@@ -299,7 +299,8 @@ public class ExecuteServiceImpl implements ExecuteService {
             logEntry.setRequestBody(body);
 
             // Execute HTTP request
-            HttpClientResult httpResult = executeHttpRequest(config.getRequestMethod(), url, headers, body);
+            String bodyType = config.getBodyType() != null ? config.getBodyType() : "json";
+            HttpClientResult httpResult = executeHttpRequest(config.getRequestMethod(), url, headers, body, bodyType, config.getBodyData());
 
             long costMs = System.currentTimeMillis() - startTime;
             logEntry.setResponseCode(httpResult.statusCode);
@@ -364,6 +365,10 @@ public class ExecuteServiceImpl implements ExecuteService {
     }
 
     private HttpClientResult executeHttpRequest(String method, String url, String headersJson, String body) throws Exception {
+        return executeHttpRequest(method, url, headersJson, body, "json", null);
+    }
+
+    private HttpClientResult executeHttpRequest(String method, String url, String headersJson, String body, String bodyType, String originalBodyData) throws Exception {
         RequestConfig requestConfig = RequestConfig.custom()
                 .setConnectTimeout(10000)
                 .setSocketTimeout(120000)
@@ -376,20 +381,44 @@ public class ExecuteServiceImpl implements ExecuteService {
                 .build();
 
         HttpRequestBase request;
+        boolean isFileUpload = "file".equals(bodyType) && body != null && body.startsWith("FILE_");
+
         switch (method.toUpperCase()) {
             case "POST":
-                HttpPost post = new HttpPost(url);
-                if (body != null && !body.isEmpty()) {
-                    post.setEntity(new StringEntity(body, "UTF-8"));
+                if (isFileUpload) {
+                    HttpPost postFile = new HttpPost(url);
+                    java.io.File uploadFile = findUploadedFile(body);
+                    if (uploadFile != null && uploadFile.exists()) {
+                        org.apache.http.entity.mime.MultipartEntityBuilder builder = org.apache.http.entity.mime.MultipartEntityBuilder.create();
+                        builder.addBinaryBody("file", uploadFile, org.apache.http.entity.ContentType.APPLICATION_OCTET_STREAM, uploadFile.getName());
+                        postFile.setEntity(builder.build());
+                    }
+                    request = postFile;
+                } else {
+                    HttpPost post = new HttpPost(url);
+                    if (body != null && !body.isEmpty()) {
+                        post.setEntity(new StringEntity(body, "UTF-8"));
+                    }
+                    request = post;
                 }
-                request = post;
                 break;
             case "PUT":
-                HttpPut put = new HttpPut(url);
-                if (body != null && !body.isEmpty()) {
-                    put.setEntity(new StringEntity(body, "UTF-8"));
+                if (isFileUpload) {
+                    HttpPut putFile = new HttpPut(url);
+                    java.io.File uploadFilePut = findUploadedFile(body);
+                    if (uploadFilePut != null && uploadFilePut.exists()) {
+                        org.apache.http.entity.mime.MultipartEntityBuilder builder = org.apache.http.entity.mime.MultipartEntityBuilder.create();
+                        builder.addBinaryBody("file", uploadFilePut, org.apache.http.entity.ContentType.APPLICATION_OCTET_STREAM, uploadFilePut.getName());
+                        putFile.setEntity(builder.build());
+                    }
+                    request = putFile;
+                } else {
+                    HttpPut put = new HttpPut(url);
+                    if (body != null && !body.isEmpty()) {
+                        put.setEntity(new StringEntity(body, "UTF-8"));
+                    }
+                    request = put;
                 }
-                request = put;
                 break;
             case "DELETE":
                 request = new HttpDelete(url);
@@ -412,7 +441,7 @@ public class ExecuteServiceImpl implements ExecuteService {
             }
         }
 
-        if (request.getFirstHeader("Content-Type") == null && body != null) {
+        if (!isFileUpload && request.getFirstHeader("Content-Type") == null && body != null) {
             request.setHeader("Content-Type", "application/json");
         }
 
@@ -620,6 +649,14 @@ public class ExecuteServiceImpl implements ExecuteService {
         vo.setStartTime(log.getStartTime());
         vo.setEndTime(log.getEndTime());
         return vo;
+    }
+
+    private java.io.File findUploadedFile(String fileId) {
+        java.nio.file.Path dirPath = java.nio.file.Paths.get(System.getProperty("user.dir") + "/uploads");
+        java.io.File dir = dirPath.toFile();
+        if (!dir.exists()) return null;
+        java.io.File[] files = dir.listFiles((d, name) -> name.startsWith(fileId));
+        return (files != null && files.length > 0) ? files[0] : null;
     }
 
     private static class NodeResult {

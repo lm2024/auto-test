@@ -35,6 +35,7 @@
 /Users/lm/Documents/GitHub/auto-test/backend/src/main/java/com/autotest/exception/GlobalExceptionHandler.java
 /Users/lm/Documents/GitHub/auto-test/backend/src/main/java/com/autotest/mapper/TestNodeConfigMapper.java
 /Users/lm/Documents/GitHub/auto-test/backend/src/main/java/com/autotest/exception/BusinessException.java
+/Users/lm/Documents/GitHub/auto-test/backend/src/main/java/com/autotest/controller/UploadController.java
 /Users/lm/Documents/GitHub/auto-test/backend/src/main/java/com/autotest/service/AiService.java
 /Users/lm/Documents/GitHub/auto-test/backend/src/main/java/com/autotest/controller/PluginController.java
 /Users/lm/Documents/GitHub/auto-test/backend/src/main/java/com/autotest/model/dto/PluginChainCreateDTO.java

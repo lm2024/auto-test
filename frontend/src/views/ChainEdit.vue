@@ -1,114 +1,301 @@
 <template>
   <div class="chain-edit">
     <div class="toolbar">
-      <el-button @click="$router.back()">返回</el-button>
-      <el-button type="primary" @click="saveAll">保存</el-button>
-      <el-button @click="undo" :disabled="!canUndo">撤销</el-button>
-      <el-button @click="redo" :disabled="!canRedo">重做</el-button>
-      <el-button @click="autoLayout">自动布局</el-button>
-      <el-button type="warning" @click="generateTestData" :loading="aiLoading">AI生成测试数据</el-button>
-      <el-button type="success" @click="executeChain" :disabled="nodes.length === 0">执行</el-button>
+      <div class="toolbar-left">
+        <el-button @click="$router.back()" :icon="ArrowLeft">返回</el-button>
+        <el-divider direction="vertical" />
+        <span class="chain-title">链路编排</span>
+      </div>
+      <div class="toolbar-right">
+        <el-button @click="undo" :disabled="!canUndo" :icon="RefreshLeft">撤销</el-button>
+        <el-button @click="redo" :disabled="!canRedo" :icon="RefreshRight">重做</el-button>
+        <el-button @click="autoLayout" :icon="Grid">自动布局</el-button>
+        <el-divider direction="vertical" />
+        <el-button type="warning" @click="generateTestData" :loading="aiLoading" :icon="MagicStick">AI生成测试数据</el-button>
+        <el-button type="success" @click="executeChain" :disabled="nodes.length === 0" :icon="CaretRight">执行</el-button>
+        <el-button type="primary" @click="saveAll" :icon="Check">保存</el-button>
+      </div>
     </div>
 
     <div class="main-area">
       <div class="left-panel">
-        <div class="panel-title">节点库</div>
-        <div class="node-item" draggable @dragstart="onDragStart">
-          <el-icon><Connection /></el-icon>
-          <span>HTTP请求节点</span>
-        </div>
-        <el-button size="small" style="margin-top:10px;width:100%" @click="openImportDialog">批量导入</el-button>
-      </div>
-
-      <div class="center-panel" ref="canvasRef" @drop="onDrop" @dragover.prevent>
-        <div v-if="nodes.length === 0" class="empty-hint">拖拽节点到此处或批量导入接口</div>
-        <template v-for="(node, index) in sortedNodes" :key="node.nodeCode">
-          <div class="node-card"
-               :class="{ selected: selectedNode?.nodeCode === node.nodeCode, 'status-running': nodeStatusMap[node.nodeCode] === 'RUNNING', 'status-success': nodeStatusMap[node.nodeCode] === 'SUCCESS', 'status-failed': nodeStatusMap[node.nodeCode] === 'FAILED' }"
-               @click="selectNode(node)">
-            <div class="node-header">
-              <span class="node-name">{{ node.nodeName || node.nodeCode }}</span>
-              <el-tag size="small" :type="methodType(node.requestMethod)">{{ node.requestMethod }}</el-tag>
-            </div>
-            <div class="node-url">{{ node.requestUrl }}</div>
-            <div v-if="nodeStatusMap[node.nodeCode]" class="node-status">
-              {{ nodeStatusMap[node.nodeCode] }}
+        <div class="panel-section">
+          <div class="panel-title">
+            <el-icon><Box /></el-icon>
+            <span>节点库</span>
+          </div>
+          <div class="node-item" draggable @dragstart="onDragStart">
+            <el-icon class="node-icon http"><Connection /></el-icon>
+            <div class="node-item-info">
+              <span class="node-item-name">HTTP请求</span>
+              <span class="node-item-desc">发送HTTP请求</span>
             </div>
           </div>
-          <div v-if="index < sortedNodes.length - 1" class="connection-arrow">↓</div>
-        </template>
-        <div style="text-align:center;margin-top:10px">
-          <el-button type="primary" plain @click="addNode">+ 新增</el-button>
+          <el-button type="primary" plain @click="openImportDialog" style="width:100%;margin-top:12px" :icon="Upload">
+            批量导入
+          </el-button>
+        </div>
+
+        <div class="panel-section" style="margin-top:16px">
+          <div class="panel-title">
+            <el-icon><List /></el-icon>
+            <span>节点列表</span>
+            <el-tag size="small" type="info" style="margin-left:auto">{{ nodes.length }}</el-tag>
+          </div>
+          <div class="node-list">
+            <div v-for="(node, index) in sortedNodes" :key="node.nodeCode"
+                 class="node-list-item"
+                 :class="{ active: selectedNode?.nodeCode === node.nodeCode }"
+                 draggable="true"
+                 @dragstart="onListDragStart($event, node.nodeCode)"
+                 @dragover.prevent
+                 @drop="onListDrop($event, node.nodeCode)"
+                 @click="selectNode(node)">
+              <el-icon class="list-drag-handle"><Rank /></el-icon>
+              <el-tag size="small" :type="methodType(node.requestMethod)" class="method-tag">{{ node.requestMethod }}</el-tag>
+              <span class="node-list-name">{{ node.nodeName || node.nodeCode }}</span>
+            </div>
+            <div v-if="nodes.length === 0" class="empty-list">暂无节点</div>
+          </div>
         </div>
       </div>
 
-      <div class="right-panel" v-if="selectedNode">
-        <div class="panel-title">属性配置 - {{ selectedNode.nodeName }}</div>
-        <el-tabs v-model="activeTab">
-          <el-tab-pane label="基础信息" name="basic">
-            <el-form label-width="80px" size="small">
-              <el-form-item label="节点名称">
-                <el-input v-model="selectedNode.nodeName" />
-              </el-form-item>
-              <el-form-item label="排序号">
-                <el-input-number v-model="selectedNode.sortNo" :min="1" />
-              </el-form-item>
-              <el-form-item label="并行分组">
-                <el-input v-model="selectedNode.parallelGroup" placeholder="为空则串行" />
-              </el-form-item>
-              <el-form-item label="等待时间">
-                <el-input-number v-model="selectedNode.delaySeconds" :min="0" :max="3600" />
-                <span style="margin-left:8px;color:#909399;font-size:12px">秒，执行后等待再执行下一节点</span>
-              </el-form-item>
-            </el-form>
-          </el-tab-pane>
-          <el-tab-pane label="请求配置" name="request">
-            <el-form label-width="80px" size="small">
-              <el-form-item label="URL">
-                <el-input v-model="selectedNode.requestUrl" />
-              </el-form-item>
-              <el-form-item label="方法">
-                <el-select v-model="selectedNode.requestMethod">
+      <div class="center-panel" ref="canvasRef" @dragover.prevent>
+        <div v-if="nodes.length === 0" class="empty-canvas" @drop="onDrop" @dragover.prevent>
+          <el-icon class="empty-icon"><Connection /></el-icon>
+          <div class="empty-title">拖拽节点到此处</div>
+          <div class="empty-desc">或点击左侧「批量导入」添加接口</div>
+        </div>
+        <template v-for="(node, index) in sortedNodes" :key="node.nodeCode">
+          <div class="node-card"
+               :class="{ selected: selectedNode?.nodeCode === node.nodeCode, ['status-' + (nodeStatusMap[node.nodeCode] || '').toLowerCase()]: true, 'drag-over': dragOverIndex === index }"
+               draggable="true"
+               @dragstart="onNodeDragStart($event, index)"
+               @dragend="onNodeDragEnd"
+               @dragover="onNodeDragOver($event, index)"
+               @dragleave="onNodeDragLeave"
+               @drop="onNodeDrop($event, index)"
+               @click="selectNode(node)">
+            <div class="node-card-header">
+              <div class="node-card-left">
+                <el-icon class="drag-handle"><Rank /></el-icon>
+                <div class="node-index">{{ index + 1 }}</div>
+                <div class="node-card-info">
+                  <div class="node-card-name">{{ node.nodeName || node.nodeCode }}</div>
+                  <div class="node-card-url">{{ node.requestUrl }}</div>
+                </div>
+              </div>
+              <div class="node-card-right">
+                <el-tag size="small" :type="methodType(node.requestMethod)" effect="dark">{{ node.requestMethod }}</el-tag>
+                <div v-if="nodeStatusMap[node.nodeCode]" class="status-badge" :class="'badge-' + nodeStatusMap[node.nodeCode].toLowerCase()">
+                  {{ nodeStatusMap[node.nodeCode] }}
+                </div>
+              </div>
+            </div>
+            <div v-if="node.bodyType === 'file'" class="node-card-file">
+              <el-icon><Document /></el-icon>
+              <span>文件上传</span>
+            </div>
+          </div>
+          <div v-if="index < sortedNodes.length - 1" class="connection-arrow">
+            <div class="arrow-line"></div>
+            <el-icon class="arrow-icon"><Bottom /></el-icon>
+          </div>
+        </template>
+        <div v-if="nodes.length > 0" class="add-node-area" @drop.stop="onDrop" @dragover.prevent>
+          <el-button type="primary" plain @click="addNode" :icon="Plus">新增节点</el-button>
+        </div>
+      </div>
+
+      <transition name="slide-right">
+        <div class="right-panel" v-if="selectedNode">
+          <div class="panel-header">
+            <div class="panel-title-row">
+              <el-icon class="config-icon"><Setting /></el-icon>
+              <span>属性配置</span>
+            </div>
+            <el-button text @click="selectedNode = null" :icon="Close" />
+          </div>
+
+          <el-tabs v-model="activeTab" class="config-tabs">
+            <el-tab-pane label="基础信息" name="basic">
+              <div class="config-section">
+                <div class="config-label">节点名称</div>
+                <el-input v-model="selectedNode.nodeName" placeholder="请输入节点名称" clearable />
+              </div>
+              <div class="config-row">
+                <div class="config-label">排序号</div>
+                <el-input-number v-model="selectedNode.sortNo" :min="1" size="small" />
+              </div>
+              <div class="config-row">
+                <div class="config-label">并行分组</div>
+                <el-input v-model="selectedNode.parallelGroup" placeholder="为空则串行" size="small" clearable />
+              </div>
+              <div class="config-row">
+                <div class="config-label">等待时间</div>
+                <div class="config-inline">
+                  <el-input-number v-model="selectedNode.delaySeconds" :min="0" :max="3600" size="small" />
+                  <span class="config-hint">秒，执行后等待再执行下一节点</span>
+                </div>
+              </div>
+            </el-tab-pane>
+
+            <el-tab-pane label="请求配置" name="request">
+              <div class="config-section">
+                <div class="config-label">请求方法</div>
+                <el-select v-model="selectedNode.requestMethod" style="width:100%">
                   <el-option label="GET" value="GET" />
                   <el-option label="POST" value="POST" />
                   <el-option label="PUT" value="PUT" />
                   <el-option label="DELETE" value="DELETE" />
                   <el-option label="PATCH" value="PATCH" />
                 </el-select>
-              </el-form-item>
-              <el-form-item label="请求头">
-                <el-input v-model="selectedNode.requestHeaders" type="textarea" :rows="4" placeholder='{"Content-Type":"application/json"}' />
-                <el-button size="small" @click="formatJson('requestHeaders')">格式化</el-button>
-                <el-button size="small" @click="copyText(selectedNode.requestHeaders)">复制</el-button>
-              </el-form-item>
-              <el-form-item label="请求体">
-                <el-input v-model="selectedNode.bodyData" type="textarea" :rows="6" />
-                <el-button size="small" @click="formatJson('bodyData')">格式化</el-button>
-                <el-button size="small" @click="copyText(selectedNode.bodyData)">复制</el-button>
-              </el-form-item>
-            </el-form>
-          </el-tab-pane>
-          <el-tab-pane label="提取规则" name="extract">
-            <el-input v-model="selectedNode.extractRules" type="textarea" :rows="8"
-              placeholder='{"rules":[{"varName":"userId","jsonPath":"$.data.id"}]}' />
-          </el-tab-pane>
-          <el-tab-pane label="断言规则" name="assert">
-            <el-input v-model="selectedNode.assertRules" type="textarea" :rows="6"
-              placeholder='{"statusCode":200,"body":{"$.code":200}}' />
-          </el-tab-pane>
-        </el-tabs>
-        <div style="margin-top:10px">
-          <el-button type="primary" @click="saveNode">保存节点</el-button>
-          <el-button type="danger" @click="deleteNode">删除节点</el-button>
+              </div>
+              <div class="config-section">
+                <div class="config-label">URL</div>
+                <el-input v-model="selectedNode.requestUrl" placeholder="https://api.example.com/endpoint" clearable />
+              </div>
+              <div class="config-section">
+                <div class="config-label">
+                  请求体类型
+                  <el-tooltip content="JSON: 发送JSON数据 | 文件: 上传文件(Multipart)" placement="top">
+                    <el-icon class="help-icon"><QuestionFilled /></el-icon>
+                  </el-tooltip>
+                </div>
+                <el-radio-group v-model="selectedNode.bodyType" size="small">
+                  <el-radio-button label="json">JSON</el-radio-button>
+                  <el-radio-button label="file">文件上传</el-radio-button>
+                  <el-radio-button label="form">Form Data</el-radio-button>
+                </el-radio-group>
+              </div>
+
+              <template v-if="selectedNode.bodyType === 'json'">
+                <div class="config-section">
+                  <div class="config-label">请求头</div>
+                  <el-input v-model="selectedNode.requestHeaders" type="textarea" :rows="3"
+                    placeholder='{"Content-Type":"application/json"}' />
+                  <div class="config-actions">
+                    <el-button size="small" text @click="formatJson('requestHeaders')">格式化</el-button>
+                    <el-button size="small" text @click="copyText(selectedNode.requestHeaders)">复制</el-button>
+                  </div>
+                </div>
+                <div class="config-section">
+                  <div class="config-label">请求体</div>
+                  <el-input v-model="selectedNode.bodyData" type="textarea" :rows="8"
+                    placeholder='{"key":"value"}' class="code-editor" />
+                  <div class="config-actions">
+                    <el-button size="small" text @click="formatJson('bodyData')">格式化</el-button>
+                    <el-button size="small" text @click="copyText(selectedNode.bodyData)">复制</el-button>
+                  </div>
+                </div>
+              </template>
+
+              <template v-else-if="selectedNode.bodyType === 'file'">
+                <div class="config-section">
+                  <div class="config-label">文件上传</div>
+                  <div class="file-upload-area" v-if="!selectedNode._uploadedFile">
+                    <el-upload
+                      ref="fileUploadRef"
+                      drag
+                      :auto-upload="true"
+                      :action="'/api/upload/file'"
+                      :data="{ nodeCode: selectedNode.nodeCode }"
+                      :on-success="handleFileUploadSuccess"
+                      :on-error="handleFileUploadError"
+                      :before-upload="beforeFileUpload"
+                      accept=".xlsx,.xls,.csv,.json,.txt,.xml,.pdf,.doc,.docx,.zip,.rar"
+                      :limit="1"
+                    >
+                      <el-icon class="upload-icon"><UploadFilled /></el-icon>
+                      <div class="upload-text">拖拽文件到此处，或<em>点击上传</em></div>
+                      <div class="upload-tip">支持 Excel、CSV、JSON、XML 等文件，最大 50MB</div>
+                    </el-upload>
+                  </div>
+                  <div class="file-info" v-else>
+                    <div class="file-card">
+                      <el-icon class="file-icon"><Document /></el-icon>
+                      <div class="file-detail">
+                        <div class="file-name">{{ selectedNode._uploadedFile.fileName }}</div>
+                        <div class="file-size">{{ formatFileSize(selectedNode._uploadedFile.size) }}</div>
+                      </div>
+                      <el-button type="danger" text @click="removeUploadedFile" :icon="Delete">移除</el-button>
+                    </div>
+                  </div>
+                  <div class="config-hint-box">
+                    <el-icon><InfoFilled /></el-icon>
+                    <span>文件将作为 Multipart 请求体发送，文件ID会保存到节点配置中</span>
+                  </div>
+                </div>
+                <div class="config-section">
+                  <div class="config-label">请求头</div>
+                  <el-input v-model="selectedNode.requestHeaders" type="textarea" :rows="3"
+                    placeholder='文件上传时会自动设置 Content-Type' />
+                </div>
+              </template>
+
+              <template v-else>
+                <div class="config-section">
+                  <div class="config-label">请求头</div>
+                  <el-input v-model="selectedNode.requestHeaders" type="textarea" :rows="3"
+                    placeholder='{"Content-Type":"application/x-www-form-urlencoded"}' />
+                  <div class="config-actions">
+                    <el-button size="small" text @click="formatJson('requestHeaders')">格式化</el-button>
+                  </div>
+                </div>
+                <div class="config-section">
+                  <div class="config-label">Form Data</div>
+                  <el-input v-model="selectedNode.bodyData" type="textarea" :rows="6"
+                    placeholder='{"key":"value"}' />
+                </div>
+              </template>
+            </el-tab-pane>
+
+            <el-tab-pane label="提取规则" name="extract">
+              <div class="config-section">
+                <div class="config-label">变量提取</div>
+                <el-input v-model="selectedNode.extractRules" type="textarea" :rows="10"
+                  placeholder='{"rules":[{"varName":"userId","jsonPath":"$.data.id"}]}' class="code-editor" />
+                <div class="config-hint-box">
+                  <el-icon><InfoFilled /></el-icon>
+                  <span>使用 JSONPath 从响应中提取变量，供后续节点引用</span>
+                </div>
+              </div>
+            </el-tab-pane>
+
+            <el-tab-pane label="断言规则" name="assert">
+              <div class="config-section">
+                <div class="config-label">断言条件</div>
+                <el-input v-model="selectedNode.assertRules" type="textarea" :rows="10"
+                  placeholder='{"statusCode":200,"body":{"$.code":200}}' class="code-editor" />
+                <div class="config-hint-box">
+                  <el-icon><InfoFilled /></el-icon>
+                  <span>验证响应码或响应体中的字段值</span>
+                </div>
+              </div>
+            </el-tab-pane>
+          </el-tabs>
+
+          <div class="panel-footer">
+            <el-button @click="moveNodeUp" :disabled="isFirstNode" :icon="Top" size="small">上移</el-button>
+            <el-button @click="moveNodeDown" :disabled="isLastNode" :icon="Bottom" size="small">下移</el-button>
+            <el-divider direction="vertical" />
+            <el-button type="primary" @click="saveNode" :icon="Check" style="flex:1">保存节点</el-button>
+            <el-button type="danger" @click="deleteNode" :icon="Delete" style="flex:1">删除节点</el-button>
+          </div>
         </div>
-      </div>
-      <div class="right-panel" v-else>
-        <div class="empty-hint" style="padding:40px">点击左侧节点查看配置</div>
+      </transition>
+
+      <div class="right-panel empty-right" v-if="!selectedNode">
+        <div class="empty-config">
+          <el-icon class="empty-config-icon"><Setting /></el-icon>
+          <div class="empty-config-title">选择节点配置</div>
+          <div class="empty-config-desc">点击左侧节点列表或画布中的节点</div>
+        </div>
       </div>
     </div>
 
     <!-- 批量导入对话框 -->
-    <el-dialog v-model="importDialogVisible" title="批量导入接口" width="700px" :close-on-click-modal="false">
+    <el-dialog v-model="importDialogVisible" title="批量导入接口" width="750px" :close-on-click-modal="false" class="import-dialog">
       <el-tabs v-model="importTab">
         <el-tab-pane label="Swagger/OpenAPI" name="swagger">
           <el-form label-width="100px">
@@ -192,7 +379,11 @@ curl -X POST https://api.example.com/users \
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Connection, UploadFilled } from '@element-plus/icons-vue'
+import {
+  ArrowLeft, RefreshLeft, RefreshRight, Grid, MagicStick, CaretRight, Check,
+  Connection, Box, Upload, List, Document, Setting, Close, Delete, Plus,
+  UploadFilled, InfoFilled, Bottom, QuestionFilled, Rank, Top
+} from '@element-plus/icons-vue'
 import api from '../api'
 
 const route = useRoute()
@@ -206,6 +397,8 @@ const aiLoading = ref(false)
 const canUndo = ref(false)
 const canRedo = ref(false)
 const nodeStatusMap = ref({})
+const dragIndex = ref(null)
+const dragOverIndex = ref(null)
 
 const importDialogVisible = ref(false)
 const importTab = ref('swagger')
@@ -216,10 +409,125 @@ const jsonPreview = ref([])
 const curlCommand = ref('')
 const pasteJson = ref('')
 const jsonUploadRef = ref(null)
+const fileUploadRef = ref(null)
 
 const sortedNodes = computed(() => {
   return [...nodes.value].sort((a, b) => (a.sortNo || 0) - (b.sortNo || 0))
 })
+
+const selectedNodeIndex = computed(() => {
+  if (!selectedNode.value) return -1
+  return sortedNodes.value.findIndex(n => n.nodeCode === selectedNode.value.nodeCode)
+})
+
+const isFirstNode = computed(() => selectedNodeIndex.value <= 0)
+const isLastNode = computed(() => selectedNodeIndex.value >= sortedNodes.value.length - 1)
+
+const moveNodeUp = () => {
+  const idx = selectedNodeIndex.value
+  if (idx <= 0) return
+  const sorted = sortedNodes.value
+  const cur = sorted[idx]
+  const prev = sorted[idx - 1]
+  const tmpSort = cur.sortNo
+  cur.sortNo = prev.sortNo
+  prev.sortNo = tmpSort
+  const ci = nodes.value.findIndex(n => n.nodeCode === cur.nodeCode)
+  const pi = nodes.value.findIndex(n => n.nodeCode === prev.nodeCode)
+  if (ci !== -1) nodes.value[ci] = { ...cur }
+  if (pi !== -1) nodes.value[pi] = { ...prev }
+  saveAll()
+}
+
+const moveNodeDown = () => {
+  const idx = selectedNodeIndex.value
+  if (idx < 0 || idx >= sortedNodes.value.length - 1) return
+  const sorted = sortedNodes.value
+  const cur = sorted[idx]
+  const next = sorted[idx + 1]
+  const tmpSort = cur.sortNo
+  cur.sortNo = next.sortNo
+  next.sortNo = tmpSort
+  const ci = nodes.value.findIndex(n => n.nodeCode === cur.nodeCode)
+  const ni = nodes.value.findIndex(n => n.nodeCode === next.nodeCode)
+  if (ci !== -1) nodes.value[ci] = { ...cur }
+  if (ni !== -1) nodes.value[ni] = { ...next }
+  saveAll()
+}
+
+const onNodeDragStart = (e, index) => {
+  dragIndex.value = index
+  e.dataTransfer.effectAllowed = 'move'
+  e.dataTransfer.setData('text/plain', index)
+  e.target.style.opacity = '0.4'
+}
+
+const onNodeDragEnd = (e) => {
+  e.target.style.opacity = '1'
+  dragIndex.value = null
+  dragOverIndex.value = null
+}
+
+const onNodeDragOver = (e, index) => {
+  e.preventDefault()
+  e.dataTransfer.dropEffect = 'move'
+  dragOverIndex.value = index
+}
+
+const onNodeDragLeave = () => {
+  dragOverIndex.value = null
+}
+
+const onNodeDrop = (e, dropIndex) => {
+  e.preventDefault()
+  dragOverIndex.value = null
+  const fromIndex = dragIndex.value
+  if (fromIndex === null || fromIndex === dropIndex) return
+
+  const sorted = sortedNodes.value
+  const fromNode = sorted[fromIndex]
+  const toNode = sorted[dropIndex]
+  if (!fromNode || !toNode) return
+
+  const fromSortNo = fromNode.sortNo || 0
+  const toSortNo = toNode.sortNo || 0
+
+  fromNode.sortNo = toSortNo
+  toNode.sortNo = fromSortNo
+
+  const fromIdx = nodes.value.findIndex(n => n.nodeCode === fromNode.nodeCode)
+  const toIdx = nodes.value.findIndex(n => n.nodeCode === toNode.nodeCode)
+  if (fromIdx !== -1) nodes.value[fromIdx] = { ...fromNode }
+  if (toIdx !== -1) nodes.value[toIdx] = { ...toNode }
+
+  saveAll()
+  dragIndex.value = null
+}
+
+const onListDragStart = (e, nodeCode) => {
+  e.dataTransfer.effectAllowed = 'move'
+  e.dataTransfer.setData('text/plain', nodeCode)
+}
+
+const onListDrop = (e, targetCode) => {
+  e.preventDefault()
+  const sourceCode = e.dataTransfer.getData('text/plain')
+  if (!sourceCode || sourceCode === targetCode) return
+
+  const sorted = sortedNodes.value
+  const sourceIdx = sorted.findIndex(n => n.nodeCode === sourceCode)
+  const targetIdx = sorted.findIndex(n => n.nodeCode === targetCode)
+  if (sourceIdx === -1 || targetIdx === -1) return
+
+  const newSortNo = sorted[targetIdx].sortNo || 0
+  const sourceNode = nodes.value.find(n => n.nodeCode === sourceCode)
+  if (sourceNode) {
+    sourceNode.sortNo = newSortNo
+    const idx = nodes.value.findIndex(n => n.nodeCode === sourceCode)
+    nodes.value[idx] = { ...sourceNode }
+    saveAll()
+  }
+}
 
 const loadNodes = async () => {
   const res = await api.get('/node/list', { params: { chainCode } })
@@ -227,7 +535,11 @@ const loadNodes = async () => {
 }
 
 const selectNode = (node) => {
-  selectedNode.value = { ...node }
+  const n = { ...node }
+  if (n.bodyType === 'file' && n.bodyData && n.bodyData.startsWith('FILE_')) {
+    n._uploadedFile = { fileId: n.bodyData, fileName: '已上传文件' }
+  }
+  selectedNode.value = n
 }
 
 const methodType = (m) => {
@@ -249,8 +561,47 @@ const copyText = (text) => {
   ElMessage.success('已复制')
 }
 
+const formatFileSize = (bytes) => {
+  if (!bytes) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB']
+  let i = 0
+  let size = bytes
+  while (size >= 1024 && i < units.length - 1) { size /= 1024; i++ }
+  return size.toFixed(1) + ' ' + units[i]
+}
+
+const handleFileUploadSuccess = (response) => {
+  if (response.code === 200) {
+    selectedNode.value.bodyData = response.data.fileId
+    selectedNode.value._uploadedFile = response.data
+    ElMessage.success('文件上传成功')
+  } else {
+    ElMessage.error(response.message || '上传失败')
+  }
+}
+
+const handleFileUploadError = () => {
+  ElMessage.error('文件上传失败')
+}
+
+const beforeFileUpload = (file) => {
+  const maxSize = 50 * 1024 * 1024
+  if (file.size > maxSize) {
+    ElMessage.error('文件大小不能超过50MB')
+    return false
+  }
+  return true
+}
+
+const removeUploadedFile = () => {
+  selectedNode.value.bodyData = ''
+  selectedNode.value._uploadedFile = null
+}
+
 const saveNode = async () => {
-  await api.post('/node/edit', selectedNode.value)
+  const data = { ...selectedNode.value }
+  delete data._uploadedFile
+  await api.post('/node/edit', data)
   ElMessage.success('保存成功')
   loadNodes()
 }
@@ -264,7 +615,9 @@ const deleteNode = async () => {
 
 const saveAll = async () => {
   for (const node of nodes.value) {
-    await api.post('/node/edit', node)
+    const data = { ...node }
+    delete data._uploadedFile
+    await api.post('/node/edit', data)
   }
   ElMessage.success('全部保存成功')
 }
@@ -273,7 +626,9 @@ const onDragStart = (e) => {
   e.dataTransfer.setData('text/plain', 'httpNode')
 }
 
-const onDrop = async () => {
+const onDrop = async (e) => {
+  const data = e.dataTransfer.getData('text/plain')
+  if (data !== 'httpNode') return
   try {
     await api.post('/node/create', { chainCode, nodeName: '新节点', requestMethod: 'GET', requestUrl: 'http://' })
     await loadNodes()
@@ -519,26 +874,235 @@ onMounted(loadNodes)
 </script>
 
 <style scoped>
-.chain-edit { height: calc(100vh - 80px); display: flex; flex-direction: column; }
-.toolbar { padding: 10px; background: #fff; border-bottom: 1px solid #e4e7ed; display: flex; gap: 8px; }
+.chain-edit { height: calc(100vh - 60px); display: flex; flex-direction: column; background: #f0f2f5; }
+
+.toolbar {
+  padding: 8px 16px;
+  background: #fff;
+  border-bottom: 1px solid #e8e8e8;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.toolbar-left, .toolbar-right { display: flex; align-items: center; gap: 8px; }
+.chain-title { font-size: 15px; font-weight: 600; color: #1f2937; }
+
 .main-area { flex: 1; display: flex; overflow: hidden; }
-.left-panel { width: 200px; background: #fff; border-right: 1px solid #e4e7ed; padding: 15px; }
-.center-panel { flex: 1; background: #f5f7fa; overflow-y: auto; padding: 20px; position: relative; }
-.right-panel { width: 400px; background: #fff; border-left: 1px solid #e4e7ed; padding: 15px; overflow-y: auto; }
-.panel-title { font-weight: bold; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #e4e7ed; }
-.node-item { padding: 10px; border: 1px solid #dcdfe6; border-radius: 4px; cursor: grab; display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.node-item:hover { border-color: #409eff; }
-.empty-hint { text-align: center; color: #909399; padding: 60px; }
-.node-card { background: #fff; border: 2px solid #dcdfe6; border-radius: 8px; padding: 12px; margin-bottom: 10px; cursor: pointer; transition: all 0.3s; }
-.node-card:hover { border-color: #409eff; }
-.node-card.selected { border-color: #409eff; box-shadow: 0 0 8px rgba(64,158,255,0.3); }
-.node-card.status-running { border-color: #409eff; animation: pulse 1.5s infinite; }
+
+.left-panel {
+  width: 240px;
+  background: #fff;
+  border-right: 1px solid #e8e8e8;
+  padding: 16px;
+  overflow-y: auto;
+}
+.panel-section { }
+.panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #606266;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.node-item {
+  padding: 12px;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.2s;
+  background: #fafafa;
+}
+.node-item:hover { border-color: #409eff; background: #ecf5ff; }
+.node-icon { font-size: 24px; color: #409eff; }
+.node-item-info { display: flex; flex-direction: column; }
+.node-item-name { font-size: 13px; font-weight: 500; color: #303133; }
+.node-item-desc { font-size: 11px; color: #909399; margin-top: 2px; }
+
+.node-list { max-height: 300px; overflow-y: auto; }
+.node-list-item {
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  transition: all 0.15s;
+}
+.node-list-item:hover { background: #f5f7fa; }
+.node-list-item.active { background: #ecf5ff; }
+.list-drag-handle { cursor: grab; color: #c0c4cc; font-size: 14px; flex-shrink: 0; }
+.list-drag-handle:hover { color: #409eff; }
+.method-tag { min-width: 42px; text-align: center; }
+.node-list-name { font-size: 13px; color: #303133; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.empty-list { text-align: center; color: #c0c4cc; padding: 20px; font-size: 13px; }
+
+.center-panel {
+  flex: 1;
+  background: #f5f7fa;
+  overflow-y: auto;
+  padding: 24px;
+  position: relative;
+  background-image: radial-gradient(circle, #ddd 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.empty-canvas {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 0;
+}
+.empty-icon { font-size: 48px; color: #c0c4cc; margin-bottom: 16px; }
+.empty-title { font-size: 16px; color: #909399; margin-bottom: 8px; }
+.empty-desc { font-size: 13px; color: #c0c4cc; }
+
+.node-card {
+  background: #fff;
+  border: 2px solid #e8e8e8;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 0;
+  cursor: pointer;
+  transition: all 0.2s;
+  max-width: 520px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.node-card:hover { border-color: #409eff; box-shadow: 0 2px 12px rgba(64,158,255,0.12); }
+.node-card.drag-over { border-color: #409eff; border-style: dashed; background: #ecf5ff; }
+.drag-handle { cursor: grab; color: #c0c4cc; font-size: 16px; margin-right: 4px; }
+.drag-handle:hover { color: #409eff; }
+.node-card:active .drag-handle { cursor: grabbing; }
+.node-card.selected { border-color: #409eff; box-shadow: 0 0 0 3px rgba(64,158,255,0.15); }
 .node-card.status-success { border-color: #67c23a; }
 .node-card.status-failed { border-color: #f56c6c; }
-.node-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-.node-name { font-weight: bold; }
-.node-url { font-size: 12px; color: #909399; word-break: break-all; }
-.node-status { font-size: 12px; margin-top: 6px; }
-.connection-arrow { font-size: 20px; text-align: center; color: #909399; padding: 4px 0; }
+.node-card.status-running { border-color: #409eff; animation: pulse 1.5s infinite; }
+
+.node-card-header { display: flex; justify-content: space-between; align-items: center; }
+.node-card-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.node-index {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: #f0f2f5; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; color: #606266; flex-shrink: 0;
+}
+.node-card.selected .node-index { background: #409eff; color: #fff; }
+.node-card-info { min-width: 0; }
+.node-card-name { font-size: 14px; font-weight: 600; color: #1f2937; margin-bottom: 2px; }
+.node-card-url { font-size: 12px; color: #909399; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 320px; }
+.node-card-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.status-badge {
+  font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500;
+}
+.badge-success { background: #f0f9eb; color: #67c23a; }
+.badge-failed { background: #fef0f0; color: #f56c6c; }
+.badge-running { background: #ecf5ff; color: #409eff; }
+
+.node-card-file {
+  margin-top: 8px; padding: 6px 10px; background: #fafafa;
+  border-radius: 6px; display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: #909399;
+}
+
+.connection-arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 0;
+  max-width: 520px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.arrow-line { width: 2px; height: 16px; background: #c0c4cc; }
+.arrow-icon { font-size: 16px; color: #c0c4cc; margin-top: -4px; }
+
+.add-node-area { text-align: center; margin-top: 16px; }
+
+.right-panel {
+  width: 420px;
+  background: #fff;
+  border-left: 1px solid #e8e8e8;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.empty-right { align-items: center; justify-content: center; }
+.empty-config { text-align: center; color: #c0c4cc; }
+.empty-config-icon { font-size: 48px; margin-bottom: 12px; }
+.empty-config-title { font-size: 15px; color: #909399; margin-bottom: 6px; }
+.empty-config-desc { font-size: 13px; }
+
+.panel-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e8e8e8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.panel-title-row { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: #1f2937; }
+.config-icon { color: #409eff; }
+
+.config-tabs { flex: 1; overflow-y: auto; padding: 0 16px; }
+.config-tabs :deep(.el-tabs__header) { margin-bottom: 16px; }
+.config-tabs :deep(.el-tabs__nav-wrap::after) { height: 1px; }
+
+.config-section { margin-bottom: 18px; }
+.config-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #606266;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.help-icon { font-size: 14px; color: #c0c4cc; cursor: help; }
+.config-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.config-row .config-label { margin-bottom: 0; min-width: 60px; }
+.config-inline { display: flex; align-items: center; gap: 8px; }
+.config-hint { font-size: 12px; color: #909399; }
+.config-actions { display: flex; gap: 4px; margin-top: 4px; }
+
+.code-editor :deep(textarea) { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; line-height: 1.5; }
+
+.file-upload-area { border-radius: 8px; overflow: hidden; }
+.file-upload-area :deep(.el-upload-dragger) { padding: 24px; }
+.upload-icon { font-size: 36px; color: #c0c4cc; }
+.upload-text { color: #606266; margin-top: 8px; }
+.upload-text em { color: #409eff; font-style: normal; }
+.upload-tip { color: #909399; font-size: 12px; margin-top: 6px; }
+
+.file-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px; background: #f5f7fa; border-radius: 8px; border: 1px solid #e8e8e8;
+}
+.file-icon { font-size: 28px; color: #409eff; }
+.file-detail { flex: 1; min-width: 0; }
+.file-name { font-size: 13px; font-weight: 500; color: #303133; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-size { font-size: 12px; color: #909399; margin-top: 2px; }
+
+.config-hint-box {
+  display: flex; align-items: flex-start; gap: 6px;
+  padding: 8px 12px; background: #f5f7fa; border-radius: 6px;
+  font-size: 12px; color: #909399; margin-top: 8px; line-height: 1.5;
+}
+
+.panel-footer {
+  padding: 12px 16px;
+  border-top: 1px solid #e8e8e8;
+  display: flex;
+  gap: 10px;
+}
+
 @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(64,158,255,0.4); } 50% { box-shadow: 0 0 0 8px rgba(64,158,255,0); } }
+.slide-right-enter-active, .slide-right-leave-active { transition: all 0.25s ease; }
+.slide-right-enter-from, .slide-right-leave-to { transform: translateX(20px); opacity: 0; }
 </style>

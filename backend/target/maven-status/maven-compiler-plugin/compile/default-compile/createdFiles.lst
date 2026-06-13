@@ -25,6 +25,7 @@ com/autotest/service/impl/AiServiceImpl.class
 com/autotest/config/WebSocketConfig.class
 com/autotest/service/AiService.class
 com/autotest/model/dto/TestDataGenerateDTO.class
+com/autotest/controller/UploadController.class
 com/autotest/mapper/TestExecuteMainMapper.class
 com/autotest/engine/plan/ExecuteNode.class
 com/autotest/model/vo/ChainVO.class
