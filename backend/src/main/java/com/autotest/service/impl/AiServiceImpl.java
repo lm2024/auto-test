@@ -246,7 +246,7 @@ public class AiServiceImpl implements AiService {
             } else if (url.contains("/order")) {
                 data.put("bodyData", "{\"orderId\":\"ORD" + System.currentTimeMillis() + "\",\"userId\":" + (idCounter++) + ",\"amount\":99.99,\"productId\":\"P001\",\"quantity\":1}");
             } else if (url.contains("/product") || url.contains("/item")) {
-                data.put("bodyData", "{\"productId\":\"P" + String.format("%04d", idCounter++),\"name\":\"测试商品\",\"price\":29.99,\"stock\":100}");
+                data.put("bodyData", "{\"productId\":\"P" + String.format("%04d", idCounter++) + ",\"name\":\"测试商品\",\"price\":29.99,\"stock\":100}");
             } else {
                 data.put("bodyData", "{\"id\":" + (idCounter++) + ",\"name\":\"测试数据\",\"timestamp\":\"" + System.currentTimeMillis() + "\"}");
             }
