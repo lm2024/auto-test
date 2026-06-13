@@ -1,0 +1,11 @@
+{
+  "proposal_id": "plugin-system-20260613111547-29fd9b",
+  "slug": "plugin-system",
+  "reason": "补充 plugin-system 页面内部跳转链接，修复孤儿页面",
+  "created_at": "2026-06-13T11:15:47.418720+00:00",
+  "base_page_exists": true,
+  "base_hash": "5b6527a401d515d209ebf515f8080cc3",
+  "proposed_content": "---\ntype: feature\nproject: auto-test\ntags: [backend, plugin, dynamic-loading]\nupdated_at: \"2026-06-13\"\ncreated_at: \"2026-06-13\"\n---\n\n# 插件系统 (Plugin System)\n\n> 支持动态加载、注册和管理测试插件。\n\n## 功能概述\n\n插件系统允许扩展平台功能，无需修改核心代码即可添加新的测试节点类型。\n\n## API 端点 (PluginController)\n\n| 端点 | 方法 | 说明 |\n|------|------|------|\n| `/api/plugin/list` | GET | 获取已注册插件列表 |\n| `/api/plugin/register` | POST | 注册新插件 |\n| `/api/plugin/unregister/{id}` | DELETE | 卸载插件 |\n| `/api/plugin/detail/{id}` | GET | 获取插件详情 |\n\n## 数据模型\n\n### PluginInterfaceDTO\n\n文件: `model/dto/PluginInterfaceDTO.java`\n\n| 字段 | 说明 |\n|------|------|\n| pluginId | 插件 ID |\n| pluginName | 插件名称 |\n| nodeType | 关联的节点类型 |\n| description | 插件描述 |\n| parameters | 参数定义 |\n| version | 版本号 |\n\n## 插件生命周期\n\n```\n插件开发\n    ↓\n打包为可执行模块\n    ↓\nPluginController.register() 注册\n    ↓\n系统加载插件元数据\n    ↓\n节点类型映射 (nodeType → pluginId)\n    ↓\n执行时调用插件处理逻辑\n```\n\n## 插件类型\n\n常见的插件类型：\n- **HTTP 请求插件**: 标准 HTTP 方法封装\n- **数据库查询插件**: SQL 执行与结果验证\n- **文件处理插件**: 文件上传/下载/比对\n- **自定义脚本插件**: 执行自定义逻辑\n\n## 相关\n\n- [[chain-management]] — 节点中的插件类型\n- [[data-models#pluginterface]] — 插件数据模型\n- [[frontend-pages#system-config]] — 系统设置中的插件管理区域\n",
+  "status": "applied",
+  "applied_at": "2026-06-13T11:17:12.598984+00:00"
+}

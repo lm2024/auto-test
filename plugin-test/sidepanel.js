@@ -5,6 +5,7 @@
   var editingIdx = -1;
 
   function el(id) { return document.getElementById(id); }
+  function narrow() { return window.innerWidth <= 360; }
 
   function init() {
     bindAll();
@@ -20,8 +21,10 @@
   function loadData() {
     chrome.storage.local.get(['isRecording', 'recordedApis', 'settings'], function(r) {
       var rec = r.isRecording || false;
-      el('recordBtn').textContent = rec ? '停止录制' : '开始录制';
-      el('recordBtn').className = rec ? 'btn btn-recording' : 'btn';
+      var btn = el('recordBtn');
+      var label = narrow() ? (rec ? '停止' : '录制') : (rec ? '停止录制' : '开始录制');
+      btn.textContent = label;
+      btn.className = rec ? 'btn btn-stop' : 'btn';
       apis = r.recordedApis || []; lastApisLength = apis.length;
       if (r.settings) settings = r.settings;
       render();
@@ -30,11 +33,13 @@
 
   function bindAll() {
     el('recordBtn').addEventListener('click', function() {
-      var rec = this.textContent === '开始录制';
-      chrome.storage.local.set({ isRecording: rec });
-      chrome.runtime.sendMessage({ type: rec ? 'START_RECORDING' : 'STOP_RECORDING' });
-      this.textContent = rec ? '停止录制' : '开始录制';
-      this.className = rec ? 'btn btn-recording' : 'btn';
+      var isNarrow = narrow();
+      var isRec = isNarrow ? (this.textContent === '录制') : (this.textContent === '开始录制');
+      chrome.storage.local.set({ isRecording: isRec });
+      chrome.runtime.sendMessage({ type: isRec ? 'START_RECORDING' : 'STOP_RECORDING' });
+      var label = isNarrow ? (isRec ? '停止' : '录制') : (isRec ? '停止录制' : '开始录制');
+      this.textContent = label;
+      this.className = isRec ? 'btn btn-stop' : 'btn';
     });
     el('searchInput').addEventListener('input', render);
     el('methodFilter').addEventListener('change', render);
@@ -66,7 +71,7 @@
       var checked = this.checked;
       el('apiList').querySelectorAll('.api-check').forEach(function(c) { c.checked = checked; });
       var cnt = checked ? el('apiList').querySelectorAll('.api-check').length : 0;
-      el('selText').textContent = '\u5df2\u9009 ' + cnt + ' \u6761';
+      el('selText').textContent = '已选 ' + cnt + ' 条';
     });
   }
 
@@ -88,14 +93,15 @@
       return true;
     });
 
-    el('statsText').textContent = '\u5171 ' + apis.length + ' \u6761\uff0c\u663e\u793a ' + filtered.length + ' \u6761';
+    var statsLabel = narrow() ? (apis.length + '条 显' + filtered.length) : ('共 ' + apis.length + ' 条，显示 ' + filtered.length + ' 条');
+    el('statsText').textContent = statsLabel;
     var list = el('apiList'), empty = el('emptyHint');
 
     if (apis.length === 0) {
       while (list.firstChild) list.removeChild(list.firstChild);
       list.appendChild(empty); empty.style.display = '';
       el('pushBtn').disabled = true; el('exportBtn').disabled = true; el('genDocBtn').disabled = true; el('clearBtn').disabled = true;
-      el('selText').textContent = '\u5df2\u9009 0 \u6761'; return;
+      el('selText').textContent = '已选 0'; return;
     }
     empty.style.display = 'none';
     el('pushBtn').disabled = false; el('exportBtn').disabled = false; el('genDocBtn').disabled = false; el('clearBtn').disabled = false;
@@ -113,20 +119,20 @@
       var div = document.createElement('div');
       div.className = 'api-item'; div.setAttribute('data-i', idx); div.setAttribute('draggable', 'true');
       div.innerHTML = '<input type="checkbox" class="api-check" data-i="' + idx + '"' + chk + '>'
-        + '<span class="method-tag m-' + m + '">' + m + '</span>'
-        + '<div class="api-info" data-i="' + idx + '"><div class="api-url" title="' + enc(a.url) + '">' + enc(nm) + '</div>'
+        + '<span class="method-badge m-' + m + '">' + m + '</span>'
+        + '<div class="api-info" data-i="' + idx + '"><div class="api-name" title="' + enc(a.url) + '">' + enc(nm) + '</div>'
         + '<div class="api-meta"><span>' + enc(shortUrl(a.url)) + '</span><span>' + (a.duration || 0) + 'ms</span></div></div>'
-        + '<span class="api-status ' + (ok ? 'st-ok' : 'st-err') + '">' + (a.status || 'ERR') + '</span>'
+        + '<span class="status-badge ' + (ok ? 'st-ok' : 'st-err') + '">' + (a.status || 'ERR') + '</span>'
         + '<div class="api-acts">'
-        + '<button class="act-btn" data-a="debug" data-i="' + idx + '" title="调试">\u{1f527}</button>'
-        + '<button class="act-btn" data-a="copy" data-i="' + idx + '" title="复制OpenAPI">\u{1f4cb}</button>'
-        + '<button class="act-btn" data-a="edit" data-i="' + idx + '" title="编辑">\u270e</button>'
-        + '<button class="act-btn del" data-a="del" data-i="' + idx + '" title="删除">\u2715</button></div>';
+        + '<button class="act-btn" data-a="debug" data-i="' + idx + '" title="调试"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></button>'
+        + '<button class="act-btn" data-a="copy" data-i="' + idx + '" title="复制OpenAPI"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>'
+        + '<button class="act-btn" data-a="edit" data-i="' + idx + '" title="编辑"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>'
+        + '<button class="act-btn del" data-a="del" data-i="' + idx + '" title="删除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>';
       list.appendChild(div);
     }
 
     list.querySelectorAll('.api-check').forEach(function(c) {
-      c.addEventListener('change', function() { el('selText').textContent = '\u5df2\u9009 ' + list.querySelectorAll('.api-check:checked').length + ' \u6761'; });
+      c.addEventListener('change', function() { el('selText').textContent = '已选 ' + list.querySelectorAll('.api-check:checked').length + ' 条'; });
     });
     list.querySelectorAll('.api-info').forEach(function(info) {
       info.addEventListener('click', function() { showDetail(parseInt(this.getAttribute('data-i'))); });
@@ -142,38 +148,39 @@
       });
     });
     var cnt = list.querySelectorAll('.api-check:checked').length;
-    el('selText').textContent = '\u5df2\u9009 ' + cnt + ' \u6761';
+    el('selText').textContent = '已选 ' + cnt + ' 条';
   }
 
   // ========== 详情 ==========
   function showDetail(idx) {
     var a = apis[idx]; if (!a) return;
     el('detailTitle').textContent = (a.method || 'GET') + ' ' + getName(a.url);
+    var ok = a.status >= 200 && a.status < 300;
     el('detailBody').innerHTML =
       '<div class="meta-grid">'
-      + '<div><div class="meta-label">\u8282\u70b9\u540d\u79f0</div><div>' + enc(a.nodeName || getName(a.url)) + '</div></div>'
-      + '<div><div class="meta-label">\u65b9\u6cd5</div><div>' + (a.method || 'GET') + '</div></div>'
-      + '<div><div class="meta-label">\u72b6\u6001\u7801</div><div>' + (a.status || 'N/A') + '</div></div>'
-      + '<div><div class="meta-label">\u8017\u65f6</div><div>' + (a.duration || 0) + 'ms</div></div>'
-      + '<div style="grid-column:1/3"><div class="meta-label">URL</div><div style="word-break:break-all;font-size:10px">' + enc(a.url) + '</div></div>'
-      + '<div><div class="meta-label">\u65f6\u95f4</div><div>' + new Date(a.timestamp).toLocaleString() + '</div></div></div>'
-      + sec('\u8bf7\u6c42\u5934', a.headers, 'headers', idx)
-      + sec('\u8bf7\u6c42\u4f53', a.body, 'body', idx)
-      + sec('\u54cd\u5e94\u5934', a.responseHeaders, 'responseHeaders', idx)
-      + sec('\u54cd\u5e94\u4f53', a.response, 'response', idx);
+      + '<div><div class="meta-label">节点名称</div><div class="meta-value">' + enc(a.nodeName || getName(a.url)) + '</div></div>'
+      + '<div><div class="meta-label">方法</div><div class="meta-value">' + (a.method || 'GET') + '</div></div>'
+      + '<div><div class="meta-label">状态码</div><div class="meta-value"><span class="status-badge ' + (ok ? 'st-ok' : 'st-err') + '">' + (a.status || 'N/A') + '</span></div></div>'
+      + '<div><div class="meta-label">耗时</div><div class="meta-value">' + (a.duration || 0) + 'ms</div></div>'
+      + '<div class="meta-full"><div class="meta-label">URL</div><div class="meta-value" style="font-size:10px">' + enc(a.url) + '</div></div>'
+      + '<div><div class="meta-label">时间</div><div class="meta-value">' + new Date(a.timestamp).toLocaleString() + '</div></div></div>'
+      + sec('请求头', a.headers, 'headers', idx)
+      + sec('请求体', a.body, 'body', idx)
+      + sec('响应头', a.responseHeaders, 'responseHeaders', idx)
+      + sec('响应体', a.response, 'response', idx);
     el('detailBody').querySelectorAll('.cpy-btn').forEach(function(b) {
       b.addEventListener('click', function() {
         var f = this.getAttribute('data-f'), ix = parseInt(this.getAttribute('data-i'));
         var v = apis[ix] ? apis[ix][f] : '';
         if (v && typeof v === 'object') try { v = JSON.stringify(v, null, 2); } catch(e) {}
-        navigator.clipboard.writeText(String(v || '')).then(function() { b.textContent = '\u5df2\u590d\u5236'; setTimeout(function() { b.textContent = '\u590d\u5236'; }, 1000); });
+        navigator.clipboard.writeText(String(v || '')).then(function() { b.textContent = '已复制'; setTimeout(function() { b.textContent = '复制'; }, 1000); });
       });
     });
     openP('detail');
   }
 
   function sec(title, data, field, idx) {
-    return '<div class="section"><div class="section-hd">' + title + ' <button class="cpy-btn" data-f="' + field + '" data-i="' + idx + '">\u590d\u5236</button></div><pre>' + (fmt(data) || '(\u7a7a)') + '</pre></div>';
+    return '<div class="detail-section"><div class="detail-section-hd">' + title + ' <button class="cpy-btn" data-f="' + field + '" data-i="' + idx + '">复制</button></div><pre>' + (fmt(data) || '(空)') + '</pre></div>';
   }
 
   // ========== 调试器 ==========
@@ -192,14 +199,14 @@
   window.addDbgHeader = function(k, v) {
     var row = document.createElement('div');
     row.className = 'dbg-kv-row';
-    row.innerHTML = '<input placeholder="Header名" value="' + enc(k || '') + '"><input placeholder="Header值" value="' + enc(v || '') + '"><button onclick="this.parentElement.remove()">\u00d7</button>';
+    row.innerHTML = '<input placeholder="Header名" value="' + enc(k || '') + '"><input placeholder="Header值" value="' + enc(v || '') + '"><button class="dbg-kv-btn" onclick="this.parentElement.remove()">×</button>';
     el('dbgHeaders').appendChild(row);
   };
 
   window.sendDbgRequest = async function() {
     var url = el('dbgUrl').value.trim();
-    if (!url) { alert('\u8bf7\u8f93\u5165\u8bf7\u6c42\u5730\u5740'); return; }
-    el('dbgSend').disabled = true; el('dbgSend').textContent = '\u23f3 \u53d1\u9001\u4e2d...';
+    if (!url) { alert('请输入请求地址'); return; }
+    el('dbgSend').disabled = true; el('dbgSend').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg> 发送中...';
     try {
       var hdrs = {};
       el('dbgHeaders').querySelectorAll('.dbg-kv-row').forEach(function(r) {
@@ -217,19 +224,19 @@
       el('dbgDuration').textContent = dur + 'ms';
       el('dbgResponseBody').textContent = typeof rbody === 'string' ? rbody : JSON.stringify(rbody, null, 2);
       el('dbgResponse').classList.add('show');
-      el('dbgSend').textContent = '\u2714 \u6210\u529f';
+      el('dbgSend').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> 成功';
     } catch(e) {
-      el('dbgStatus').textContent = '\u274c \u8bf7\u6c42\u5931\u8d25'; el('dbgStatus').className = 'dbg-status err';
+      el('dbgStatus').textContent = '请求失败'; el('dbgStatus').className = 'dbg-status err';
       el('dbgResponseBody').textContent = e.message; el('dbgResponse').classList.add('show');
-      el('dbgSend').textContent = '\u274c \u5931\u8d25';
+      el('dbgSend').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> 失败';
     }
-    setTimeout(function() { el('dbgSend').textContent = '\u{1f680} \u53d1\u9001\u8bf7\u6c42'; el('dbgSend').disabled = false; }, 2000);
+    setTimeout(function() { el('dbgSend').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> 发送请求'; el('dbgSend').disabled = false; }, 2000);
   };
 
   // ========== OpenAPI 复制 ==========
   function copyOpenAPI(a) {
     var spec = buildOpenAPI(a);
-    navigator.clipboard.writeText(JSON.stringify(spec, null, 2)).then(function() { alert('OpenAPI JSON \u5df2\u590d\u5236\u5230\u526a\u8d34\u677f'); });
+    navigator.clipboard.writeText(JSON.stringify(spec, null, 2)).then(function() { alert('OpenAPI JSON 已复制到剪贴板'); });
   }
 
   function buildOpenAPI(a) {
@@ -247,7 +254,7 @@
     Object.keys(qp).forEach(function(k) { pathObj[method].parameters.push({ name: k, in: 'query', ...qp[k] }); });
     if (reqSchema) pathObj[method].requestBody = { required: true, content: { 'application/json': { schema: reqSchema, example: a.body } } };
     pathObj[method].responses[String(a.status || 200)] = { description: a.statusText || 'OK', content: { 'application/json': { schema: respSchema || { type: 'object' }, example: a.response } } };
-    return { openapi: '3.0.0', info: { title: 'API Documentation', version: '1.0.0', description: '\u81ea\u52a8\u5f55\u5236\u751f\u6210' }, servers: [{ url: url.origin }], paths: {} };
+    return { openapi: '3.0.0', info: { title: 'API Documentation', version: '1.0.0', description: '自动录制生成' }, servers: [{ url: url.origin }], paths: {} };
   }
 
   function inferSchema(data) {
@@ -263,7 +270,7 @@
   // ========== 生成文档 ==========
   function genDoc() {
     var selected = getChecked();
-    if (selected.length === 0) { alert('\u8bf7\u5148\u9009\u62e9\u8981\u751f\u6210\u6587\u6863\u7684\u63a5\u53e3'); return; }
+    if (selected.length === 0) { alert('请先选择要生成文档的接口'); return; }
     var grouped = {};
     selected.forEach(function(a) {
       try {
@@ -274,24 +281,24 @@
       } catch(e) {}
     });
     var docs = Object.values(grouped);
-    var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>API\u6587\u6863</title><style>'
-      + 'body{font-family:sans-serif;max-width:1200px;margin:0 auto;padding:20px;background:#f5f5f5}'
-      + '.h{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:30px;border-radius:12px;text-align:center;margin-bottom:20px}'
-      + '.card{background:#fff;border-radius:10px;margin-bottom:16px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08)}'
+    var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>API文档</title><style>'
+      + 'body{font-family:"Noto Sans SC",sans-serif;max-width:1200px;margin:0 auto;padding:20px;background:#F8FAFC}'
+      + '.h{background:linear-gradient(135deg,#1E293B,#334155);color:#fff;padding:30px;border-radius:12px;text-align:center;margin-bottom:20px}'
+      + '.card{background:#fff;border-radius:10px;margin-bottom:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08)}'
       + '.card-h{padding:16px;border-bottom:1px solid #eee;display:flex;align-items:center;gap:10px}'
       + '.m{padding:4px 10px;border-radius:4px;color:#fff;font-weight:700;font-size:12px}'
-      + '.m-GET{background:#67c23a}.m-POST{background:#409eff}.m-PUT{background:#e6a23c}.m-DELETE{background:#f56c6c}'
+      + '.m-GET{background:#16A34A}.m-POST{background:#2563EB}.m-PUT{background:#D97706}.m-DELETE{background:#DC2626}'
       + '.card-b{padding:16px}'
       + 'pre{background:#1e1e1e;color:#d4d4d4;padding:12px;border-radius:6px;overflow-x:auto;font-size:12px}'
       + '</style></head><body>'
-      + '<div class="h"><h1>\u{1f4da} API\u63a5\u53e3\u6587\u6863</h1><p>\u751f\u6210\u65f6\u95f4: ' + new Date().toLocaleString() + ' | \u63a5\u53e3\u6570\u91cf: ' + docs.length + '</p></div>';
+      + '<div class="h"><h1>API接口文档</h1><p>生成时间: ' + new Date().toLocaleString() + ' | 接口数量: ' + docs.length + '</p></div>';
     docs.forEach(function(d) {
       html += '<div class="card"><div class="card-h"><span class="m m-' + d.method + '">' + d.method + '</span><strong>' + d.path + '</strong><span style="color:#999;font-size:12px;margin-left:auto">' + d.baseUrl + '</span></div><div class="card-b">';
       d.examples.forEach(function(ex) {
         html += '<div style="margin-bottom:10px">';
-        if (ex.body) html += '<div style="margin-bottom:6px"><strong>\u8bf7\u6c42\u4f53:</strong><pre>' + esc(JSON.stringify(typeof ex.body === 'string' ? ex.body : ex.body, null, 2)) + '</pre></div>';
-        if (ex.response) html += '<div style="margin-bottom:6px"><strong>\u54cd\u5e94\u4f53:</strong><pre>' + esc(JSON.stringify(ex.response, null, 2)) + '</pre></div>';
-        if (ex.headers) html += '<div><strong>\u54cd\u5e94\u5934:</strong><pre>' + esc(JSON.stringify(ex.responseHeaders || ex.headers, null, 2)) + '</pre></div>';
+        if (ex.body) html += '<div style="margin-bottom:6px"><strong>请求体:</strong><pre>' + esc(JSON.stringify(typeof ex.body === 'string' ? ex.body : ex.body, null, 2)) + '</pre></div>';
+        if (ex.response) html += '<div style="margin-bottom:6px"><strong>响应体:</strong><pre>' + esc(JSON.stringify(ex.response, null, 2)) + '</pre></div>';
+        if (ex.headers) html += '<div><strong>响应头:</strong><pre>' + esc(JSON.stringify(ex.responseHeaders || ex.headers, null, 2)) + '</pre></div>';
         html += '</div>';
       });
       html += '</div></div>';
@@ -318,21 +325,21 @@
     settings.idMode = el('cfgMode').value;
     settings.idStep = parseInt(el('cfgStep').value) || 1;
     chrome.storage.local.set({ settings: settings });
-    alert('\u8bbe\u7f6e\u5df2\u4fdd\u5b58'); closeP('settings'); render();
+    alert('设置已保存'); closeP('settings'); render();
   }
 
   // ========== 推送 ==========
   function openPush() {
     var c = getChecked();
-    if (!c.length) { alert('\u8bf7\u52fe\u9009\u63a5\u53e3'); return; }
-    el('pushName').value = '\u5f55\u5236\u63a5\u53e3-' + new Date().toLocaleDateString();
+    if (!c.length) { alert('请勾选接口'); return; }
+    el('pushName').value = '录制接口-' + new Date().toLocaleDateString();
     el('pushDialog').classList.add('open');
   }
   function doPush() {
     var name = el('pushName').value.trim();
-    if (!name) { alert('\u8bf7\u8f93\u5165\u94fe\u8def\u540d\u79f0'); return; }
+    if (!name) { alert('请输入链路名称'); return; }
     var mode = el('pushMode').value, code = el('pushCode').value.trim(), list = getChecked();
-    if (mode === 'append' && !code) { alert('\u8bf7\u8f93\u5165\u94fe\u8def\u7f16\u7801'); return; }
+    if (mode === 'append' && !code) { alert('请输入链路编码'); return; }
     var ifList = list.map(function(a, i) { return { nodeName: a.nodeName || getName(a.url), method: a.method || 'GET', url: a.url, headers: a.headers ? JSON.stringify(a.headers) : '', bodyData: a.body || '', responseData: typeof a.response === 'string' ? a.response : JSON.stringify(a.response || ''), sort: i + 1, parallelGroup: '' }; });
     var url = (settings.platformUrl || 'http://localhost:8080') + '/api/plugin/chain/' + (mode === 'create' ? 'create' : 'append');
     var body = mode === 'create' ? JSON.stringify({ chainName: name, interfaceList: ifList }) : JSON.stringify({ chainCode: code, interfaceList: ifList });
@@ -340,21 +347,20 @@
       if (d.code === 200) {
         var code = d.data.chainCode || code;
         el('pushDialog').classList.remove('open');
-        // 跳转到平台查看
         var platformUrl = (settings.frontendUrl || 'http://localhost:3000') + '/chain/edit/' + code;
-        if (confirm('\u63a8\u9001\u6210\u529f\uff01\u94fe\u8def\u7f16\u7801: ' + code + '\n\n\u662f\u5426\u8df3\u8f6c\u5230\u5e73\u53f0\u67e5\u770b\uff1f')) {
+        if (confirm('推送成功！链路编码: ' + code + '\n\n是否跳转到平台查看？')) {
           window.open(platformUrl, '_blank');
         }
       }
-      else alert('\u5931\u8d25: ' + (d.message || ''));
-    }).catch(function(e) { alert('\u5931\u8d25: ' + e.message); });
+      else alert('失败: ' + (d.message || ''));
+    }).catch(function(e) { alert('失败: ' + e.message); });
   }
 
   // ========== 导出 ==========
   function doExport() {
     var list = getChecked();
-    if (!list.length) { alert('\u8bf7\u52fe\u9009\u63a5\u53e3'); return; }
-    var data = { chainName: '\u5f55\u5236\u63a5\u53e3-' + new Date().toLocaleDateString(), interfaceList: list.map(function(a, i) { return { nodeName: a.nodeName || getName(a.url), method: a.method || 'GET', url: a.url, headers: a.headers ? JSON.stringify(a.headers) : '', bodyData: a.body || '', responseData: typeof a.response === 'string' ? a.response : JSON.stringify(a.response || ''), sort: i + 1, parallelGroup: '' }; }) };
+    if (!list.length) { alert('请勾选接口'); return; }
+    var data = { chainName: '录制接口-' + new Date().toLocaleDateString(), interfaceList: list.map(function(a, i) { return { nodeName: a.nodeName || getName(a.url), method: a.method || 'GET', url: a.url, headers: a.headers ? JSON.stringify(a.headers) : '', bodyData: a.body || '', responseData: typeof a.response === 'string' ? a.response : JSON.stringify(a.response || ''), sort: i + 1, parallelGroup: '' }; }) };
     var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     var u = URL.createObjectURL(blob); var a = document.createElement('a'); a.href = u; a.download = 'apis-' + Date.now() + '.json'; a.click(); URL.revokeObjectURL(u);
   }
