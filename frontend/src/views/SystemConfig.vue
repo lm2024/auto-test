@@ -39,9 +39,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import axios from 'axios'
+import api from '../api/index.js'
 
-const API = 'http://localhost:8080/api/config'
+const API = '/config'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -62,8 +62,8 @@ onMounted(() => {
 const loadConfig = async () => {
   loading.value = true
   try {
-    const res = await axios.get(`${API}/all`)
-    const map = res.data.data || {}
+    const res = await api.get(`${API}/all`)
+    const map = res.data || {}
     if (map['ai.baseUrl']) config.value.aiBaseUrl = map['ai.baseUrl']
     if (map['ai.apiKey']) config.value.aiApiKey = map['ai.apiKey']
     if (map['ai.model']) config.value.aiModel = map['ai.model']
@@ -88,7 +88,7 @@ const saveConfig = async () => {
       'idGenerate.mode': config.value.idGenerateMode || 'AUTO_INCREMENT',
       'idGenerate.step': String(config.value.idStep || 1)
     }
-    await axios.post(`${API}/save`, params)
+    await api.post(`${API}/save`, params)
     ElMessage.success('配置已保存')
   } catch (e) {
     ElMessage.error('保存失败: ' + (e.response?.data?.message || e.message))

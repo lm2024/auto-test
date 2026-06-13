@@ -96,3 +96,15 @@ CREATE TABLE IF NOT EXISTS test_node_execute_log (
     INDEX idx_node_code (node_code),
     INDEX idx_execution_node (execution_id, node_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='节点明细日志表';
+
+-- 系统配置表
+CREATE TABLE IF NOT EXISTS sys_config (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+    config_key VARCHAR(255) NOT NULL COMMENT '配置键',
+    config_value LONGTEXT COMMENT '配置值',
+    config_desc VARCHAR(512) COMMENT '配置描述',
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_config_key (config_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统配置表';

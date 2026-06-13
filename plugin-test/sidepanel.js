@@ -262,9 +262,10 @@
 
   // ========== 生成文档 ==========
   function genDoc() {
-    if (apis.length === 0) { alert('\u6ca1\u6709\u8bf7\u6c42\u8bb0\u5f55'); return; }
+    var selected = getChecked();
+    if (selected.length === 0) { alert('\u8bf7\u5148\u9009\u62e9\u8981\u751f\u6210\u6587\u6863\u7684\u63a5\u53e3'); return; }
     var grouped = {};
-    apis.forEach(function(a) {
+    selected.forEach(function(a) {
       try {
         var url = new URL(a.url), path = url.pathname, method = a.method || 'GET';
         var key = method + ' ' + path;
