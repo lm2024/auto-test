@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.autotest.mapper.TestNodeExecuteLogMapper">
+
+    <resultMap id="BaseResultMap" type="com.autotest.model.entity.TestNodeExecuteLog">
+        <id column="id" property="id"/>
+        <result column="execution_id" property="executionId"/>
+        <result column="node_code" property="nodeCode"/>
+        <result column="node_name" property="nodeName"/>
+        <result column="status" property="status"/>
+        <result column="request_url" property="requestUrl"/>
+        <result column="request_method" property="requestMethod"/>
+        <result column="request_headers" property="requestHeaders"/>
+        <result column="request_body" property="requestBody"/>
+        <result column="response_code" property="responseCode"/>
+        <result column="response_headers" property="responseHeaders"/>
+        <result column="response_body" property="responseBody"/>
+        <result column="cost_ms" property="costMs"/>
+        <result column="error_message" property="errorMessage"/>
+        <result column="extracted_vars" property="extractedVars"/>
+        <result column="start_time" property="startTime"/>
+        <result column="end_time" property="endTime"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <insert id="batchInsert">
+        INSERT INTO test_node_execute_log (execution_id, node_code, node_name, status,
+            request_url, request_method, request_headers, request_body,
+            response_code, response_headers, response_body,
+            cost_ms, error_message, extracted_vars, start_time, end_time)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.executionId}, #{item.nodeCode}, #{item.nodeName}, #{item.status},
+             #{item.requestUrl}, #{item.requestMethod}, #{item.requestHeaders}, #{item.requestBody},
+             #{item.responseCode}, #{item.responseHeaders}, #{item.responseBody},
+             #{item.costMs}, #{item.errorMessage}, #{item.extractedVars}, #{item.startTime}, #{item.endTime})
+        </foreach>
+    </insert>
+
+    <select id="selectByExecutionId" resultMap="BaseResultMap">
+        SELECT * FROM test_node_execute_log WHERE execution_id = #{executionId} ORDER BY start_time ASC
+    </select>
+
+    <select id="selectByExecutionAndNode" resultMap="BaseResultMap">
+        SELECT * FROM test_node_execute_log
+        WHERE execution_id = #{executionId} AND node_code = #{nodeCode}
+        ORDER BY start_time DESC LIMIT 1
+    </select>
+</mapper>
