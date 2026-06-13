@@ -15,6 +15,7 @@ com/autotest/model/dto/ChainEditDTO.class
 com/autotest/model/entity/TestChain.class
 com/autotest/service/impl/NodeConfigServiceImpl.class
 com/autotest/model/entity/TestNodeConfig.class
+com/autotest/controller/ConfigController.class
 com/autotest/service/impl/ExecuteServiceImpl.class
 com/autotest/controller/LogController.class
 com/autotest/model/dto/PluginChainAppendDTO.class
@@ -55,6 +56,8 @@ com/autotest/service/impl/ChainServiceImpl.class
 com/autotest/model/dto/ChainCreateDTO.class
 com/autotest/engine/plan/ExecutionGroup.class
 com/autotest/engine/plan/ExecutionPlan.class
+com/autotest/mapper/SysConfigMapper.class
+com/autotest/model/entity/SysConfig.class
 com/autotest/mapper/TestNodeConfigMapper.class
 com/autotest/model/dto/PluginInterfaceDTO.class
 com/autotest/service/impl/ChainServiceImpl$1.class

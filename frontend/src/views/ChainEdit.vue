@@ -96,6 +96,10 @@
               <el-icon><Document /></el-icon>
               <span>文件上传</span>
             </div>
+            <div v-if="node.bodyData" class="node-card-data">
+              <el-icon><Document /></el-icon>
+              <span>已填充测试数据</span>
+            </div>
           </div>
           <div v-if="index < sortedNodes.length - 1" class="connection-arrow">
             <div class="arrow-line"></div>
@@ -252,24 +256,118 @@
 
             <el-tab-pane label="提取规则" name="extract">
               <div class="config-section">
-                <div class="config-label">变量提取</div>
-                <el-input v-model="selectedNode.extractRules" type="textarea" :rows="10"
-                  placeholder='{"rules":[{"varName":"userId","jsonPath":"$.data.id"}]}' class="code-editor" />
-                <div class="config-hint-box">
+                <div class="config-label">从响应中提取变量</div>
+                <div class="config-hint-box" style="margin-bottom:14px">
                   <el-icon><InfoFilled /></el-icon>
-                  <span>使用 JSONPath 从响应中提取变量，供后续节点引用</span>
+                  <span>提取响应数据保存为变量，供后续节点使用（如：提取 token、用户ID 等）</span>
                 </div>
+                <div v-for="(rule, idx) in extractRuleList" :key="idx" class="rule-row">
+                  <div class="rule-row-header">
+                    <span class="rule-index">#{{ idx + 1 }}</span>
+                    <el-button text type="danger" size="small" @click="removeExtractRule(idx)" :icon="Delete" />
+                  </div>
+                  <div class="rule-fields">
+                    <div class="rule-field">
+                      <div class="rule-field-label">变量名称</div>
+                      <el-input v-model="rule.varName" size="small" placeholder="例如: token, userId" clearable />
+                    </div>
+                    <div class="rule-field">
+                      <div class="rule-field-label">提取路径</div>
+                      <el-input v-model="rule.jsonPath" size="small" placeholder="例如: $.data.token" clearable />
+                    </div>
+                  </div>
+                  <div class="rule-field">
+                    <div class="rule-field-label">路径说明</div>
+                    <div class="path-examples">
+                      <el-tag size="small" type="info" @click="rule.jsonPath = '$.data.id'">$.data.id</el-tag>
+                      <el-tag size="small" type="info" @click="rule.jsonPath = '$.data.token'">$.data.token</el-tag>
+                      <el-tag size="small" type="info" @click="rule.jsonPath = '$.data.items[0].name'">$.data.items[0].name</el-tag>
+                      <el-tag size="small" type="info" @click="rule.jsonPath = '$.data.list.length'">$.data.list.length</el-tag>
+                    </div>
+                  </div>
+                </div>
+                <el-button type="primary" plain size="small" @click="addExtractRule" :icon="Plus" style="width:100%;margin-top:8px">
+                  添加提取规则
+                </el-button>
               </div>
             </el-tab-pane>
 
             <el-tab-pane label="断言规则" name="assert">
               <div class="config-section">
-                <div class="config-label">断言条件</div>
-                <el-input v-model="selectedNode.assertRules" type="textarea" :rows="10"
-                  placeholder='{"statusCode":200,"body":{"$.code":200}}' class="code-editor" />
-                <div class="config-hint-box">
+                <div class="config-label">验证响应结果</div>
+                <div class="config-hint-box" style="margin-bottom:14px">
                   <el-icon><InfoFilled /></el-icon>
-                  <span>验证响应码或响应体中的字段值</span>
+                  <span>设置验证条件，执行后自动检查是否符合预期</span>
+                </div>
+
+                <div class="assert-group">
+                  <div class="assert-group-title">
+                    <el-icon><Monitor /></el-icon>
+                    <span>状态码检查</span>
+                  </div>
+                  <div class="rule-fields">
+                    <div class="rule-field" style="flex:0 0 120px">
+                      <el-select v-model="assertStatusMode" size="small" style="width:100%">
+                        <el-option label="等于" value="eq" />
+                        <el-option label="不等于" value="ne" />
+                        <el-option label="在范围内" value="in" />
+                      </el-select>
+                    </div>
+                    <div class="rule-field">
+                      <el-input v-model="assertStatusCode" size="small" placeholder="例如: 200" clearable />
+                    </div>
+                  </div>
+                  <div class="path-examples">
+                    <el-tag size="small" type="info" @click="assertStatusCode='200'">200 成功</el-tag>
+                    <el-tag size="small" type="info" @click="assertStatusCode='201'">201 创建</el-tag>
+                    <el-tag size="small" type="info" @click="assertStatusCode='400'">400 参数错误</el-tag>
+                    <el-tag size="small" type="info" @click="assertStatusCode='401'">401 未授权</el-tag>
+                    <el-tag size="small" type="info" @click="assertStatusCode='404'">404 不存在</el-tag>
+                    <el-tag size="small" type="info" @click="assertStatusCode='500'">500 服务器错误</el-tag>
+                  </div>
+                </div>
+
+                <div class="assert-group">
+                  <div class="assert-group-title">
+                    <el-icon><DataLine /></el-icon>
+                    <span>响应体字段检查</span>
+                  </div>
+                  <div v-for="(rule, idx) in assertBodyRules" :key="idx" class="rule-row">
+                    <div class="rule-row-header">
+                      <span class="rule-index">#{{ idx + 1 }}</span>
+                      <el-button text type="danger" size="small" @click="removeAssertBodyRule(idx)" :icon="Delete" />
+                    </div>
+                    <div class="rule-fields">
+                      <div class="rule-field">
+                        <div class="rule-field-label">字段路径</div>
+                        <el-input v-model="rule.path" size="small" placeholder="例如: $.data.code" clearable />
+                      </div>
+                      <div class="rule-field" style="flex:0 0 100px">
+                        <div class="rule-field-label">比较方式</div>
+                        <el-select v-model="rule.operator" size="small" style="width:100%">
+                          <el-option label="等于" value="eq" />
+                          <el-option label="不等于" value="ne" />
+                          <el-option label="包含" value="contains" />
+                          <el-option label="大于" value="gt" />
+                          <el-option label="小于" value="lt" />
+                          <el-option label="不为空" value="notNull" />
+                        </el-select>
+                      </div>
+                      <div class="rule-field">
+                        <div class="rule-field-label">期望值</div>
+                        <el-input v-model="rule.expected" size="small" placeholder="期望值" clearable :disabled="rule.operator === 'notNull'" />
+                      </div>
+                    </div>
+                    <div class="path-examples">
+                      <el-tag size="small" type="info" @click="rule.path='$.code'">$.code 状态码</el-tag>
+                      <el-tag size="small" type="info" @click="rule.path='$.message'">$.message 消息</el-tag>
+                      <el-tag size="small" type="info" @click="rule.path='$.data.id'">$.data.id 数据ID</el-tag>
+                      <el-tag size="small" type="info" @click="rule.path='$.data.list.length'">$.data.list.length 列表长度</el-tag>
+                    </div>
+                  </div>
+                  <el-button type="primary" plain size="small" @click="addAssertBodyRule" :icon="Plus" style="width:100%;margin-top:8px">
+                    添加字段检查
+                  </el-button>
                 </div>
               </div>
             </el-tab-pane>
@@ -382,7 +480,7 @@ import { ElMessage } from 'element-plus'
 import {
   ArrowLeft, RefreshLeft, RefreshRight, Grid, MagicStick, CaretRight, Check,
   Connection, Box, Upload, List, Document, Setting, Close, Delete, Plus,
-  UploadFilled, InfoFilled, Bottom, QuestionFilled, Rank, Top
+  UploadFilled, InfoFilled, Bottom, QuestionFilled, Rank, Top, Monitor, DataLine
 } from '@element-plus/icons-vue'
 import api from '../api'
 
@@ -410,6 +508,11 @@ const curlCommand = ref('')
 const pasteJson = ref('')
 const jsonUploadRef = ref(null)
 const fileUploadRef = ref(null)
+
+const extractRuleList = ref([])
+const assertStatusMode = ref('eq')
+const assertStatusCode = ref('')
+const assertBodyRules = ref([])
 
 const sortedNodes = computed(() => {
   return [...nodes.value].sort((a, b) => (a.sortNo || 0) - (b.sortNo || 0))
@@ -540,6 +643,82 @@ const selectNode = (node) => {
     n._uploadedFile = { fileId: n.bodyData, fileName: '已上传文件' }
   }
   selectedNode.value = n
+  parseExtractRules()
+  parseAssertRules()
+}
+
+const parseExtractRules = () => {
+  try {
+    const raw = selectedNode.value?.extractRules
+    if (!raw) { extractRuleList.value = []; return }
+    const obj = JSON.parse(raw)
+    const rules = obj.rules || []
+    extractRuleList.value = rules.map(r => ({ varName: r.varName || '', jsonPath: r.jsonPath || '' }))
+  } catch { extractRuleList.value = [] }
+}
+
+const parseAssertRules = () => {
+  try {
+    const raw = selectedNode.value?.assertRules
+    if (!raw) { assertStatusCode.value = ''; assertStatusMode.value = 'eq'; assertBodyRules.value = []; return }
+    const obj = JSON.parse(raw)
+    if (obj.statusCode !== undefined && obj.statusCode !== null && obj.statusCode !== '') {
+      assertStatusCode.value = String(obj.statusCode)
+      assertStatusMode.value = 'eq'
+    } else {
+      assertStatusCode.value = ''
+      assertStatusMode.value = 'eq'
+    }
+    const bodyRules = obj.body || {}
+    assertBodyRules.value = Object.entries(bodyRules).map(([path, expected]) => ({
+      path, operator: 'eq', expected: String(expected)
+    }))
+  } catch { assertStatusCode.value = ''; assertBodyRules.value = [] }
+}
+
+const syncExtractRules = () => {
+  if (!selectedNode.value) return
+  const rules = extractRuleList.value.filter(r => r.varName && r.jsonPath)
+  selectedNode.value.extractRules = rules.length > 0 ? JSON.stringify({ rules }) : ''
+}
+
+const syncAssertRules = () => {
+  if (!selectedNode.value) return
+  const obj = {}
+  if (assertStatusCode.value !== '' && assertStatusCode.value !== null) {
+    obj.statusCode = parseInt(assertStatusCode.value) || assertStatusCode.value
+  }
+  const bodyRules = {}
+  assertBodyRules.value.forEach(r => {
+    if (r.path) {
+      if (r.operator === 'notNull') {
+        bodyRules[r.path] = '__NOT_NULL__'
+      } else {
+        const val = r.expected
+        bodyRules[r.path] = isNaN(val) ? val : Number(val)
+      }
+    }
+  })
+  if (Object.keys(bodyRules).length > 0) obj.body = bodyRules
+  selectedNode.value.assertRules = Object.keys(obj).length > 0 ? JSON.stringify(obj) : ''
+}
+
+const addExtractRule = () => {
+  extractRuleList.value.push({ varName: '', jsonPath: '' })
+}
+
+const removeExtractRule = (idx) => {
+  extractRuleList.value.splice(idx, 1)
+  syncExtractRules()
+}
+
+const addAssertBodyRule = () => {
+  assertBodyRules.value.push({ path: '', operator: 'eq', expected: '' })
+}
+
+const removeAssertBodyRule = (idx) => {
+  assertBodyRules.value.splice(idx, 1)
+  syncAssertRules()
 }
 
 const methodType = (m) => {
@@ -599,6 +778,8 @@ const removeUploadedFile = () => {
 }
 
 const saveNode = async () => {
+  syncExtractRules()
+  syncAssertRules()
   const data = { ...selectedNode.value }
   delete data._uploadedFile
   await api.post('/node/edit', data)
@@ -850,12 +1031,20 @@ const generateTestData = async () => {
   try {
     const res = await api.post('/ai/data/generate', { chainCode, idGenerateMode: 'AUTO_INCREMENT', idStep: 1 })
     const nodeData = res.data.nodeData
+    const message = res.data.message || '测试数据生成成功'
+    let updatedCount = 0
     for (const node of nodes.value) {
       if (nodeData[node.nodeCode] && nodeData[node.nodeCode].bodyData) {
         node.bodyData = nodeData[node.nodeCode].bodyData
+        updatedCount++
       }
     }
-    ElMessage.success('测试数据生成成功')
+    if (updatedCount > 0) {
+      await saveAll()
+      ElMessage.success(`${message}，已写入 ${updatedCount} 个节点的请求体，请在右侧「请求配置」中查看`)
+    } else {
+      ElMessage.warning('未生成到有效数据，请检查节点是否配置了请求URL')
+    }
   } catch (e) {
     ElMessage.error('AI生成失败: ' + (e.message || '未知错误'))
   } finally {
@@ -1011,6 +1200,11 @@ onMounted(loadNodes)
   border-radius: 6px; display: flex; align-items: center; gap: 6px;
   font-size: 12px; color: #909399;
 }
+.node-card-data {
+  margin-top: 8px; padding: 6px 10px; background: #f0f9eb;
+  border-radius: 6px; display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: #67c23a; border: 1px solid #e1f3d8;
+}
 
 .connection-arrow {
   display: flex;
@@ -1093,6 +1287,33 @@ onMounted(loadNodes)
   display: flex; align-items: flex-start; gap: 6px;
   padding: 8px 12px; background: #f5f7fa; border-radius: 6px;
   font-size: 12px; color: #909399; margin-top: 8px; line-height: 1.5;
+}
+
+.rule-row {
+  background: #fafafa; border: 1px solid #e8e8e8; border-radius: 8px;
+  padding: 12px; margin-bottom: 10px;
+}
+.rule-row-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+}
+.rule-index {
+  font-size: 12px; font-weight: 600; color: #409eff; background: #ecf5ff;
+  padding: 2px 8px; border-radius: 10px;
+}
+.rule-fields { display: flex; gap: 10px; }
+.rule-field { flex: 1; min-width: 0; }
+.rule-field-label { font-size: 12px; color: #909399; margin-bottom: 4px; }
+.path-examples { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.path-examples .el-tag { cursor: pointer; }
+.path-examples .el-tag:hover { opacity: 0.8; }
+
+.assert-group {
+  background: #fafafa; border: 1px solid #e8e8e8; border-radius: 8px;
+  padding: 14px; margin-bottom: 14px;
+}
+.assert-group-title {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 500; color: #303133; margin-bottom: 10px;
 }
 
 .panel-footer {

@@ -1,3 +1,4 @@
+/Users/lm/Documents/GitHub/auto-test/backend/src/main/java/com/autotest/mapper/SysConfigMapper.java
 /Users/lm/Documents/GitHub/auto-test/backend/src/main/java/com/autotest/mapper/TestNodeExecuteLogMapper.java
 /Users/lm/Documents/GitHub/auto-test/backend/src/main/java/com/autotest/service/impl/NodeConfigServiceImpl.java
 /Users/lm/Documents/GitHub/auto-test/backend/src/main/java/com/autotest/model/dto/PluginChainAppendDTO.java
@@ -7,6 +8,7 @@
 /Users/lm/Documents/GitHub/auto-test/backend/src/main/java/com/autotest/mapper/TestChainMapper.java
 /Users/lm/Documents/GitHub/auto-test/backend/src/main/java/com/autotest/model/dto/NodeCreateDTO.java
 /Users/lm/Documents/GitHub/auto-test/backend/src/main/java/com/autotest/model/vo/ChainVO.java
+/Users/lm/Documents/GitHub/auto-test/backend/src/main/java/com/autotest/controller/ConfigController.java
 /Users/lm/Documents/GitHub/auto-test/backend/src/main/java/com/autotest/model/vo/ExecuteMainVO.java
 /Users/lm/Documents/GitHub/auto-test/backend/src/main/java/com/autotest/mapper/TestExecuteMainMapper.java
 /Users/lm/Documents/GitHub/auto-test/backend/src/main/java/com/autotest/controller/NodeConfigController.java
@@ -33,6 +35,7 @@
 /Users/lm/Documents/GitHub/auto-test/backend/src/main/java/com/autotest/model/dto/PluginInterfaceDTO.java
 /Users/lm/Documents/GitHub/auto-test/backend/src/main/java/com/autotest/model/entity/TestNodeExecuteLog.java
 /Users/lm/Documents/GitHub/auto-test/backend/src/main/java/com/autotest/exception/GlobalExceptionHandler.java
+/Users/lm/Documents/GitHub/auto-test/backend/src/main/java/com/autotest/model/entity/SysConfig.java
 /Users/lm/Documents/GitHub/auto-test/backend/src/main/java/com/autotest/mapper/TestNodeConfigMapper.java
 /Users/lm/Documents/GitHub/auto-test/backend/src/main/java/com/autotest/exception/BusinessException.java
 /Users/lm/Documents/GitHub/auto-test/backend/src/main/java/com/autotest/controller/UploadController.java

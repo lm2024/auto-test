@@ -55,15 +55,46 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="aiVisible" title="AI分析结果" width="600px">
-      <div v-if="aiResult">
-        <div class="section-title">根因定位</div>
-        <el-input :model-value="aiResult.rootCause" type="textarea" :rows="3" readonly />
-        <div class="section-title">排查步骤</div>
-        <el-input :model-value="aiResult.troubleshootingSteps" type="textarea" :rows="4" readonly />
-        <div class="section-title">修复方案</div>
-        <el-input :model-value="aiResult.fixSuggestion" type="textarea" :rows="3" readonly />
-        <el-button size="small" style="margin-top:10px" @click="copyText(JSON.stringify(aiResult, null, 2))">复制全部</el-button>
+    <el-dialog v-model="aiVisible" title="AI分析结果" width="650px" :close-on-click-modal="false">
+      <div v-if="aiLoading" class="ai-loading">
+        <el-icon class="loading-icon"><Loading /></el-icon>
+        <span>正在分析失败原因...</span>
+      </div>
+      <div v-else-if="aiResult">
+        <div class="source-badge" :class="aiResult.source === 'AI智能分析' ? 'source-ai' : 'source-rule'">
+          <el-icon v-if="aiResult.source === 'AI智能分析'"><MagicStick /></el-icon>
+          <el-icon v-else><Monitor /></el-icon>
+          <span>{{ aiResult.source || '规则分析' }}</span>
+          <span v-if="aiResult.source !== 'AI智能分析'" class="source-hint">（AI模型未配置，基于规则自动分析）</span>
+        </div>
+        <div class="analysis-section">
+          <div class="analysis-label">
+            <el-icon class="label-icon error"><WarningFilled /></el-icon>
+            根因定位
+          </div>
+          <div class="analysis-content">{{ aiResult.rootCause }}</div>
+        </div>
+        <div class="analysis-section">
+          <div class="analysis-label">
+            <el-icon class="label-icon info"><InfoFilled /></el-icon>
+            排查步骤
+          </div>
+          <div class="analysis-content">{{ aiResult.troubleshootingSteps }}</div>
+        </div>
+        <div class="analysis-section">
+          <div class="analysis-label">
+            <el-icon class="label-icon success"><CircleCheckFilled /></el-icon>
+            修复方案
+          </div>
+          <div class="analysis-content">{{ aiResult.fixSuggestion }}</div>
+        </div>
+        <div class="analysis-footer">
+          <el-button size="small" @click="copyText(JSON.stringify(aiResult, null, 2))" :icon="DocumentCopy">复制全部</el-button>
+        </div>
+      </div>
+      <div v-else class="ai-empty">
+        <el-icon><WarningFilled /></el-icon>
+        <span>分析失败，请稍后重试</span>
       </div>
     </el-dialog>
   </div>
@@ -73,6 +104,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { Loading, WarningFilled, InfoFilled, CircleCheckFilled, DocumentCopy, MagicStick, Monitor } from '@element-plus/icons-vue'
 import api from '../api'
 
 const route = useRoute()
@@ -84,6 +116,7 @@ const detailVisible = ref(false)
 const currentLog = ref(null)
 const aiVisible = ref(false)
 const aiResult = ref(null)
+const aiLoading = ref(false)
 let ws = null
 
 const loadData = async () => {
@@ -119,12 +152,15 @@ const showDetail = (log) => {
 
 const analyzeFailure = async (log) => {
   aiResult.value = null
+  aiLoading.value = true
   aiVisible.value = true
   try {
     const res = await api.post('/ai/failure/analyze', { executionId, nodeCode: log.nodeCode })
     aiResult.value = res.data
   } catch (e) {
-    ElMessage.error('AI分析失败')
+    ElMessage.error('分析失败: ' + (e.response?.data?.message || e.message))
+  } finally {
+    aiLoading.value = false
   }
 }
 
@@ -157,4 +193,25 @@ onUnmounted(() => { if (ws) ws.close() })
 .log-error { color: #f56c6c; }
 .log-actions { display: flex; gap: 8px; }
 .section-title { font-weight: bold; margin: 15px 0 8px; }
+.ai-loading { display: flex; flex-direction: column; align-items: center; padding: 40px; color: #909399; }
+.loading-icon { font-size: 36px; color: #409eff; margin-bottom: 12px; animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.analysis-section { margin-bottom: 16px; }
+.analysis-label { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 14px; margin-bottom: 8px; color: #303133; }
+.label-icon { font-size: 16px; }
+.label-icon.error { color: #f56c6c; }
+.label-icon.info { color: #409eff; }
+.label-icon.success { color: #67c23a; }
+.analysis-content { padding: 12px; background: #f5f7fa; border-radius: 8px; font-size: 13px; color: #606266; line-height: 1.8; white-space: pre-wrap; word-break: break-all; }
+.analysis-footer { padding-top: 12px; border-top: 1px solid #ebeef5; display: flex; justify-content: flex-end; }
+.ai-empty { display: flex; flex-direction: column; align-items: center; padding: 40px; color: #909399; }
+.ai-empty .el-icon { font-size: 36px; margin-bottom: 12px; color: #e6a23c; }
+.source-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
+  margin-bottom: 16px;
+}
+.source-ai { background: #ecf5ff; color: #409eff; border: 1px solid #b3d8ff; }
+.source-rule { background: #fdf6ec; color: #e6a23c; border: 1px solid #f5dab1; }
+.source-hint { font-weight: 400; font-size: 12px; color: #909399; }
 </style>

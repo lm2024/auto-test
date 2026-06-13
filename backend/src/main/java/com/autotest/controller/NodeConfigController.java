@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -53,7 +55,21 @@ public class NodeConfigController {
     @PostMapping("/import")
     public Result<?> importNodes(@RequestBody Map<String, Object> params) {
         String chainCode = (String) params.get("chainCode");
-        List<PluginInterfaceDTO> interfaces = (List<PluginInterfaceDTO>) params.get("interfaces");
+        List<Map<String, Object>> rawList = (List<Map<String, Object>>) params.get("interfaces");
+        List<PluginInterfaceDTO> interfaces = new ArrayList<>();
+        if (rawList != null) {
+            for (Map<String, Object> item : rawList) {
+                PluginInterfaceDTO dto = new PluginInterfaceDTO();
+                dto.setNodeName((String) item.get("nodeName"));
+                dto.setMethod((String) item.get("method"));
+                dto.setUrl((String) item.get("url"));
+                dto.setHeaders((String) item.get("headers"));
+                dto.setBodyData((String) item.get("bodyData"));
+                dto.setSort(item.get("sort") != null ? ((Number) item.get("sort")).intValue() : null);
+                dto.setParallelGroup((String) item.get("parallelGroup"));
+                interfaces.add(dto);
+            }
+        }
         Map<String, Object> result = nodeConfigService.importNodes(chainCode, interfaces);
         return Result.success(result);
     }
