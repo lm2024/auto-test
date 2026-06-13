@@ -1,9 +1,17 @@
 let isRecording = false;
 const debuggerTabs = new Set();
 const pendingReqs = {};
+let currentSettings = {};
 
-chrome.storage.local.get(['isRecording'], (r) => {
+chrome.storage.local.get(['isRecording', 'settings'], (r) => {
   isRecording = r.isRecording || false;
+  currentSettings = r.settings || {};
+});
+
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes.settings && changes.settings.newValue) {
+    currentSettings = changes.settings.newValue;
+  }
 });
 
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
@@ -91,7 +99,46 @@ chrome.tabs.onRemoved.addListener((id) => debuggerTabs.delete(id));
 // ========== 工具函数 ==========
 function shouldCapture(url) {
   if (!url) return false;
-  return !/^(chrome-extension|chrome|edge|about|data|blob|file):/.test(url);
+  // 1. 基础协议过滤
+  if (/^(chrome-extension|chrome|edge|about|data|blob|file):/.test(url)) return false;
+  // 2. 读取缓存的过滤设置
+  const s = currentSettings || {};
+  const mode = s.filterMode || 'off';
+  if (mode === 'off') return true;
+  const kwText = (s.ignoreKeywords || '').trim();
+  const domText = (s.ignoreDomains || '').trim();
+  if (!kwText && !domText) return true;
+  const kwList = kwText.split('\n').map(l => l.trim()).filter(Boolean);
+  const domList = domText.split('\n').map(l => l.trim()).filter(Boolean);
+  const hasRule = kwList.length > 0 || domList.length > 0;
+  if (!hasRule) return true;
+  // 忽略模式：匹配关键词或域名 → 不录制
+  if (mode === 'ignore') {
+    for (let i = 0; i < kwList.length; i++) {
+      if (url.indexOf(kwList[i]) !== -1) return false;
+    }
+    try {
+      const u = new URL(url);
+      for (let j = 0; j < domList.length; j++) {
+        if (u.hostname === domList[j] || u.hostname.endsWith('.' + domList[j])) return false;
+      }
+    } catch(e) {}
+    return true;
+  }
+  // 白名单模式：匹配关键词或域名 → 才录制
+  if (mode === 'whitelist') {
+    for (let k = 0; k < kwList.length; k++) {
+      if (url.indexOf(kwList[k]) !== -1) return true;
+    }
+    try {
+      const u2 = new URL(url);
+      for (let m = 0; m < domList.length; m++) {
+        if (u2.hostname === domList[m] || u2.hostname.endsWith('.' + domList[m])) return true;
+      }
+    } catch(e) {}
+    return false;
+  }
+  return true;
 }
 
 function getType(u) {
@@ -117,6 +164,10 @@ function saveApi(data) {
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === 'START_RECORDING') {
     isRecording = true;
+    // 启动录制时加载最新设置
+    chrome.storage.local.get(['settings'], (r) => {
+      currentSettings = r.settings || {};
+    });
     chrome.storage.local.set({ isRecording: true });
     updateIcon();
     broadcast({ type: 'START_RECORDING' });

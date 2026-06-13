@@ -409,8 +409,25 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/></svg>
           过滤规则
         </div>
-        <div class="form-g"><label>忽略 URL 关键词（每行一个）</label><textarea id="cfgKw"></textarea></div>
-        <div class="form-g"><label>忽略域名（每行一个）</label><textarea id="cfgDomains"></textarea></div>
+        <div class="form-g">
+          <label>过滤模式</label>
+          <select id="filterMode">
+            <option value="off">关闭（录制全部接口）</option>
+            <option value="ignore">忽略模式（黑名单）— 排除匹配的接口</option>
+            <option value="whitelist">白名单模式 — 只录制匹配的接口</option>
+          </select>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);padding:8px;background:var(--bg);border-radius:var(--radius-sm);margin-bottom:10px;line-height:1.6" id="filterHelp">
+          过滤模式已关闭，所有接口都会被录制。
+        </div>
+        <div class="form-g">
+          <label>过滤关键词 <span style="font-weight:400;color:var(--text-muted)">(每行一个，子串匹配)</span></label>
+          <textarea id="cfgKw" placeholder="例：&#10;analytics.example.com&#10;/api/v1/health&#10;tracking"></textarea>
+        </div>
+        <div class="form-g">
+          <label>过滤域名 <span style="font-weight:400;color:var(--text-muted)">(每行一个，精确匹配域名)</span></label>
+          <textarea id="cfgDomains" placeholder="例：&#10;cdn.example.com&#10;static.example.com"></textarea>
+        </div>
       </div>
       <div class="settings-group">
         <div class="settings-group-title">

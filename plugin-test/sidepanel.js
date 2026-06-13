@@ -15,6 +15,10 @@
         var n = (changes.recordedApis.newValue || []).length;
         if (n !== lastApisLength) { apis = changes.recordedApis.newValue || []; lastApisLength = n; render(); }
       }
+      if (area === 'local' && changes.settings) {
+        settings = changes.settings.newValue || {};
+        render();
+      }
     });
   }
 
@@ -45,6 +49,7 @@
     el('methodFilter').addEventListener('change', render);
     el('statusFilter').addEventListener('change', render);
     el('autoFilter').addEventListener('change', render);
+    el('filterMode').addEventListener('change', updateFilterHelp);
     el('pushBtn').addEventListener('click', openPush);
     el('exportBtn').addEventListener('click', doExport);
     el('genDocBtn').addEventListener('click', genDoc);
@@ -75,6 +80,54 @@
     });
   }
 
+  // 过滤帮助文字动态更新
+  function updateFilterHelp() {
+    var mode = el('filterMode').value;
+    var help = el('filterHelp');
+    if (mode === 'off') {
+      help.textContent = '过滤模式已关闭，所有接口都会被录制。';
+    } else if (mode === 'ignore') {
+      help.textContent = '匹配的接口不会被录制。未配置的接口正常录制。留空则忽略全部。';
+    } else if (mode === 'whitelist') {
+      help.textContent = '只有匹配的接口才会被录制。未配置的接口不会被录制。留空则白名单失效（相当于关闭）。';
+    }
+  }
+
+  // 渲染时根据设置过滤（列表显示层）
+  function shouldShowApi(url, settings) {
+    if (!settings || !settings.filterMode || settings.filterMode === 'off') return true;
+    var kwText = (settings.ignoreKeywords || '').trim();
+    var domText = (settings.ignoreDomains || '').trim();
+    if (!kwText && !domText) return true;
+    var kwList = kwText.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
+    var domList = domText.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
+    if (settings.filterMode === 'ignore') {
+      for (var i = 0; i < kwList.length; i++) {
+        if (url.indexOf(kwList[i]) !== -1) return false;
+      }
+      try {
+        var u = new URL(url);
+        for (var j = 0; j < domList.length; j++) {
+          if (u.hostname === domList[j] || u.hostname.endsWith('.' + domList[j])) return false;
+        }
+      } catch(e) {}
+      return true;
+    }
+    if (settings.filterMode === 'whitelist') {
+      for (var k = 0; k < kwList.length; k++) {
+        if (url.indexOf(kwList[k]) !== -1) return true;
+      }
+      try {
+        var u2 = new URL(url);
+        for (var m = 0; m < domList.length; m++) {
+          if (u2.hostname === domList[m] || u2.hostname.endsWith('.' + domList[m])) return true;
+        }
+      } catch(e) {}
+      return false;
+    }
+    return true;
+  }
+
   // ========== 渲染 ==========
   function render() {
     var search = (el('searchInput').value || '').toLowerCase();
@@ -90,6 +143,7 @@
       if (st === 'error' && a.status >= 200 && a.status < 400) return false;
       if (search && a.url.toLowerCase().indexOf(search) === -1) return false;
       if (af && (a.apiType === 'static' || a.apiType === 'track')) return false;
+      if (!shouldShowApi(a.url, settings)) return false;
       return true;
     });
 
@@ -311,15 +365,18 @@
   function openSettings() {
     el('cfgUrl').value = settings.platformUrl || '';
     el('cfgFrontendUrl').value = settings.frontendUrl || '';
+    el('filterMode').value = settings.filterMode || 'off';
     el('cfgKw').value = settings.ignoreKeywords || '';
     el('cfgDomains').value = settings.ignoreDomains || '';
     el('cfgMode').value = settings.idMode || 'AUTO_INCREMENT';
     el('cfgStep').value = settings.idStep || 1;
+    updateFilterHelp();
     openP('settings');
   }
   function saveSettings() {
     settings.platformUrl = el('cfgUrl').value.trim();
     settings.frontendUrl = el('cfgFrontendUrl').value.trim();
+    settings.filterMode = el('filterMode').value;
     settings.ignoreKeywords = el('cfgKw').value;
     settings.ignoreDomains = el('cfgDomains').value;
     settings.idMode = el('cfgMode').value;
