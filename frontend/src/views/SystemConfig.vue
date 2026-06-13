@@ -97,3 +97,87 @@ const saveConfig = async () => {
   }
 }
 </script>
+
+<style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+/* ── Card ── */
+:deep(.el-card) {
+  border-radius: 16px;
+  box-shadow:
+    0 4px 24px rgba(99, 102, 241, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(99, 102, 241, 0.08);
+}
+
+:deep(.el-card__header) {
+  padding: 20px 28px;
+  border-bottom: 1px solid rgba(99, 102, 241, 0.08);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.04), rgba(129, 140, 248, 0.02));
+}
+
+:deep(.el-card__header .el-card__body > p) {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e1b4b;
+  margin: 0;
+}
+
+/* ── Form ── */
+:deep(.el-form) {
+  max-width: 680px;
+}
+
+:deep(.el-divider__text) {
+  font-weight: 600;
+  font-size: 15px;
+  color: #4338ca;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+:deep(.el-form-item__label) {
+  font-weight: 500;
+  color: #4338ca;
+  font-size: 14px;
+}
+
+:deep(.el-input__wrapper),
+:deep(.el-select .el-input__wrapper),
+:deep(.el-input-number) {
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #d0d5dd;
+  box-shadow: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+:deep(.el-input__wrapper:hover),
+:deep(.el-select .el-input__wrapper:hover) {
+  border-color: #a5b4fc;
+  box-shadow: none;
+}
+
+:deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+  border-color: #6366f1;
+}
+
+/* ── Buttons ── */
+:deep(.el-button--primary) {
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 10px 28px;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+:deep(.el-button--primary:hover) {
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.45);
+  transform: translateY(-1px);
+}
+</style>

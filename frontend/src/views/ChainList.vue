@@ -184,27 +184,189 @@ onMounted(loadChains)
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+/* ── Card Wrapper ── */
+:deep(.el-card) {
+  border-radius: 16px;
+  overflow: visible;
+  box-shadow:
+    0 4px 24px rgba(99, 102, 241, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(99, 102, 241, 0.08);
+}
+
+:deep(.el-card__header) {
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(99, 102, 241, 0.08);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.03), rgba(129, 140, 248, 0.02));
+}
+
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
 }
+
+.card-header > span:first-child {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e1b4b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Primary Button ── */
+:deep(.el-button--primary) {
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 10px 20px;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+:deep(.el-button--primary:hover) {
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.45);
+  transform: translateY(-1px);
+}
+
+/* ── Filter Bar ── */
 .filter-bar {
   display: flex;
   align-items: center;
+  gap: 10px;
+  padding: 16px 24px;
+  flex-wrap: wrap;
 }
+
+.filter-bar :deep(.el-input__wrapper) {
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #d0d5dd;
+  box-shadow: none;
+}
+
+.filter-bar :deep(.el-select .el-input__wrapper) {
+  border-radius: 10px;
+}
+
+.filter-bar :deep(.el-button) {
+  border-radius: 10px;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.filter-bar :deep(.el-button:hover) {
+  transform: translateY(-1px);
+}
+
+/* ── Batch Bar ── */
 .batch-bar {
-  margin-top: 15px;
-  padding: 10px 15px;
-  background: #f0f9ff;
-  border: 1px solid #b3d8ff;
-  border-radius: 4px;
+  margin-top: 16px;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.06), rgba(16, 185, 129, 0.04));
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  border-radius: 12px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  flex-wrap: wrap;
+  animation: slideDown 0.3s ease;
 }
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .batch-bar span {
-  color: #409eff;
+  color: #6366f1;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+/* ── Table ── */
+:deep(.el-table) {
+  border-radius: 0 0 12px 12px;
+  overflow: visible;
+  font-size: 13px;
+}
+
+:deep(.el-table th) {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.06), rgba(129, 140, 248, 0.04)) !important;
+  color: #4338ca !important;
+  font-weight: 600;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(99, 102, 241, 0.1) !important;
+}
+
+:deep(.el-table td) {
+  border-bottom: 1px solid rgba(99, 102, 241, 0.06);
+}
+
+:deep(.el-table--striped .el-table__body tr.el-table__row--striped) {
+  background: rgba(99, 102, 241, 0.02);
+}
+
+:deep(.el-table tbody tr:hover > td) {
+  background: rgba(99, 102, 241, 0.05) !important;
+}
+
+/* ── Tags ── */
+:deep(.el-tag) {
+  border-radius: 8px;
   font-weight: 500;
+  padding: 2px 10px;
+  font-size: 12px;
+}
+
+/* ── Dialog ── */
+:deep(.el-dialog) {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+:deep(.el-dialog__header) {
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(99, 102, 241, 0.08);
+}
+
+:deep(.el-dialog__body) {
+  padding: 24px;
+}
+
+:deep(.el-dialog__footer) {
+  padding: 16px 24px;
+  border-top: 1px solid rgba(99, 102, 241, 0.08);
+}
+
+:deep(.el-form-item__label) {
+  font-weight: 500;
+  color: #4338ca;
+}
+
+:deep(.el-input__wrapper),
+:deep(.el-textarea__inner) {
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #d0d5dd;
+  box-shadow: none;
+}
+
+:deep(.el-input__wrapper:hover),
+:deep(.el-textarea__inner:hover) {
+  border-color: #a5b4fc;
+}
+
+:deep(.el-input__wrapper.is-focus),
+:deep(.el-textarea__inner:focus) {
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+  border-color: #6366f1;
 }
 </style>

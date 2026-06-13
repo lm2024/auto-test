@@ -35,9 +35,9 @@
         </el-table-column>
         <el-table-column label="节点统计" width="150">
           <template #default="{ row }">
-            <span style="color:#67c23a">{{ row.successCount || 0 }}成功</span> /
-            <span style="color:#f56c6c">{{ row.failCount || 0 }}失败</span> /
-            <span style="color:#909399">{{ row.skipCount || 0 }}跳过</span>
+            <span class="success-count">{{ row.successCount || 0 }}成功</span> /
+            <span class="fail-count">{{ row.failCount || 0 }}失败</span> /
+            <span class="skip-count">{{ row.skipCount || 0 }}跳过</span>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="100">
@@ -76,6 +76,100 @@ onMounted(loadRecords)
 </script>
 
 <style scoped>
-.card-header { display: flex; justify-content: space-between; align-items: center; }
-.filter-bar { display: flex; align-items: center; }
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+/* ── Card ── */
+:deep(.el-card) {
+  border-radius: 16px;
+  box-shadow:
+    0 4px 24px rgba(99, 102, 241, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(99, 102, 241, 0.08);
+}
+
+:deep(.el-card__header) {
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(99, 102, 241, 0.08);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.04), rgba(129, 140, 248, 0.02));
+}
+
+.card-header > span {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e1b4b;
+}
+
+/* ── Filter Bar ── */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 24px;
+  flex-wrap: wrap;
+}
+
+.filter-bar :deep(.el-input__wrapper),
+.filter-bar :deep(.el-select .el-input__wrapper),
+.filter-bar :deep(.el-date-editor) {
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #d0d5dd;
+  box-shadow: none;
+}
+
+.filter-bar :deep(.el-button) {
+  border-radius: 10px;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.filter-bar :deep(.el-button--primary) {
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+  border: none;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+.filter-bar :deep(.el-button:hover) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+}
+
+/* ── Table ── */
+:deep(.el-table) {
+  border-radius: 0 0 12px 12px;
+  font-size: 13px;
+}
+
+:deep(.el-table th) {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.06), rgba(129, 140, 248, 0.04)) !important;
+  color: #4338ca !important;
+  font-weight: 600;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(99, 102, 241, 0.1) !important;
+}
+
+:deep(.el-table td) {
+  border-bottom: 1px solid rgba(99, 102, 241, 0.06);
+}
+
+:deep(.el-table--striped .el-table__body tr.el-table__row--striped) {
+  background: rgba(99, 102, 241, 0.02);
+}
+
+:deep(.el-table tbody tr:hover > td) {
+  background: rgba(99, 102, 241, 0.05) !important;
+}
+
+/* ── Status Tags ── */
+:deep(.el-tag) {
+  border-radius: 8px;
+  font-weight: 500;
+  padding: 2px 10px;
+  font-size: 12px;
+}
+
+/* ── Node Stats ── */
+:deep(.el-table td .success-count) { color: #10b981; font-weight: 600; }
+:deep(.el-table td .fail-count) { color: #ef4444; font-weight: 600; }
+:deep(.el-table td .skip-count) { color: #6b7280; font-weight: 500; }
 </style>
