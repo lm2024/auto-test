@@ -1,0 +1,29 @@
+# Claude Code 忽略文件
+# 列出 Claude Code 在对话中应忽略的目录和文件
+
+# --- 依赖与包 ---
+node_modules/
+
+# --- 版本控制与索引 ---
+.git/
+.codegraph/
+
+# --- 数据与文档 ---
+.advwiki/
+doc/
+rawindex.md
+
+# --- 废弃代码 ---
+plugin废弃/
+
+# --- 构建产物与缓存 ---
+.history/
+
+# --- 虚拟环境 ---
+mcp-servers/git/venv/
+
+# --- Docker ---
+docker/
+
+# --- GitHub 配置 ---
+.github/

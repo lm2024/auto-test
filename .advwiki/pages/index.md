@@ -1,11 +1,11 @@
 ---
 type: index
-updated_at: "2026-06-13"
+updated_at: "2026-06-14"
 ---
 
 # Índice da Wiki
 
-> Gerado automaticamente pelo AdvWiki em 2026-06-13. Não edite manualmente.
+> Gerado automaticamente pelo AdvWiki em 2026-06-14. Não edite manualmente.
 
 ## Por Tipo
 

@@ -1,0 +1,35 @@
+# CodeGraph 忽略文件
+# 列出需要从代码图索引中排除的目录和文件
+
+# --- 依赖与包 ---
+node_modules/
+
+# --- 版本控制与索引 ---
+.git/
+.codegraph/
+
+# --- 数据与文档 ---
+.advwiki/
+doc/
+rawindex.md
+
+# --- 废弃代码 ---
+plugin废弃/
+
+# --- 构建产物与缓存 ---
+.history/
+*.db
+*.db-shm
+*.db-wal
+*.sock
+*.pid
+*.log
+
+# --- 虚拟环境 ---
+mcp-servers/git/venv/
+
+# --- Docker ---
+docker/
+
+# --- GitHub 配置 ---
+.github/
