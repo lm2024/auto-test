@@ -3,6 +3,14 @@
   var lastApisLength = 0;
   var settings = {};
   var editingIdx = -1;
+  var chainList = [];
+  var selectedChain = null;
+  var replayResults = [];
+  var replayLogs = [];
+  var isReplayPaused = false;
+  var isReplayStopped = false;
+  var currentReplayer = null;
+  var macroReplayFilter = null;
 
   function el(id) { return document.getElementById(id); }
   function narrow() { return window.innerWidth <= 360; }
@@ -23,12 +31,17 @@
   }
 
   function loadData() {
-    chrome.storage.local.get(['isRecording', 'recordedApis', 'settings'], function(r) {
-      var rec = r.isRecording || false;
-      var btn = el('recordBtn');
-      var label = narrow() ? (rec ? '停止' : '录制') : (rec ? '停止录制' : '开始录制');
-      btn.textContent = label;
-      btn.className = rec ? 'btn btn-stop' : 'btn';
+    chrome.storage.local.get(['isRecordingApi', 'isRecordingMacro', 'recordedApis', 'settings'], function(r) {
+      var recApi = r.isRecordingApi || false;
+      var recMacro = r.isRecordingMacro || false;
+      var btnApi = el('recordApiBtn');
+      var btnMacro = el('recordMacroBtn');
+      var labelApi = narrow() ? (recApi ? '停止' : '接口') : (recApi ? '停止录制' : '录制接口');
+      var labelMacro = narrow() ? (recMacro ? '停止' : '宏') : (recMacro ? '停止录制' : '录制宏');
+      btnApi.textContent = labelApi;
+      btnApi.className = recApi ? 'btn btn-stop' : 'btn';
+      btnMacro.textContent = labelMacro;
+      btnMacro.className = recMacro ? 'btn btn-stop' : 'btn';
       apis = r.recordedApis || []; lastApisLength = apis.length;
       if (r.settings) settings = r.settings;
       render();
@@ -36,29 +49,46 @@
   }
 
   function bindAll() {
-    el('recordBtn').addEventListener('click', function() {
+    el('recordApiBtn').addEventListener('click', function() {
       var isNarrow = narrow();
-      var isRec = isNarrow ? (this.textContent === '录制') : (this.textContent === '开始录制');
-      chrome.storage.local.set({ isRecording: isRec });
-      chrome.runtime.sendMessage({ type: isRec ? 'START_RECORDING' : 'STOP_RECORDING' });
-      var label = isNarrow ? (isRec ? '停止' : '录制') : (isRec ? '停止录制' : '开始录制');
+      var isRec = this.classList.contains('btn-stop');
+      chrome.storage.local.set({ isRecordingApi: !isRec });
+      chrome.runtime.sendMessage({ type: isRec ? 'STOP_RECORDING' : 'START_RECORDING' });
+      if (!isRec) macroReplayFilter = null;
+      var label = isNarrow ? (isRec ? '录制接口' : '停止') : (isRec ? '录制接口' : '停止录制');
       this.textContent = label;
-      this.className = isRec ? 'btn btn-stop' : 'btn';
+      this.className = isRec ? 'btn' : 'btn btn-stop';
+    });
+    el('recordMacroBtn').addEventListener('click', function() {
+      var isNarrow = narrow();
+      var isRec = this.classList.contains('btn-stop');
+      chrome.storage.local.set({ isRecordingMacro: !isRec });
+      chrome.runtime.sendMessage({ type: isRec ? 'STOP_MACRO_RECORDING' : 'START_MACRO_RECORDING' });
+      if (!isRec) {
+        chrome.storage.local.set({ macroActions: [] });
+      }
+      var label = isNarrow ? (isRec ? '录制宏' : '停止') : (isRec ? '录制宏' : '停止录制');
+      this.textContent = label;
+      this.className = isRec ? 'btn' : 'btn btn-stop';
     });
     el('searchInput').addEventListener('input', render);
     el('methodFilter').addEventListener('change', render);
     el('statusFilter').addEventListener('change', render);
-    el('autoFilter').addEventListener('change', render);
+    el('resourceTypeFilter').addEventListener('change', render);
     el('filterMode').addEventListener('change', updateFilterHelp);
     el('pushBtn').addEventListener('click', openPush);
     el('exportBtn').addEventListener('click', doExport);
     el('genDocBtn').addEventListener('click', genDoc);
-    el('clearBtn').addEventListener('click', function() { apis = []; lastApisLength = 0; chrome.storage.local.set({ recordedApis: [] }); render(); });
+    el('clearBtn').addEventListener('click', function() { apis = []; lastApisLength = 0; macroReplayFilter = null; chrome.storage.local.set({ recordedApis: [] }); render(); });
     el('detailOverlay').addEventListener('click', function() { closeP('detail'); });
     el('detailClose').addEventListener('click', function() { closeP('detail'); });
     el('settingsOverlay').addEventListener('click', function() { closeP('settings'); });
     el('settingsClose').addEventListener('click', function() { closeP('settings'); });
     el('settingsBtn').addEventListener('click', openSettings);
+    el('goPlatformBtn').addEventListener('click', function() {
+      var url = (settings.frontendUrl || 'http://localhost:3001') + '/chain/list';
+      window.open(url, '_blank');
+    });
     el('saveSettingsBtn').addEventListener('click', saveSettings);
     el('pushCancel').addEventListener('click', function() { el('pushDialog').classList.remove('open'); });
     el('pushOk').addEventListener('click', doPush);
@@ -71,29 +101,46 @@
       el('editDialog').classList.remove('open'); editingIdx = -1; render();
     });
     el('dbgSend').addEventListener('click', sendDbgRequest);
-    // 全选
     el('selectAll').addEventListener('change', function() {
       var checked = this.checked;
       el('apiList').querySelectorAll('.api-check').forEach(function(c) { c.checked = checked; });
       var cnt = checked ? el('apiList').querySelectorAll('.api-check').length : 0;
       el('selText').textContent = '已选 ' + cnt + ' 条';
     });
+
+    // Tab switching
+    document.querySelectorAll('.tab-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+        document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+        this.classList.add('active');
+        el('tab-' + this.getAttribute('data-tab')).classList.add('active');
+        if (this.getAttribute('data-tab') === 'chains') loadChainList();
+      });
+    });
+
+    // Chain management
+    el('chainSearch').addEventListener('input', renderChainList);
+    el('chainMethodFilter').addEventListener('change', renderChainList);
+    el('chainRefreshBtn').addEventListener('click', loadChainList);
+    el('replayHttpBtn').addEventListener('click', function() { startReplay('http'); });
+    el('replayBrowserBtn').addEventListener('click', function() { startReplay('browser'); });
+
+    // Replay controls
+    el('replayPauseBtn').addEventListener('click', togglePause);
+    el('replayStopBtn').addEventListener('click', stopReplay);
+    el('replayLogClearBtn').addEventListener('click', function() { replayLogs = []; renderReplayLog(); });
   }
 
-  // 过滤帮助文字动态更新
+  // ========== Tab: 录制 ==========
   function updateFilterHelp() {
     var mode = el('filterMode').value;
     var help = el('filterHelp');
-    if (mode === 'off') {
-      help.textContent = '过滤模式已关闭，所有接口都会被录制。';
-    } else if (mode === 'ignore') {
-      help.textContent = '匹配的接口不会被录制。未配置的接口正常录制。留空则忽略全部。';
-    } else if (mode === 'whitelist') {
-      help.textContent = '只有匹配的接口才会被录制。未配置的接口不会被录制。留空则白名单失效（相当于关闭）。';
-    }
+    if (mode === 'off') help.textContent = '过滤模式已关闭，所有接口都会被录制。';
+    else if (mode === 'ignore') help.textContent = '匹配的接口不会被录制。未配置的接口正常录制。留空则忽略全部。';
+    else if (mode === 'whitelist') help.textContent = '只有匹配的接口才会被录制。未配置的接口不会被录制。留空则白名单失效（相当于关闭）。';
   }
 
-  // 渲染时根据设置过滤（列表显示层）
   function shouldShowApi(url, settings) {
     if (!settings || !settings.filterMode || settings.filterMode === 'off') return true;
     var kwText = (settings.ignoreKeywords || '').trim();
@@ -102,38 +149,36 @@
     var kwList = kwText.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
     var domList = domText.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
     if (settings.filterMode === 'ignore') {
-      for (var i = 0; i < kwList.length; i++) {
-        if (url.indexOf(kwList[i]) !== -1) return false;
-      }
-      try {
-        var u = new URL(url);
-        for (var j = 0; j < domList.length; j++) {
-          if (u.hostname === domList[j] || u.hostname.endsWith('.' + domList[j])) return false;
-        }
-      } catch(e) {}
+      for (var i = 0; i < kwList.length; i++) { if (url.indexOf(kwList[i]) !== -1) return false; }
+      try { var u = new URL(url); for (var j = 0; j < domList.length; j++) { if (u.hostname === domList[j] || u.hostname.endsWith('.' + domList[j])) return false; } } catch(e) {}
       return true;
     }
     if (settings.filterMode === 'whitelist') {
-      for (var k = 0; k < kwList.length; k++) {
-        if (url.indexOf(kwList[k]) !== -1) return true;
-      }
-      try {
-        var u2 = new URL(url);
-        for (var m = 0; m < domList.length; m++) {
-          if (u2.hostname === domList[m] || u2.hostname.endsWith('.' + domList[m])) return true;
-        }
-      } catch(e) {}
+      for (var k = 0; k < kwList.length; k++) { if (url.indexOf(kwList[k]) !== -1) return true; }
+      try { var u2 = new URL(url); for (var m = 0; m < domList.length; m++) { if (u2.hostname === domList[m] || u2.hostname.endsWith('.' + domList[m])) return true; } } catch(e) {}
       return false;
     }
     return true;
   }
 
-  // ========== 渲染 ==========
+  function getResourceType(url) {
+    if (!url) return 'other';
+    var ext = url.split('?')[0].split('#')[0].split('.').pop().toLowerCase();
+    if (/\.(js|mjs|cjs)(\?|$)/i.test(url)) return 'script';
+    if (/\.(css)(\?|$)/i.test(url)) return 'stylesheet';
+    if (/\.(png|jpg|jpeg|gif|svg|ico|webp|avif|bmp|tiff)(\?|$)/i.test(url)) return 'image';
+    if (/\.(woff|woff2|ttf|eot|otf)(\?|$)/i.test(url)) return 'font';
+    if (/\.(mp4|mp3|webm|ogg|wav|flac|aac)(\?|$)/i.test(url)) return 'media';
+    if (/\.(html|htm|php|asp|aspx|jsp)(\?|$)/i.test(url)) return 'document';
+    if (/^wss?:\/\//i.test(url)) return 'websocket';
+    return 'fetch_xhr';
+  }
+
   function render() {
     var search = (el('searchInput').value || '').toLowerCase();
     var method = el('methodFilter').value;
     var st = el('statusFilter').value;
-    var af = el('autoFilter').checked;
+    var rt = el('resourceTypeFilter').value;
     var checkedIdxs = {};
     el('apiList').querySelectorAll('.api-check:checked').forEach(function(c) { checkedIdxs[parseInt(c.getAttribute('data-i'))] = true; });
 
@@ -142,12 +187,22 @@
       if (st === 'success' && a.status > 0 && (a.status < 200 || a.status >= 300)) return false;
       if (st === 'error' && a.status >= 200 && a.status < 400) return false;
       if (search && a.url.toLowerCase().indexOf(search) === -1) return false;
-      if (af && (a.apiType === 'static' || a.apiType === 'track')) return false;
+      if (rt && a.resourceType !== rt) return false;
+      if (macroReplayFilter) {
+        var matched = false;
+        for (var fi = 0; fi < macroReplayFilter.length; fi++) {
+          if (a.url && a.url.indexOf(macroReplayFilter[fi]) !== -1) { matched = true; break; }
+        }
+        if (!matched) return false;
+      }
       if (!shouldShowApi(a.url, settings)) return false;
       return true;
     });
 
     var statsLabel = narrow() ? (apis.length + '条 显' + filtered.length) : ('共 ' + apis.length + ' 条，显示 ' + filtered.length + ' 条');
+    if (macroReplayFilter) {
+      statsLabel += ' (链路筛选: ' + macroReplayFilter.length + ' 个接口)';
+    }
     el('statsText').textContent = statsLabel;
     var list = el('apiList'), empty = el('emptyHint');
 
@@ -205,7 +260,6 @@
     el('selText').textContent = '已选 ' + cnt + ' 条';
   }
 
-  // ========== 详情 ==========
   function showDetail(idx) {
     var a = apis[idx]; if (!a) return;
     el('detailTitle').textContent = (a.method || 'GET') + ' ' + getName(a.url);
@@ -235,6 +289,407 @@
 
   function sec(title, data, field, idx) {
     return '<div class="detail-section"><div class="detail-section-hd">' + title + ' <button class="cpy-btn" data-f="' + field + '" data-i="' + idx + '">复制</button></div><pre>' + (fmt(data) || '(空)') + '</pre></div>';
+  }
+
+  // ========== Tab: 链路管理 ==========
+  function loadChainList() {
+    var baseUrl = settings.platformUrl || 'http://localhost:8080';
+    var search = el('chainSearch') ? el('chainSearch').value.trim() : '';
+    var method = el('chainMethodFilter') ? el('chainMethodFilter').value : '';
+    var url = baseUrl + '/api/plugin/chain/list?pageSize=100';
+    if (search) url += '&keyword=' + encodeURIComponent(search);
+    if (method) url += '&method=' + encodeURIComponent(method);
+
+    fetch(url).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.code === 200) {
+        chainList = d.data.list || [];
+        renderChainList();
+      }
+    }).catch(function(e) {
+      console.error('加载链路列表失败:', e);
+    });
+  }
+
+  function renderChainList() {
+    var search = (el('chainSearch') ? el('chainSearch').value : '').toLowerCase();
+    var method = el('chainMethodFilter') ? el('chainMethodFilter').value : '';
+    var list = el('chainList'), empty = el('chainEmptyHint');
+
+    var filtered = chainList.filter(function(c) {
+      if (search && (c.chainName || '').toLowerCase().indexOf(search) === -1) return false;
+      return true;
+    });
+
+    el('chainStatsText').textContent = '共 ' + filtered.length + ' 条链路';
+
+    if (filtered.length === 0) {
+      while (list.firstChild) list.removeChild(list.firstChild);
+      list.appendChild(empty); empty.style.display = '';
+      el('replayHttpBtn').disabled = true; el('replayBrowserBtn').disabled = true;
+      return;
+    }
+    empty.style.display = 'none';
+    el('replayHttpBtn').disabled = !selectedChain;
+    el('replayBrowserBtn').disabled = !selectedChain;
+
+    var toRemove = [];
+    for (var i = 0; i < list.childNodes.length; i++) { if (list.childNodes[i] !== empty) toRemove.push(list.childNodes[i]); }
+    toRemove.forEach(function(n) { list.removeChild(n); });
+
+    filtered.forEach(function(chain) {
+      var div = document.createElement('div');
+      div.className = 'chain-item' + (selectedChain && selectedChain.chainCode === chain.chainCode ? ' selected' : '');
+      div.setAttribute('data-code', chain.chainCode);
+      var modeLabel = chain.executeMode === 2 ? '分组并行' : '串行';
+      div.innerHTML = '<div class="chain-name">' + enc(chain.chainName)
+        + '<span class="badge badge-ver">v' + (chain.currentVersion || 1) + '</span></div>'
+        + '<div class="chain-meta">'
+        + '<span class="badge badge-mode">' + modeLabel + '</span>'
+        + '<span>' + (chain.nodeCount || 0) + ' 个接口</span>'
+        + '<span>' + (chain.chainCode || '') + '</span>'
+        + '</div>'
+        + '<div class="chain-versions" id="versions-' + chain.chainCode + '"></div>';
+      div.addEventListener('click', function(e) {
+        if (e.target.closest('.version-item')) return;
+        selectedChain = chain;
+        renderChainList();
+        el('replayHttpBtn').disabled = false;
+        el('replayBrowserBtn').disabled = false;
+        loadChainVersions(chain.chainCode);
+      });
+      list.appendChild(div);
+    });
+  }
+
+  function loadChainVersions(chainCode) {
+    var baseUrl = settings.platformUrl || 'http://localhost:8080';
+    var url = baseUrl + '/api/chain/versions?chainCode=' + encodeURIComponent(chainCode) + '&all=true';
+    fetch(url).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.code === 200 && d.data && d.data.list) {
+        renderChainVersions(chainCode, d.data.list);
+      }
+    }).catch(function(e) {
+      console.error('加载版本失败:', e);
+    });
+  }
+
+  function renderChainVersions(chainCode, versions) {
+    var container = el('versions-' + chainCode);
+    if (!container) return;
+    container.innerHTML = '';
+    if (!versions || versions.length === 0) {
+      container.innerHTML = '<div style="padding:4px 12px;font-size:11px;color:var(--text-muted)">暂无版本</div>';
+      return;
+    }
+    versions.forEach(function(v) {
+      var div = document.createElement('div');
+      div.className = 'version-item';
+      div.setAttribute('data-version', v.version);
+      var diff = v.diffSummary ? (' +' + (v.diffSummary.added||0) + ' -' + (v.diffSummary.removed||0) + ' ~' + (v.diffSummary.modified||0)) : '';
+      var time = v.createTime ? new Date(v.createTime).toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }) : '';
+      div.innerHTML = '<span class="version-label">v' + v.version + '</span>'
+        + '<span class="version-info">' + (v.nodeCount || 0) + '个接口 ' + diff + '</span>'
+        + '<span class="version-time">' + time + '</span>';
+      div.addEventListener('click', function(e) {
+        e.stopPropagation();
+        container.querySelectorAll('.version-item').forEach(function(item) { item.classList.remove('selected'); });
+        div.classList.add('selected');
+        selectedChain = { chainCode: chainCode, chainName: selectedChain ? selectedChain.chainName : '', currentVersion: v.version };
+        el('replayHttpBtn').disabled = false;
+        el('replayBrowserBtn').disabled = false;
+      });
+      container.appendChild(div);
+    });
+  }
+
+  // ========== Tab: 回放日志 ==========
+  function addReplayLog(type, msg) {
+    var now = new Date();
+    var time = now.toLocaleTimeString('zh-CN', { hour12: false });
+    replayLogs.push({ type: type, msg: msg, time: time });
+    renderReplayLog();
+  }
+
+  function renderReplayLog() {
+    var list = el('replayLogList'), empty = el('replayLogEmpty');
+    var actions = el('replayActions');
+
+    if (replayLogs.length === 0) {
+      while (list.firstChild) list.removeChild(list.firstChild);
+      list.appendChild(empty); empty.style.display = '';
+      actions.style.display = 'none';
+      return;
+    }
+    empty.style.display = 'none';
+    actions.style.display = 'flex';
+
+    var toRemove = [];
+    for (var i = 0; i < list.childNodes.length; i++) { if (list.childNodes[i] !== empty) toRemove.push(list.childNodes[i]); }
+    toRemove.forEach(function(n) { list.removeChild(n); });
+
+    replayLogs.forEach(function(log) {
+      var div = document.createElement('div');
+      div.className = 'log-item';
+      var icon = log.type === 'success' ? '✓' : log.type === 'error' ? '✗' : log.type === 'info' ? 'ℹ' : '⏳';
+      var iconColor = log.type === 'success' ? 'var(--success)' : log.type === 'error' ? 'var(--danger)' : 'var(--text-muted)';
+      div.innerHTML = '<span class="log-time">' + enc(log.time) + '</span>'
+        + '<span class="log-icon" style="color:' + iconColor + '">' + icon + '</span>'
+        + '<span class="log-msg">' + log.msg + '</span>';
+      list.appendChild(div);
+    });
+
+    list.scrollTop = list.scrollHeight;
+  }
+
+  // ========== 回放引擎 ==========
+  function startReplay(mode) {
+    if (!selectedChain) { alert('请先选择一个链路'); return; }
+    var baseUrl = settings.platformUrl || 'http://localhost:8080';
+
+    // 加载链路详情
+    fetch(baseUrl + '/api/plugin/chain/detail?chainCode=' + encodeURIComponent(selectedChain.chainCode))
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.code !== 200) { alert('加载链路详情失败: ' + d.message); return; }
+        var chain = d.data;
+        if (!chain.nodeList || chain.nodeList.length === 0) { alert('链路中没有接口'); return; }
+
+        // 切换到回放日志Tab
+        document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+        document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+        document.querySelector('[data-tab="replayLog"]').classList.add('active');
+        el('tab-replayLog').classList.add('active');
+        el('replayLogTitle').textContent = '回放日志 — ' + chain.chainName;
+
+        replayResults = [];
+        isReplayPaused = false;
+        isReplayStopped = false;
+
+        addReplayLog('info', '开始' + (mode === 'http' ? 'HTTP' : '浏览器') + '回放: ' + chain.chainName + '，共 ' + chain.nodeList.length + ' 个接口');
+
+        if (mode === 'http') {
+          httpReplay(chain);
+        } else {
+          browserReplay(chain);
+        }
+      })
+      .catch(function(e) { alert('加载链路失败: ' + e.message); });
+  }
+
+  function httpReplay(chain) {
+    var nodes = chain.nodeList.sort(function(a, b) { return (a.sortNo || 0) - (b.sortNo || 0); });
+    var idx = 0;
+    var intervalMs = (settings.replayInterval || 0) * 1000;
+
+    function executeNext() {
+      if (isReplayStopped) {
+        addReplayLog('info', '回放已停止');
+        updateReplayActions(false);
+        return;
+      }
+      if (isReplayPaused) {
+        setTimeout(executeNext, 200);
+        return;
+      }
+      if (idx >= nodes.length) {
+        addReplayLog('success', '回放完成! 成功: ' + replayResults.filter(function(r) { return r.status === 'SUCCESS'; }).length
+          + '/' + nodes.length + '，失败: ' + replayResults.filter(function(r) { return r.status === 'FAILED'; }).length);
+        updateReplayActions(false);
+        return;
+      }
+
+      var node = nodes[idx];
+      var startTime = Date.now();
+      addReplayLog('info', '[' + (idx + 1) + '/' + nodes.length + '] 正在执行: ' + (node.nodeName || '节点' + (idx + 1)));
+
+      var fetchOpts = {
+        method: node.requestMethod || 'GET',
+        headers: parseHeaders(node.requestHeaders),
+        credentials: 'include'
+      };
+      if (['POST', 'PUT', 'PATCH'].indexOf(fetchOpts.method) >= 0 && node.bodyData) {
+        fetchOpts.body = node.bodyData;
+      }
+
+      fetch(node.requestUrl, fetchOpts)
+        .then(function(resp) {
+          var duration = Date.now() - startTime;
+          return resp.text().then(function(body) {
+            var result = {
+              node: node,
+              nodeName: node.nodeName || '节点' + (idx + 1),
+              requestUrl: node.requestUrl,
+              requestMethod: node.requestMethod,
+              requestHeaders: node.requestHeaders,
+              bodyData: node.bodyData,
+              responseCode: resp.status,
+              responseHeaders: JSON.stringify(Object.fromEntries(resp.headers.entries())),
+              responseBody: body,
+              durationMs: duration,
+              sort: idx + 1,
+              status: 'SUCCESS'
+            };
+            replayResults.push(result);
+            addReplayLog('success', '<span class="node-name">' + enc(result.nodeName) + '</span> <span class="status ok">' + resp.status + '</span> <span class="cost">' + duration + 'ms</span>');
+            idx++;
+            if (intervalMs > 0 && idx < nodes.length) {
+              addReplayLog('info', '等待 ' + settings.replayInterval + ' 秒后执行下一步...');
+              setTimeout(executeNext, intervalMs);
+            } else {
+              executeNext();
+            }
+          });
+        })
+        .catch(function(err) {
+          var duration = Date.now() - startTime;
+          var result = {
+            node: node,
+            nodeName: node.nodeName || '节点' + (idx + 1),
+            requestUrl: node.requestUrl,
+            requestMethod: node.requestMethod,
+            requestHeaders: node.requestHeaders,
+            bodyData: node.bodyData,
+            responseCode: 0,
+            responseHeaders: '',
+            responseBody: err.message,
+            durationMs: duration,
+            sort: idx + 1,
+            status: 'FAILED'
+          };
+          replayResults.push(result);
+          addReplayLog('error', '<span class="node-name">' + enc(result.nodeName) + '</span> <span class="status err">失败</span> <span class="cost">' + duration + 'ms</span> — ' + enc(err.message));
+          idx++;
+          if (intervalMs > 0 && idx < nodes.length) {
+            addReplayLog('info', '等待 ' + settings.replayInterval + ' 秒后执行下一步...');
+            setTimeout(executeNext, intervalMs);
+          } else {
+            executeNext();
+          }
+        });
+    }
+
+    updateReplayActions(true);
+    executeNext();
+  }
+
+  function browserReplay(chain) {
+    var baseUrl = settings.platformUrl || 'http://localhost:8080';
+    var url = baseUrl + '/api/plugin/chain/detail?chainCode=' + encodeURIComponent(chain.chainCode);
+
+    fetch(url).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.code !== 200 || !d.data || !d.data.nodeList) {
+        addReplayLog('error', '加载链路详情失败');
+        return;
+      }
+
+      var nodeList = d.data.nodeList;
+      var macroActions = null;
+      var firstUrl = '';
+      var chainUrls = [];
+
+      for (var i = 0; i < nodeList.length; i++) {
+        if (nodeList[i].nodeType === 'MACRO' && nodeList[i].bodyData) {
+          try { macroActions = JSON.parse(nodeList[i].bodyData); } catch(e) {}
+        }
+        if (nodeList[i].requestUrl && nodeList[i].nodeType !== 'MACRO') {
+          if (!firstUrl) firstUrl = nodeList[i].requestUrl;
+          chainUrls.push(nodeList[i].requestUrl);
+        }
+      }
+
+      macroReplayFilter = chainUrls.length > 0 ? chainUrls : null;
+
+      if (!macroActions || macroActions.length === 0) {
+        addReplayLog('error', '该链路没有宏操作数据，无法回放');
+        return;
+      }
+
+      var origin = '';
+      try { origin = new URL(firstUrl).origin; } catch(e) { origin = firstUrl; }
+
+      document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+      document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+      document.querySelector('[data-tab="replayLog"]').classList.add('active');
+      el('tab-replayLog').classList.add('active');
+      el('replayLogTitle').textContent = '回放日志 — ' + chain.chainName;
+
+      replayLogs = [];
+      renderReplayLog();
+      replayResults = [];
+      isReplayPaused = false;
+      isReplayStopped = false;
+
+      addReplayLog('info', '开始宏回放: ' + chain.chainName + '，共 ' + macroActions.length + ' 个操作步骤');
+      addReplayLog('info', '正在打开页面: ' + origin);
+
+      chrome.tabs.create({ url: origin, active: true }, function(tab) {
+        chrome.storage.local.set({ macroActions: [] });
+        chrome.runtime.sendMessage({ type: 'CLEAR_APIS' });
+        chrome.runtime.sendMessage({ type: 'START_RECORDING' });
+
+        setTimeout(function() {
+          addReplayLog('info', '正在发送宏操作到页面...');
+          chrome.tabs.sendMessage(tab.id, { type: 'START_MACRO_REPLAY', actions: macroActions, settings: settings });
+        }, 2000);
+
+        updateReplayActions(true);
+        selectedChain = chain;
+
+        chrome.storage.onChanged.addListener(function onChange(changes) {
+          if (changes.macroReplayResult && changes.macroReplayResult.newValue) {
+            var res = changes.macroReplayResult.newValue;
+            addReplayLog('success', '宏回放完成! 执行: ' + res.executed + '/' + res.total + (res.stopped ? ' (已停止)' : ''));
+            addReplayLog('info', '捕获到的接口已出现在「录制」标签页，请查看并推送至平台');
+
+            setTimeout(function() {
+              document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+              document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+              document.querySelector('[data-tab="record"]').classList.add('active');
+              el('tab-record').classList.add('active');
+            }, 1500);
+
+            chrome.storage.onChanged.removeListener(onChange);
+          }
+        });
+      });
+    }).catch(function(e) {
+      addReplayLog('error', '加载链路失败: ' + e.message);
+    });
+  }
+
+  function parseHeaders(headerStr) {
+    try {
+      var h = typeof headerStr === 'string' ? JSON.parse(headerStr || '{}') : (headerStr || {});
+      return h;
+    } catch(e) { return {}; }
+  }
+
+  function togglePause() {
+    isReplayPaused = !isReplayPaused;
+    el('replayPauseBtn').innerHTML = isReplayPaused
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><polygon points="5 3 19 12 5 21 5 3"/></svg> 继续'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> 暂停';
+    addReplayLog('info', isReplayPaused ? '已暂停' : '已继续');
+  }
+
+  function stopReplay() {
+    isReplayStopped = true;
+    chrome.runtime.sendMessage({ type: 'STOP_RECORDING' });
+    chrome.storage.local.get(['macroActions'], function(r) {
+      var count = (r.macroActions || []).length;
+      if (count > 0) {
+        addReplayLog('success', '录制已停止，共录制 ' + count + ' 个操作步骤');
+      } else {
+        addReplayLog('info', '录制已停止');
+      }
+      updateReplayActions(false);
+    });
+  }
+
+  function updateReplayActions(isReplaying) {
+    el('replayActions').style.display = 'flex';
+    el('replayPauseBtn').disabled = !isReplaying;
+    el('replayStopBtn').disabled = !isReplaying;
   }
 
   // ========== 调试器 ==========
@@ -287,7 +742,7 @@
     setTimeout(function() { el('dbgSend').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> 发送请求'; el('dbgSend').disabled = false; }, 2000);
   };
 
-  // ========== OpenAPI 复制 ==========
+  // ========== OpenAPI ==========
   function copyOpenAPI(a) {
     var spec = buildOpenAPI(a);
     navigator.clipboard.writeText(JSON.stringify(spec, null, 2)).then(function() { alert('OpenAPI JSON 已复制到剪贴板'); });
@@ -370,6 +825,11 @@
     el('cfgDomains').value = settings.ignoreDomains || '';
     el('cfgMode').value = settings.idMode || 'AUTO_INCREMENT';
     el('cfgStep').value = settings.idStep || 1;
+    el('cfgVersionMode').value = settings.versionMode || 'auto';
+    el('cfgReplayTimeout').value = settings.replayTimeout || 30;
+    el('cfgReplayInterval').value = settings.replayInterval || 0;
+    el('cfgFailStrategy').value = settings.failStrategy || 'continue';
+    el('cfgParallelGroup').value = settings.enableParallelGroup !== false ? 'true' : 'false';
     updateFilterHelp();
     openP('settings');
   }
@@ -381,6 +841,11 @@
     settings.ignoreDomains = el('cfgDomains').value;
     settings.idMode = el('cfgMode').value;
     settings.idStep = parseInt(el('cfgStep').value) || 1;
+    settings.versionMode = el('cfgVersionMode').value;
+    settings.replayTimeout = parseInt(el('cfgReplayTimeout').value) || 30;
+    settings.replayInterval = parseFloat(el('cfgReplayInterval').value) || 0;
+    settings.failStrategy = el('cfgFailStrategy').value;
+    settings.enableParallelGroup = el('cfgParallelGroup').value === 'true';
     chrome.storage.local.set({ settings: settings });
     alert('设置已保存'); closeP('settings'); render();
   }
@@ -397,20 +862,38 @@
     if (!name) { alert('请输入链路名称'); return; }
     var mode = el('pushMode').value, code = el('pushCode').value.trim(), list = getChecked();
     if (mode === 'append' && !code) { alert('请输入链路编码'); return; }
-    var ifList = list.map(function(a, i) { return { nodeName: a.nodeName || getName(a.url), method: a.method || 'GET', url: a.url, headers: a.headers ? JSON.stringify(a.headers) : '', bodyData: a.body || '', responseData: typeof a.response === 'string' ? a.response : JSON.stringify(a.response || ''), sort: i + 1, parallelGroup: '' }; });
-    var url = (settings.platformUrl || 'http://localhost:8080') + '/api/plugin/chain/' + (mode === 'create' ? 'create' : 'append');
-    var body = mode === 'create' ? JSON.stringify({ chainName: name, interfaceList: ifList }) : JSON.stringify({ chainCode: code, interfaceList: ifList });
-    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body }).then(function(r) { return r.json(); }).then(function(d) {
-      if (d.code === 200) {
-        var code = d.data.chainCode || code;
-        el('pushDialog').classList.remove('open');
-        var platformUrl = (settings.frontendUrl || 'http://localhost:3000') + '/chain/edit/' + code;
-        if (confirm('推送成功！链路编码: ' + code + '\n\n是否跳转到平台查看？')) {
-          window.open(platformUrl, '_blank');
-        }
+
+    chrome.storage.local.get(['macroActions'], function(macroR) {
+      var macroActions = macroR.macroActions || [];
+      var ifList = list.map(function(a, i) { return { nodeName: a.nodeName || getName(a.url), method: a.method || 'GET', url: a.url, headers: a.headers ? JSON.stringify(a.headers) : '', bodyData: a.body || '', responseData: typeof a.response === 'string' ? a.response : JSON.stringify(a.response || ''), sort: i + 1, parallelGroup: '' }; });
+
+      if (macroActions.length > 0) {
+        ifList.push({
+          nodeName: '宏操作 (' + macroActions.length + ' 步)',
+          method: 'MACRO',
+          url: macroActions[0] ? macroActions[0].pageUrl : '',
+          headers: '',
+          bodyData: JSON.stringify(macroActions),
+          responseData: JSON.stringify(macroActions),
+          sort: ifList.length + 1,
+          parallelGroup: ''
+        });
       }
-      else alert('失败: ' + (d.message || ''));
-    }).catch(function(e) { alert('失败: ' + e.message); });
+
+      var url = (settings.platformUrl || 'http://localhost:8080') + '/api/plugin/chain/' + (mode === 'create' ? 'create' : 'append');
+      var body = mode === 'create' ? JSON.stringify({ chainName: name, interfaceList: ifList }) : JSON.stringify({ chainCode: code, interfaceList: ifList });
+      fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.code === 200) {
+          var code = d.data.chainCode || code;
+          el('pushDialog').classList.remove('open');
+          var platformUrl = (settings.frontendUrl || 'http://localhost:3001') + '/chain/edit/' + code;
+          if (confirm('推送成功！链路编码: ' + code + '\n\n是否跳转到平台查看？')) {
+            window.open(platformUrl, '_blank');
+          }
+        }
+        else alert('失败: ' + (d.message || ''));
+      }).catch(function(e) { alert('失败: ' + e.message); });
+    });
   }
 
   // ========== 导出 ==========

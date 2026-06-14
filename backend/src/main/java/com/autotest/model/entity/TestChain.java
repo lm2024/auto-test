@@ -12,6 +12,8 @@ public class TestChain {
     private Date updateTime;
     private String createBy;
     private Integer status;
+    private Integer currentVersion;
+    private String chainFingerprint;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -31,4 +33,8 @@ public class TestChain {
     public void setCreateBy(String createBy) { this.createBy = createBy; }
     public Integer getStatus() { return status; }
     public void setStatus(Integer status) { this.status = status; }
+    public Integer getCurrentVersion() { return currentVersion; }
+    public void setCurrentVersion(Integer currentVersion) { this.currentVersion = currentVersion; }
+    public String getChainFingerprint() { return chainFingerprint; }
+    public void setChainFingerprint(String chainFingerprint) { this.chainFingerprint = chainFingerprint; }
 }

@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!-- TODO: Change the title bar text -->
+    <title>Katalon Recorder</title>
+
+    <link
+      href="https://fonts.googleapis.com/css?family=Roboto+Mono:400,700|Roboto:400,500,700"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="css/jquery-ui.min.css" />
+    <link rel="stylesheet" href="css/jquery-ui-slider-pips.css" />
+    <link
+      rel="stylesheet"
+      href="css/layout.css"
+      type="text/css"
+      media="screen"
+    />
+    <link rel="stylesheet" href="css/font-awesome.min.css" />
+
+    <link
+      rel="stylesheet"
+      href="js/katalon/codemirror-5.31.0/lib/codemirror.css"
+    />
+    <link rel="stylesheet" href="css/kar.css" />
+    <link rel="stylesheet" href="css/bootstrap-tour-standalone.min.css" />
+    <link rel="stylesheet" href="css/notification.css" />
+    <link rel="stylesheet" href="css/new-kar.css" />
+    <link rel="stylesheet" href="css/onBoarding.css" />
+    <link rel="stylesheet" href="css/export.css" />
+    <link rel="stylesheet" href="css/fix-kar.css" />
+    <link rel="stylesheet" href="css/dynamic-kar.css" />
+    <link rel="stylesheet" href="css/sample-project.css" />
+    <link rel="stylesheet" href="css/global-profile.css" />
+    <link rel="stylesheet" href="css/test-data-dialog.css" />
+    <link rel="stylesheet" href="css/login.css" />
+    <link rel="stylesheet" href="css/records-table.css" />
+    <link rel="stylesheet" href="css/tooltip.css" />
+    <link rel="stylesheet" href="css/new-onboarding.css" />
+    <link rel="stylesheet" href="css/toastify.css" />
+    <link rel="stylesheet" href="css/sidebar.css" />
+    <!-- to hide right button feature -->
+    <!--[if lt IE 9]>
+      <link
+        rel="stylesheet"
+        href="panel/css/ie.css"
+        type="text/css"
+        media="screen"
+      />
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <script type="text/javascript" src="../content/trustedPolicy.js"></script>
+    <script type="text/javascript" src="js/lib/utils.js"></script>
+    <script type="text/javascript" src="../common/jquery-3.2.1.min.js"></script>
+    <script type="text/javascript" src="js/lib/jquery-ui.min.js"></script>
+    <script
+      type="text/javascript"
+      src="js/lib/jquery-ui-slider-pips.js"
+    ></script>
+    <script
+      type="text/javascript"
+      src="js/lib/jquery.tablesorter.min.js"
+    ></script>
+    <script type="text/javascript" src="js/lib/jquery.equalHeight.js"></script>
+    <script type="text/javascript" src="js/lib/jquery.tabletab.js"></script>
+    <script
+      type="text/javascript"
+      src="js/lib/colResizable-1.6.min.js"
+    ></script>
+    <script type="text/javascript" src="js/lib/jszip.min.js"></script>
+    <script type="text/javascript" src="js/lib/FileSaver.js"></script>
+
+    <script type="text/javascript" src="js/background/doc.js"></script>
+
+    <script type="text/javascript" src="../content/utils.js"></script>
+    <script type="text/javascript" src="../content/atoms.js"></script>
+    <script type="text/javascript" src="../content/selenium-api.js"></script>
+    <script
+      type="text/javascript"
+      src="js/katalon/selenium-ide/testCase.js"
+    ></script>
+    <script
+      type="text/javascript"
+      src="js/katalon/codemirror-5.31.0/lib/codemirror.js"
+    ></script>
+    <script
+      type="text/javascript"
+      src="js/katalon/codemirror-5.31.0/mode/clike/clike.js"
+    ></script>
+    <script
+      type="text/javascript"
+      src="js/katalon/codemirror-5.31.0/mode/groovy/groovy.js"
+    ></script>
+    <script
+      type="text/javascript"
+      src="js/katalon/codemirror-5.31.0/mode/javascript/javascript.js"
+    ></script>
+    <script
+      type="text/javascript"
+      src="js/katalon/codemirror-5.31.0/mode/php/php.js"
+    ></script>
+    <script
+      type="text/javascript"
+      src="js/katalon/codemirror-5.31.0/mode/python/python.js"
+    ></script>
+    <script
+      type="text/javascript"
+      src="js/katalon/codemirror-5.31.0/mode/ruby/ruby.js"
+    ></script>
+    <script
+      type="text/javascript"
+      src="js/katalon/codemirror-5.31.0/mode/xml/xml.js"
+    ></script>
+    <script type="text/javascript" src="js/katalon/bowser.js"></script>
+    <script type="text/javascript" src="js/katalon/papaparse.js"></script>
+
+    <script
+      type="text/javascript"
+      src="js/UI/services/onboarding-service/bootstrap-tour-standalone.min.js"
+    ></script>
+    <script type="text/javascript" src="../content/toastify.js"></script>
+    <script type="text/javascript" src="../common/jwtJsDecode.js"></script>
+  </head>
+  <!-- TODO: Make whole panel size flexible -->
+
+  <body>
+    <div id="suite-grid-menu" class="menu">
+      <ul>
+        <li id="load-testSuite-show-menu"><a href="#">Open Test Suites</a></li>
+        <li id="add-testSuite-menu"><a href="#">Add New Test Suite</a></li>
+      </ul>
+    </div>
+    <section id="main" class="column">
+      <div id="toolbar-container" class="submit_link">
+        <!-- hidden, because it has default style -->
+        <input
+          id="import-selenium-hidden"
+          type="file"
+          multiple
+          accept=".side"
+          style="display: none"
+        />
+        <input
+          id="load-testSuite-hidden"
+          type="file"
+          multiple
+          accept=".html,.krecorder,application/json"
+          style="display: none"
+        />
+        <input
+          id="load-older-testSuite"
+          type="file"
+          multiple
+          accept="text/*"
+          style="display: none"
+        />
+        <input
+          id="open-global-profile"
+          type="file"
+          multiple
+          accept=".krprofile"
+          style="display: none"
+        />
+        <input
+          id="load-testSuite-show"
+          type="button"
+          value="OpenSuite"
+          style="display: none"
+        />
+        <button id="save-testSuite" style="display: none">SaveSuite</button>
+        <button id="close-testSuite" style="display: none">CloseSuite</button>
+        <button id="close-all-testSuites" style="display: none">
+          CloseAllSuites
+        </button>
+        <button id="add-testSuite" style="display: none">+Suite</button>
+        <button id="add-testCase" style="display: none">+Case</button>
+        <button id="delete-testCase" style="display: none">-Case</button>
+        <a download="info.html" id="downloadlink" style="display: none"
+          >Download</a
+        >
+
+        <div class="row">
+          <div class="KR-logo">
+            <a target="_blank" id="logo_kr_icon">
+              <img
+                src="../katalon/images/branding/KR-logo-collapsed.svg"
+                alt="Katalon Recorder"
+            /></a>
+            <a target="_blank" id="logo_kr_full" class="sub_btn">
+              <img
+                class="dark"
+                src="../katalon/images/branding/new-Katalon-Recorder-full-color-large.svg"
+                alt="Katalon Recorder"
+              />
+              <img
+                class="light"
+                src="../katalon/images/branding/new-Katalon-Recorder-full-color-large-w.svg"
+                alt="Katalon Recorder"
+              />
+            </a>
+          </div>
+          <div class="main-toolbar">
+            <div class="left-side">
+              <button id="record" class="sub_btn">Record</button>
+              <button id="playback" class="sub_btn" disabled>
+                Play Test Case
+              </button>
+              <button id="stop" class="sub_btn" style="display: none">
+                Stop
+              </button>
+              <button id="playSuite" class="sub_btn" disabled>
+                Play Test Suite
+              </button>
+              <button id="playSuites" class="sub_btn" disabled>
+                Play All Suites
+              </button>
+              <button id="pause" class="sub_btn btn_pr" disabled>
+                Pause Execution
+              </button>
+              <button id="resume" class="sub_btn btn_pr" style="display: none">
+                Resume Execution
+              </button>
+            </div>
+            <div class="right-side">
+              <button id="user-manual-icon" class="sub_btn"></button>
+              <button id="notification" class="sub_btn"></button>
+              <button id="login-button" class="login-button">Sign in</button>
+              <div class="sub_btn" id="login-user" style="display: none">
+                <img src="icons/user.svg" alt="" />
+              </div>
+              <div class="dropdown">
+                <div id="logout-dropdown" class="dropdown-content">
+                  <div
+                    id="logout-info"
+                    style="margin: 10px; text-align: center"
+                  ></div>
+                  <div
+                    id="logout-user"
+                    style="
+                      margin: 10px;
+                      text-align: center;
+                      color: #f54966;
+                      border-top: 1px solid #d5d8dd;
+                      padding-top: 5px;
+                    "
+                  >
+                    Log out
+                  </div>
+                </div>
+              </div>
+              <div id="slider" style="display: none"></div>
+              <div id="slider-container" style="display: none"></div>
+              <button id="more" class="sub_btn"></button>
+              <div class="dropdown">
+                <div id="myDropdown" class="dropdown-content">
+                  <button id="speed" class="sub_btn">
+                    <em class="fa"></em>
+                    <span>Speed</span>
+                  </button>
+                  <button id="settings" class="sub_btn">
+                    <em class="fa"></em>
+                    <span>Settings</span>
+                  </button>
+                  <button id="help" class="sub_btn">
+                    <em class="fa"></em>
+                    <span>Help</span>
+                  </button>
+                  <button id="github" class="sub_btn">
+                    <em class="fa"></em>
+                    <span>Github</span>
+                  </button>
+                  <button id="extended-features" class="sub_btn">
+                    <em class="fa"></em>
+                    <span>Stats</span>
+                  </button>
+                  <a id="dailyUsage" style="display: none"></a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="main-section">
+        <article id="tree-section">
+          <div class="top">
+            <div id="toggle-btn">
+              <img id="toggle" src="../panel/icons/fab-expanded.svg" alt="" />
+            </div>
+            <div id="workspace" class="module hide-scrollbar">
+              <header>WORKSPACE</header>
+              <div id="testCase-container" class="case_list">
+                <div class="header">
+                  <div class="left-side">
+                    <div class="dropdown" id="testSuiteDropdown">
+                      <img
+                        src="/katalon/images/SVG/dropdown-arrow-off.svg"
+                        alt="arrow-off"
+                      />
+                    </div>
+                    <img
+                      src="icons/test-suites-icon.svg"
+                      alt="test-suite"
+                      class="workspace-icon"
+                    />
+                    <div class="title">Test Suites</div>
+                  </div>
+                  <div class="right-side">
+                    <div id="test-suites-info"></div>
+                    <div id="suite-plus" class="plus tooltip">
+                      <img src="/katalon/images/SVG/add-icon.svg" alt="More" />
+                      <span class="tooltiptext">Create a new Test Suite</span>
+                    </div>
+                  </div>
+                </div>
+                <article id="result-container" class="module">
+                  <div class="fieldset">
+                    <div class="result-row">
+                      <img src="/katalon/images/SVG/pass-icon.svg" alt="" />
+                      <label id="result1">Passed</label>
+                      <div id="result-runs" class="runs">0</div>
+                    </div>
+                    <div class="result-row">
+                      <img src="/katalon/images/SVG/fail-icon-new.svg" alt="" />
+                      <label id="result2">Failed</label>
+                      <div id="result-failures" class="failures">0</div>
+                    </div>
+                  </div>
+                </article>
+                <div id="testCase-grid" class="module_content"></div>
+                <span class="tooltip-icon">Test Suites</span>
+              </div>
+              <div id="testCase-container-dynamic" class="case_list">
+                <div class="header">
+                  <div class="left-side">
+                    <div class="dropdown" id="dynamic-dropdown">
+                      <img
+                        src="/katalon/images/SVG/dropdown-arrow-off.svg"
+                        alt="arrow-off"
+                      />
+                    </div>
+                    <img
+                      src="icons/dynamic-test-suites-icon.svg"
+                      alt="dynamic-test-suite"
+                      class="workspace-icon"
+                    />
+                    <div class="title">Dynamic Test Suites</div>
+                  </div>
+                  <div class="right-side">
+                    <div id="dynamic-test-suite-info"></div>
+                    <div id="dynamic-plus" class="plus tooltip">
+                      <img src="/katalon/images/SVG/add-icon.svg" alt="More" />
+                      <span class="tooltiptext"
+                        >Create a new Dynamic Test Suite</span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <div id="testCase-filter" class="module_content"></div>
+                <span class="tooltip-icon">Dynamic Test Suites</span>
+              </div>
+              <div id="testData-container" class="case_list">
+                <div class="header">
+                  <div class="left-side">
+                    <div id="testDataDropdown" class="dropdown">
+                      <img
+                        src="/katalon/images/SVG/dropdown-arrow-off.svg"
+                        alt=""
+                      />
+                    </div>
+                    <img
+                      src="icons/test-data.svg"
+                      alt="test-data"
+                      class="workspace-icon"
+                    />
+                    <div class="title">Test Data</div>
+                  </div>
+                  <div class="right-side">
+                    <div id="test-data-info"></div>
+                    <div id="testDataPlus" class="plus tooltip">
+                      <img src="icons/folder.svg" alt="More" />
+                      <span class="tooltiptext" style="width: 100px"
+                        >Open a Data File</span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <div id="data-files-list"></div>
+                <input
+                  id="load-data-file-hidden"
+                  type="file"
+                  accept=".csv,.json"
+                  multiple
+                  style="display: none"
+                />
+                <span class="tooltip-icon">Test Data</span>
+              </div>
+              <div id="extensionScript-container" class="case_list">
+                <div class="header">
+                  <div class="left-side">
+                    <div id="extensionDropdown" class="dropdown">
+                      <img
+                        src="/katalon/images/SVG/dropdown-arrow-off.svg"
+                        alt=""
+                      />
+                    </div>
+                    <img
+                      src="icons/extension-script-icon.svg"
+                      alt="extension-script"
+                      class="workspace-icon"
+                    />
+                    <div class="title">Extension script</div>
+                  </div>
+                  <div class="right-side">
+                    <div id="extension-script-info"></div>
+                    <div id="extensionScriptPlus" class="plus tooltip">
+                      <img src="icons/folder.svg" alt="More" />
+                      <span class="tooltiptext" style="width: 100px"
+                        >Open a Script</span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <div id="extensions-list"></div>
+                <input
+                  id="load-extension-hidden"
+                  type="file"
+                  accept=".js"
+                  multiple
+                  style="display: none"
+                />
+                <span class="tooltip-icon">Extension script</span>
+              </div>
+              <div id="profile-container" class="case_list">
+                <div class="header">
+                  <div class="left-side">
+                    <div id="profileDropdown" class="dropdown">
+                      <img
+                        src="/katalon/images/SVG/dropdown-arrow-off.svg"
+                        alt=""
+                      />
+                    </div>
+                    <img
+                      src="icons/profiles-icon.svg"
+                      alt="profiles"
+                      class="workspace-icon"
+                    />
+                    <div class="title">Profiles</div>
+                  </div>
+                  <div class="right-side">
+                    <div id="profiles-info"></div>
+                    <div id="profilePlus" class="plus tooltip">
+                      <img src="/katalon/images/SVG/add-icon.svg" alt="More" />
+                      <span class="tooltiptext"
+                        >Create/Open a new Global Profile</span
+                      >
+                    </div>
+                    <div id="profiles-action-dropdown">
+                      <div id="create-new-profile">
+                        Create a new Global Profile
+                      </div>
+                      <div id="open-existing-profile">
+                        Open a new Global Profile
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div id="profile-list"></div>
+                <span class="tooltip-icon">Profiles</span>
+              </div>
+            </div>
+          </div>
+
+          <div id="divider"></div>
+
+          <div class="bottom">
+            <div id="actions" class="module">
+              <div id="suite-open" class="header tooltip">
+                <div class="icon">
+                  <img src="icons/open-test-suite.svg" alt="" />
+                </div>
+                <div class="title">Open Test Suite</div>
+                <div id="suite-open-dropdown">
+                  <div id="suite-open-recorder">Open KR Test Suite</div>
+                  <div id="suite-open-selenium">Open S.IDE Test Suite</div>
+                </div>
+                <span class="tooltip-icon">Open Test Suite</span>
+              </div>
+              <div id="template-open" class="header tooltip">
+                <div class="icon">
+                  <img
+                    src="/katalon/images/SVG/open-template-sidebar-icon.svg"
+                    alt=""
+                  />
+                </div>
+                <div class="title">Sample projects</div>
+                <span class="tooltipcontent"
+                  >Learn about how Katalon works and help accelerate your
+                  automation process</span
+                >
+                <span class="tooltip-icon">Sample projects</span>
+              </div>
+              <div id="export" class="header tooltip">
+                <div class="icon">
+                  <img
+                    src="/katalon/images/SVG/export-test-suite-icon.svg"
+                    alt=""
+                  />
+                </div>
+                <div class="title">Export</div>
+                <div id="export-open-dropdown">
+                  <div id="export-to-KS">Export to KS</div>
+                  <div id="export-to-other">Export to other frameworks</div>
+                </div>
+                <span class="tooltipcontent"
+                  >Export the current test case to script in C#, Java, Ruby,
+                  Python, (Katalon Studio) Groovy, or Robot Framework</span
+                >
+                <span class="tooltip-icon">Export</span>
+              </div>
+              <div id="more-options" class="header">
+                <div class="icon">
+                  <img
+                    id="more-options-icon"
+                    src="/katalon/images/SVG/more-options.svg"
+                    alt=""
+                  />
+                </div>
+                <div class="title">More options</div>
+                <div id="more-options-open-dropdown">
+                  <div
+                    id="test-ops-back-up-data"
+                    class="dropdown-header tooltip"
+                  >
+                    <div class="icon">
+                      <img
+                        src="/katalon/images/SVG/backup-data-icon.svg"
+                        alt=""
+                      />
+                    </div>
+                    <div class="dropdown-title">Backup data</div>
+                    <span class="tooltiptext"
+                      >Upload your test suites to Katalon TestOps to safely
+                      restore them later</span
+                    >
+                  </div>
+                  <div id="tagging-features" class="dropdown-header tooltip">
+                    <div class="icon">
+                      <img src="./icons/tag-icon.svg" alt="" />
+                    </div>
+                    <div class="dropdown-title">Tags Management</div>
+                    <span class="tooltiptext"
+                      >Manage all your tags at once</span
+                    >
+                  </div>
+                  <div
+                    id="ka-upload"
+                    class="dropdown-header disable"
+                    title="Currently unavailable"
+                  >
+                    <div class="icon">
+                      <img
+                        src="/katalon/images/branding/ka_32x24px.png"
+                        alt=""
+                      />
+                    </div>
+                    <div class="dropdown-title">Upload report</div>
+                  </div>
+                  <div class="dropdown-header tooltip" id="feedback">
+                    <div class="icon">
+                      <img
+                        src="/katalon/images/SVG/feed-back-icon.svg"
+                        alt=""
+                      />
+                    </div>
+                    <div class="dropdown-title">Feedback</div>
+                    <span class="tooltiptext"
+                      >Give us your feedback to improve your experience</span
+                    >
+                  </div>
+                  <div class="dropdown-header tooltip" id="connecting">
+                    <div class="icon">
+                      <img
+                        src="/katalon/images/SVG/new-talk-to-us-icon.svg"
+                        alt=""
+                      />
+                    </div>
+                    <div class="dropdown-title">Talk to us</div>
+                    <span class="tooltiptext"
+                      >Let's have sometime to share a talk</span
+                    >
+                  </div>
+                </div>
+                <span class="tooltip-icon">More options</span>
+              </div>
+            </div>
+          </div>
+          <!-- end of messages article -->
+        </article>
+        <article id="steps-section" class="module">
+          <div class="command-sample-section">
+            <div class="title-testcase"></div>
+            <div class="command-section">
+              <div id="command-container" class="tab_content case_hight">
+                <div class="smallSection">
+                  <table id="command-grid" class="tablesorter" cellspacing="0">
+                    <thead class="fixed">
+                      <tr>
+                        <th style="max-width: 0.5px; width: 0.5px"></th>
+                        <th style="width: 23%">
+                          Command
+                          <div class="border"></div>
+                        </th>
+                        <th style="width: 40%">
+                          Target
+                          <div class="border"></div>
+                        </th>
+                        <th style="width: 36.5%">Value</th>
+                      </tr>
+                    </thead>
+                    <tbody id="records-grid">
+                      <input id="records-count" type="hidden" value="0" />
+                    </tbody>
+                  </table>
+                  <div class="record-bottom">+ Add new row (Cmd/Ctrl + I)</div>
+                </div>
+              </div>
+            </div>
+            <div class="dynamic-test-suite"></div>
+            <div id="profile-section"></div>
+          </div>
+          <div id="log-section">
+            <article class="module">
+              <header class="tabs_involved">
+                <ul class="tabs2">
+                  <li id="history-log"><a>Log</a></li>
+                  <li id="screenshot"><a>Screenshots</a></li>
+                  <li id="variable-log"><a>Variables</a></li>
+                  <li id="reference-log"><a>Reference</a></li>
+                  <li id="self-healing"><a>Self-healing</a></li>
+                </ul>
+                <ul class="tabs">
+                  <li id="ka-open">
+                    <a
+                      ><img
+                        src="../katalon/images/branding/ka_32x24px.png"
+                        alt="Katalon TestOps"
+                      />Dashboard</a
+                    >
+                  </li>
+                  <li id="save-log"><a title="Save logs as...">Save</a></li>
+                  <li id="clear-log"><a title="Clear logs">Clear</a></li>
+                  <li id="download-all">
+                    <a title="Download All">Download All</a>
+                  </li>
+                  <li id="select-self-healing-test-status">
+                    <select
+                      name="self-healing-test-status"
+                      style="
+                        color: var(--main-txt-color);
+                        background-color: var(--input-bg-color);
+                      "
+                    >
+                      <option value="All">All</option>
+                      <option value="Passed">Passed</option>
+                      <option value="Failed">Failed</option>
+                    </select>
+                  </li>
+                  <li id="collapse-console">
+                    <a
+                      href="javascript:void(0);"
+                      title="Toggle panel"
+                      id="show-hide-bottom-panel"
+                    >
+                      <img
+                        src="/katalon/images/SVG/log-container-close.svg"
+                        data-show="/katalon/images/SVG/log-container-open.svg"
+                        data-hide="/katalon/images/SVG/log-container-close.svg"
+                        alt="Show/Hide"
+                      />
+                    </a>
+                  </li>
+                </ul>
+              </header>
+              <div id="tab4" class="tab_content case_roll">
+                <div class="module_content">
+                  <div id="logcontainer"></div>
+                  <div id="screenshotcontainer">
+                    <ul></ul>
+                  </div>
+                  <div id="variablecontainer">
+                    <table id="variable-grid">
+                      <colgroup>
+                        <col width="33.3333%" />
+                        <col width="33.3333%" />
+                        <col width="33.3333%" />
+                      </colgroup>
+                      <thead>
+                        <tr>
+                          <th>Variable</th>
+                          <th>Format</th>
+                          <th>Value</th>
+                        </tr>
+                      </thead>
+                      <tbody></tbody>
+                    </table>
+                    <div id="variable-grid-border"></div>
+                  </div>
+                  <div id="refercontainer"></div>
+                  <div id="selfHealingContainer" class="file-container">
+                    <table style="table-layout: fixed; word-wrap: break-word">
+                      <colgroup>
+                        <col style="width: 20%" />
+                        <col style="width: 10%" />
+                        <col style="width: 30%" />
+                        <col style="width: 30%" />
+                        <col style="width: 10%" />
+                      </colgroup>
+                      <thead>
+                        <tr>
+                          <th>Test Case</th>
+                          <th>Status</th>
+                          <th>Broken Locator</th>
+                          <th>Proposed</th>
+                          <th>Approve</th>
+                        </tr>
+                      </thead>
+                      <tbody id="selfHealingList"></tbody>
+                    </table>
+                    <button id="self-healing-approve-btn">Approve</button>
+                  </div>
+                </div>
+              </div>
+              <!-- end of #tab4 -->
+            </article>
+            <!-- end of styles article -->
+          </div>
+        </article>
+        <div class="clear"></div>
+      </div>
+      <div id="backup-section">
+        <input
+          id="backup-restore-hidden"
+          type="file"
+          accept=".json"
+          style="display: none"
+        />
+        <p>
+          <span id="backup-status"></span>
+          <a
+            href="#"
+            id="backup-refresh-btn"
+            class="katalon-link"
+            style="display: none"
+            >Refresh</a
+          >
+          <a
+            href="#"
+            id="backup-restore-btn"
+            class="katalon-link"
+            style="display: none"
+            >Restore</a
+          >
+        </p>
+      </div>
+
+      <!--<div class="spacer"></div>-->
+      <div
+        id="generateToScriptsDialog"
+        title="Export Test Case as Script"
+        style="display: none"
+      >
+        <div
+          class=""
+          style="height: 30px; line-height: 30px; margin-bottom: 12px"
+        >
+          <label for="select-script-language-id">Format </label>
+          <select
+            style="margin: 0 5px"
+            id="select-script-language-id"
+            class="select-script-language"
+          >
+            <option value="new-formatter-dynatrace" selected>
+              JSON (Dynatrace Synthetics)
+            </option>
+            <option value="new-formatter-nrsynthetics">
+              Node (New Relic Synthetics)
+            </option>
+            <option value="new-formatter-protractorts">
+              Protractor (Typescript)
+            </option>
+            <option value="new-formatter-webdriver">WebDriver.io</option>
+            <option value="new-formatter-sample">
+              Sample for new formatters
+            </option>
+            <option value="new-formatter-puppeteer">Puppeteer</option>
+            <option value="new-formatter-puppeteer_w_comment">
+              Puppeteer w Comments
+            </option>
+            <option value="new-formatter-puppeteer_json">
+              JSON (puppeteer)
+            </option>
+          </select>
+          <div style="display: inline-block">
+            You can add your own formatter. Read more
+            <a
+              target="_blank"
+              href="https://github.com/katalon-studio/katalon-recorder"
+              class="katalon-link"
+              >here</a
+            >.
+          </div>
+        </div>
+        <textarea id="txt-script-id" class="txt-script">scripts</textarea>
+      </div>
+      <div id="helpDialog" style="display: none">
+        <button id="helpDialog-close"></button>
+        <h1>Need help? Explore Katalon Recorder Support Resources</h1>
+        <div id="panel-container">
+          <a class="panel" id="user-manual">
+            <img src="/katalon/images/SVG/user-manual-icon.svg" alt="" />
+            <p class="panel-title">User Manual</p>
+            <p class="panel-description">
+              Guides to utilize Katalon Recorder for automation effectively.
+            </p>
+          </a>
+          <a class="panel" id="sample-project" target="_blank">
+            <img src="/katalon/images/SVG/videos-icon.svg" />
+            <p class="panel-title">Sample Project</p>
+            <p class="panel-description">
+              A collection of templates to kick-start your automation
+            </p>
+          </a>
+          <a
+            class="panel"
+            href="https://forum.katalon.com/c/product-forums/katalon-recorder"
+            target="_blank"
+          >
+            <img src="/katalon/images/SVG/community-icon.svg" />
+            <p class="panel-title">Community</p>
+            <p class="panel-description">
+              Access Katalon fellow users tips and tricks sharing.
+            </p>
+          </a>
+          <a
+            id="katalon-introduction"
+            class="panel"
+            href="https://www.katalon.com?utm_source=chrome%20recorder%20pop-up"
+            target="_blank"
+          >
+            <img src="/katalon/images/SVG/advanced-icon.svg" />
+            <p class="panel-title">Free Advanced Automation</p>
+            <p class="panel-description">
+              Try Katalon Studio - the best solution for Web, API &amp; Mobile
+              automation.
+            </p>
+          </a>
+        </div>
+      </div>
+    </section>
+    <!-- script -->
+    <script src="../common/promise-utils.js"></script>
+    <script src="../common/browser-polyfill.js"></script>
+    <script
+      type="module"
+      src="js/UI/services/helper-service/SandboxEvaluator.js"
+    ></script>
+    <script src="../common/persistent-store.js"></script>
+    <script src="../common/get-anonymous-id.js"></script>
+    <script src="../common/browser-fingerprint2.js"></script>
+    <script src="../common/get-browser-fingerprint.js"></script>
+    <script src="../common/get-browser-name.js"></script>
+    <script src="js/background/editor.js"></script>
+    <script
+      type="module"
+      src="js/UI/controllers/command-toolbar/command-toolbar-undo-redo.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/command-toolbar/command-grid-toolbar.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/command-toolbar/command-toolbar-button.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/dialog/welcome-tracking.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/dialog/user-researching.js"
+    ></script>
+    <script type="module" src="js/UI/controllers/dialog/feedback.js"></script>
+    <script
+      type="module"
+      src="js/UI/controllers/records-grid/records-grid-sortable-ui.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/records-grid/context-menu.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/records-grid/hotkeys-command.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/records-grid/action-table.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/testcase-grid/testCase-grid-test-suite-listener.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/testcase-grid/testCase-grid-test-case-listener.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/testcase-grid/testcase-container-sortable-ui.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/testcase-grid/hotkeys-testcase.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/tracking/add-tracking-handler.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/other-listeners/hideshow.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/other-listeners/panel-setting.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/other-listeners/log.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/other-listeners/import-selenium.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/other-listeners/import-html-file.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/other-listeners/storage.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/left-toolbar/left-side-panel.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/left-toolbar/data-file.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/other-listeners/test-ops.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/global-profile/global-profile-left-side-panel.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/global-profile/global-profile-section.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/other-listeners/export.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/global-profile/context-menu.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/global-profile/hotkeys-command.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/sample-project/sample-project-listener.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/user-manual/user-manual-listener.js"
+    ></script>
+    <script src="js/UI/controllers/sidebar/sidebar.js"></script>
+
+    <script type="module" src="js/UI/index.js"></script>
+    <script type="module" src="js/UI/index2.js"></script>
+    <script type="module" src="js/background/load-setting-data.js"></script>
+    <script type="module" src="js/background/window-controller.js"></script>
+    <script type="module" src="js/background/recorder.js"></script>
+    <script src="js/background/initial.js"></script>
+    <script src="../common/escape.js"></script>
+    <script src="js/background/formatCommand.js"></script>
+    <script src="js/background/website-login.js"></script>
+    <script
+      type="module"
+      src="js/UI/controllers/self-healing/self-healing-listener.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/self-healing/hotkeys-self-healing.js"
+    ></script>
+    <script type="module" src="js/background/playback/index.js"></script>
+    <script src="../content-marketing/panel/converttosimage.js"></script>
+    <script
+      type="module"
+      src="../content-marketing/panel/popup-sharing.js"
+    ></script>
+    <script
+      type="module"
+      src="../content-marketing/panel/self-healing-rating.js"
+    ></script>
+    <!-- <script type="module" src="../content-marketing/panel/popup-chrome-store.js"></script> -->
+    <!-- <script type="module" src="../content-marketing/panel/popup-what-are-you-automating.js"></script> -->
+    <script
+      type="module"
+      src="../content-marketing/panel/popup-rate-us.js"
+    ></script>
+
+    <!-- <script src="js/katalon/kar.js"></script> -->
+    <script src="js/katalon/kar-upload.js"></script>
+    <script src="js/katalon/kar-loadCommand.js"></script>
+    <script type="module" src="js/katalon/kar-generateScript.js"></script>
+    <script src="js/katalon/kar-showDialog.js"></script>
+    <script src="js/katalon/kar-extensionScript.js"></script>
+    <script src="js/katalon/kar-restoreData.js"></script>
+    <script src="js/katalon/kar-screenshot.js"></script>
+    <script src="js/katalon/kar.js"></script>
+
+    <script
+      type="module"
+      src="js/UI/controllers/top-toolbar/actions.js"
+    ></script>
+    <script src="js/UI/controllers/left-toolbar/resize-actions.js"></script>
+
+    <script
+      type="text/javascript"
+      src="js/katalon/newformatters/sample.js"
+    ></script>
+    <script
+      type="text/javascript"
+      src="js/katalon/newformatters/nrsynthetics.js"
+    ></script>
+    <script
+      type="text/javascript"
+      src="js/katalon/newformatters/protractorts.js"
+    ></script>
+    <script
+      type="text/javascript"
+      src="js/katalon/newformatters/dynatrace.js"
+    ></script>
+    <script
+      type="text/javascript"
+      src="js/katalon/newformatters/webdriver.js"
+    ></script>
+    <!-- new formatter -->
+    <script
+      type="text/javascript"
+      src="js/katalon/newformatters/puppeteer.js"
+    ></script>
+
+    <script
+      type="module"
+      src="js/UI/controllers/onboarding/onboarding-listener.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/onboarding/contextual-onboarding-listener.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/onboarding/onboarding-dialogs.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/notification/notification-listener.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/dynamic-test-suite/dynamic-test-suite.js"
+    ></script>
+    <script
+      type="module"
+      src="js/UI/controllers/records-grid/command-reference.js"
+    ></script>
+  </body>
+</html>

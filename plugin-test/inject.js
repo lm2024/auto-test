@@ -56,11 +56,11 @@
       cl.text().then(function(rt) {
         var respBody = rt;
         try { respBody = JSON.parse(rt); } catch(e) {}
-        save({ url: u, method: m, headers: h, body: b, status: r.status, statusText: r.statusText, responseHeaders: respH, response: respBody, duration: dur, timestamp: Date.now(), apiType: getType(u) });
+        save({ url: u, method: m, headers: h, body: b, status: r.status, statusText: r.statusText, responseHeaders: respH, response: respBody, duration: dur, timestamp: Date.now(), apiType: getType(u), resourceType: 'fetch_xhr' });
       }).catch(function() {});
       return r;
     }).catch(function(e) {
-      save({ url: u, method: m, headers: h, body: b, status: 0, statusText: 'Error', responseHeaders: {}, response: e.message || 'Error', duration: Date.now() - st, timestamp: Date.now(), apiType: getType(u) });
+      save({ url: u, method: m, headers: h, body: b, status: 0, statusText: 'Error', responseHeaders: {}, response: e.message || 'Error', duration: Date.now() - st, timestamp: Date.now(), apiType: getType(u), resourceType: 'fetch_xhr' });
       throw e;
     });
   };
@@ -89,11 +89,11 @@
         });
         var respBody = self.responseText;
         try { respBody = JSON.parse(self.responseText); } catch(e) {}
-        save({ url: t.url, method: t.method, headers: Object.assign({}, t.headers), body: t.body, status: self.status, statusText: self.statusText, responseHeaders: respH, response: respBody, duration: Date.now() - t.st, timestamp: Date.now(), apiType: getType(t.url) });
+        save({ url: t.url, method: t.method, headers: Object.assign({}, t.headers), body: t.body, status: self.status, statusText: self.statusText, responseHeaders: respH, response: respBody, duration: Date.now() - t.st, timestamp: Date.now(), apiType: getType(t.url), resourceType: 'fetch_xhr' });
       });
       this.addEventListener('error', function() {
         if (!isRecording || !self._at) return;
-        save({ url: self._at.url, method: self._at.method, headers: self._at.headers, body: self._at.body, status: 0, statusText: 'Error', responseHeaders: {}, response: 'Network Error', duration: Date.now() - self._at.st, timestamp: Date.now(), apiType: getType(self._at.url) });
+        save({ url: self._at.url, method: self._at.method, headers: self._at.headers, body: self._at.body, status: 0, statusText: 'Error', responseHeaders: {}, response: 'Network Error', duration: Date.now() - self._at.st, timestamp: Date.now(), apiType: getType(self._at.url), resourceType: 'fetch_xhr' });
       });
     }
     return oSend.apply(this, arguments);
@@ -113,6 +113,6 @@
       fd.forEach(function(v, k) { pairs.push(encodeURIComponent(k) + '=' + encodeURIComponent(v)); });
       body = pairs.join('&');
     }
-    save({ url: url, method: method, headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body, status: 200, statusText: 'Form Submit', responseHeaders: {}, response: null, duration: 0, timestamp: Date.now(), apiType: 'api' });
+    save({ url: url, method: method, headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body, status: 200, statusText: 'Form Submit', responseHeaders: {}, response: null, duration: 0, timestamp: Date.now(), apiType: 'api', resourceType: 'fetch_xhr' });
   }, true);
 })();

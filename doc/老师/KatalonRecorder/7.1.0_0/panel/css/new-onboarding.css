@@ -1,0 +1,78 @@
+.popup-onboarding {
+    position      : fixed;
+    background    : #FFD36B;
+    border-radius : 6px;
+    z-index       : 3;
+    padding       : 10px 10px 0;
+    border        : 0.5px solid #E4E4E4;
+    border-radius : 8px;
+    max-width     : 300px;
+    display       : flex;
+    flex-direction: column;
+    min-height    : 8%;
+}
+
+.border-onboarding {
+    position     : fixed;
+    cursor       : pointer;
+    border       : 4px solid #FFE294 !important;
+    border-radius: 4px !important;
+    z-index      : 2 !important;
+    box-shadow   : rgb(33 33 33 / 0%) 0px 0px 1px 2px, rgb(33 33 33 / 50%) 0px 0px 0px 5000px !important;
+}
+
+.content-onboarding {
+    font-family: Roboto;
+    font-style : normal;
+    font-weight: normal;
+    font-size  : 13px;
+    line-height: 16px;
+    align-items: center;
+    margin-top : 5px;
+}
+
+.index-onboarding {
+    font-family: Roboto;
+    font-style : normal;
+    font-weight: 500;
+    font-size  : 11px;
+    line-height: 16px;
+    flex       : 5;
+}
+
+.popup-onboarding div {
+    display        : flex;
+    flex-direction : row;
+    justify-content: space-between;
+    align-items    : center;
+}
+
+.popup-onboarding button {
+    border     : none;
+    background : none;
+    font-family: Roboto;
+    font-style : normal;
+    font-weight: 500;
+    font-size  : 12px;
+    line-height: 16px;
+    cursor     : pointer;
+}
+
+.popup-onboarding #next-onboarding {
+    background   : #FAAE17;
+    border-radius: 4px;
+    padding      : 5px 10px;
+}
+
+.popup-onboarding #skip-onboarding {
+    margin-right: 15px
+}
+
+.init-onboarding {
+    position: fixed;
+    width   : 100%;
+    height  : 100%;
+    top     : 0px;
+    left    : 0px;
+    z-index : 1000;
+}

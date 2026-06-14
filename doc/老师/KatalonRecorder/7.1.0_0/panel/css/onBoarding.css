@@ -1,0 +1,220 @@
+.onboadingDialog {
+    border: 0 !important
+}
+
+.onboadingDialog .ui-dialog-titlebar {
+    display: none;
+}
+
+
+/* .onboadingDialog .header {
+    background-image: url(/panel/icons/background-onboarding.svg);
+    height: 150px;
+    background-repeat: no-repeat;
+} */
+
+.onboadingDialog .ui-dialog-content {
+    padding: 0 !important;
+    border : 0 !important;
+}
+
+.onboadingDialog input {
+    outline: none !important;
+}
+
+.onboadingDialog label:hover {
+    cursor: pointer;
+}
+
+.onboadingDialog .content {
+    /* flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around; */
+    font-size       : 14px;
+    /* margin-bottom: 16px;
+    padding         : 0 20px; */
+}
+
+.onboadingDialog .content ul {
+    display       : flex;
+    flex-direction: column;
+    align-items   : flex-start;
+    padding       : 0px;
+}
+
+.onboadingDialog .content ul li {
+    display       : flex;
+    flex-direction: row;
+    align-items   : center;
+    padding       : 8px 16px;
+    height        : 32px;
+    background    : #F8E8E9;
+    border        : 1px solid #E3BEC2;
+    box-sizing    : border-box;
+    border-radius : 36px;
+    margin        : 7px 0px;
+    cursor        : pointer;
+}
+
+.onboadingDialog .content ul li:hover,
+.onboadingDialog .content ul li.checked {
+    background: #FFCCD2;
+    border    : 1px solid #F23F68;
+}
+
+.onboadingDialog .content ul li.checked input{
+    background: #FFCCD2;
+}
+
+.onboadingDialog .content ul li:last-child:hover,
+.onboadingDialog .content ul li:last-child:hover input{
+    background: #F8E8E9;
+}
+
+.onboadingDialog .content ul li input {
+    width       : 300px;
+    height      : auto;
+    margin      : 0;
+    padding-left: 0;
+    border      : none;
+    font-family : Roboto;
+    font-style  : normal;
+    font-weight : normal;
+    line-height : 16px;
+    background  : #F8E8E9;
+}
+
+.onboadingDialog .footer {
+    display       : flex;
+    flex-direction: row;
+    padding       : 10px 20px;
+    font-size     : 14px;
+}
+
+.onboadingDialog .footer button {
+    min-width    : 67px;
+    height       : 32px;
+    border-radius: 4px;
+    box-shadow   : none;
+    border       : 0;
+    margin-left  : 12px;
+    padding      : 0 10px;
+}
+
+.onboadingDialog .footer .skipBtn {
+    background: none;
+    color     : #808B9A;
+}
+
+.onboadingDialog .footer .nextBtn {
+    background : #276EF1;
+    color      : white;
+    margin-left: auto;
+}
+
+.onboadingDialog .footer .skipBtn:hover,
+.onboadingDialog .footer .nextBtn:hover {
+    cursor: pointer;
+}
+
+.onboadingDialog .footer .nextBtn.disabled {
+    opacity   : 50%;
+    background: var(--dialog-button);
+}
+
+.onboadingDialog .footer .nextBtn.disabled,
+.onboadingDialog .footer .skipBtn.disabled {
+    cursor: default;
+}
+
+.onboadingDialog .footer .skipBtn.disabled {
+    visibility: hidden;
+}
+
+.onboadingDialog .content.dialog1 h3 {
+    font-weight: 500;
+    margin     : 16px 0 0;
+}
+
+.onboadingDialog .content.dialog2 .tagContainer,
+.onboadingDialog .content.dialog5 .tagContainer {
+    display       : flex;
+    flex-direction: row;
+    flex-wrap     : wrap;
+}
+
+.onboadingDialog .content.dialog2 .tag,
+.onboadingDialog .content.dialog5 .tag {
+    height          : 24px;
+    background-color: #F0F8FF;
+    display         : flex;
+    align-items     : center;
+    padding         : 2px 8px;
+    border-radius   : 4px;
+    margin          : 4px;
+}
+
+.onboadingDialog .content.dialog2 .tag:hover,
+.onboadingDialog .content.dialog5 .tag:hover {
+    cursor: pointer;
+}
+
+.onboadingDialog .content.dialog2 .tag.selected,
+.onboadingDialog .content.dialog5 .tag.selected {
+    background-color: #A3CDFF;
+}
+
+#keywords-feedback-content {
+    flex         : 1;
+    border       : 1px solid var(--sample-projec-border);
+    box-sizing   : border-box;
+    border-radius: 6px;
+    background   : var(--input-bg-color);
+    color        : var(--main-txt-color);
+    outline      : none;
+    padding      : 10px;
+    margin-top   : 10px;
+    font-size    : 14px;
+}
+
+#privacyDialog .content p {
+    margin: 0;
+}
+
+#privacyDialog .content ul {
+    margin: 0;
+}
+
+#privacyDialog .content li {
+    margin-bottom: 5px;
+}
+
+#privacyDialog .content a {
+    outline: none;
+}
+
+#privacyDialog .footer .yesBtn {
+    background : #E1E1E1;
+    color      : black;
+    margin-left: auto;
+}
+
+#privacyDialog .footer .noBtn {
+    background : #276EF1;
+    color      : white;
+    margin-left: 12px;
+}
+
+@media (prefers-color-scheme: dark) {
+
+    .onboadingDialog .content.dialog2 .tag.selected,
+    .onboadingDialog .content.dialog5 .tag.selected {
+        background-color: #395F8C;
+    }
+
+    .onboadingDialog .content.dialog2 .tag,
+    .onboadingDialog .content.dialog5 .tag {
+        background-color: #6BA1E1;
+    }
+}

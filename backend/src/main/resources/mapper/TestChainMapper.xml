@@ -12,11 +12,13 @@
         <result column="update_time" property="updateTime"/>
         <result column="create_by" property="createBy"/>
         <result column="status" property="status"/>
+        <result column="current_version" property="currentVersion"/>
+        <result column="chain_fingerprint" property="chainFingerprint"/>
     </resultMap>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO test_chain (chain_code, chain_name, execute_mode, description, create_by, status)
-        VALUES (#{chainCode}, #{chainName}, #{executeMode}, #{description}, #{createBy}, #{status})
+        INSERT INTO test_chain (chain_code, chain_name, execute_mode, description, create_by, status, current_version, chain_fingerprint)
+        VALUES (#{chainCode}, #{chainName}, #{executeMode}, #{description}, #{createBy}, #{status}, #{currentVersion}, #{chainFingerprint})
     </insert>
 
     <update id="update">
@@ -26,6 +28,8 @@
             <if test="executeMode != null">execute_mode = #{executeMode},</if>
             <if test="description != null">description = #{description},</if>
             <if test="status != null">status = #{status},</if>
+            <if test="currentVersion != null">current_version = #{currentVersion},</if>
+            <if test="chainFingerprint != null">chain_fingerprint = #{chainFingerprint},</if>
         </set>
         WHERE chain_code = #{chainCode}
     </update>

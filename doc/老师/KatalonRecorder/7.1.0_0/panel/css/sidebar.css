@@ -1,0 +1,254 @@
+#tree-section {
+  height: 100%;
+  background: #232C38;
+  color: #C4CAD8;
+  overflow-y: auto;
+  max-width: 26%;
+  margin-right: 10px;
+}
+
+#tree-section.collapsed {
+  max-width: 62px;
+}
+
+#tree-section .top {
+  flex: 10;
+  overflow: auto;
+}
+
+#tree-section .bottom {
+  height: auto;
+}
+
+#tree-section .top {
+  display: flex;
+  flex-direction: column;
+  margin-left: 8px;
+  margin-right: 8px;
+}
+
+#tree-section .bottom {
+  display: flex;
+  flex-direction: column;
+  margin-left: 8px;
+  margin-right: 8px;
+}
+
+#toggle {
+  display: none;
+  position: absolute;
+  top: 0px;
+  left: calc(26% - 36px);
+  height: 60px;
+  width: 60px;
+  cursor: pointer;
+}
+
+#tree-section.collapsed #toggle {
+  left: 36px;
+}
+
+#logo_kr_full {
+  margin-right: 10px;
+  width: auto;
+  height: auto;
+  border-radius: 3px;
+  padding: 5px 0;
+  background: none;
+  box-shadow: none;
+  border: 0;
+}
+
+#logo_kr_full img.dark {
+  height: 26px;
+  margin: 0;
+  max-height: 100%;
+  max-width: 100%;
+  display: none;
+}
+
+#logo_kr_full img.light {
+  height: 26px;
+  margin: 0;
+  max-height: 100%;
+  max-width: 100%;
+  display: block;
+}
+
+#logo_kr_icon {
+  display: none;
+}
+
+#logo_kr_icon img {
+  height: 26px;
+  width: 26px;
+  padding-top: 5px;
+  margin-bottom: 2px;
+}
+
+.KR-logo.collapsed {
+  max-width: 42px;
+  padding-left: 20px;
+}
+
+#actions .header {
+  min-height: var(--left-size-action-height);
+  padding: 2px 9px;
+  display: flex;
+  align-items: center;
+  width: inherit;
+}
+
+#tree-section.collapsed #actions .header {
+  padding: 2px 9px;
+}
+
+#tree-section.collapsed #workspace .header {
+  width: 34px;
+}
+
+#tree-section.collapsed #actions {
+  align-items: center;
+}
+
+#tree-section.collapsed #workspace {
+  display: flex;
+  flex: unset;
+  overflow-y: initial;
+  align-items: center;
+}
+
+#actions .header .icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-right: 4px;
+  margin-left: 16px;
+}
+
+#tree-section.collapsed #actions .header .icon {
+  margin: 0px;
+}
+
+#actions .header .icon img {
+  height: 16px;
+  width: 16px;
+}
+
+#actions .header .title,
+#tree-section .bottom .header .title {
+  font-family: Roboto;
+  font-style: normal;
+  font-weight: 500;
+  padding: 0;
+  margin: 0;
+  font-size: 13.5px;
+}
+
+#tree-section.collapsed #workspace header {
+  opacity: 0;
+}
+
+#tree-section.collapsed .header .title,
+#tree-section.collapsed .top .header .right-side,
+#tree-section.collapsed .top #test-suites-info,
+#tree-section.collapsed .top #dynamic-test-suite-info,
+#tree-section.collapsed .top #test-data-info,
+#tree-section.collapsed .top #extension-script-info,
+#tree-section.collapsed .top #profiles-info {
+  display: none;
+}
+
+#workspace::-webkit-scrollbar-track {
+  -webkit-box-shadow: none;
+}
+
+.show-scrollbar::-webkit-scrollbar-thumb {
+  display: block;
+  border-radius: 10px;
+  /* background: none; */
+}
+
+.hide-scrollbar::-webkit-scrollbar-thumb {
+  display: none;
+  border-radius: 10px;
+  background: none;
+}
+
+#workspace:hover {
+  overflow-y: scroll;
+}
+
+.workspace-icon {
+  margin-right: 4px;
+}
+
+#tree-section.collapsed .workspace-icon {
+  margin-right: 0px;
+}
+
+#tree-section.collapsed .case_list .header .left-side {
+  margin-left: 0px;
+  justify-content: center;
+}
+
+#more-options-open-dropdown {
+  display: none;
+  z-index: 2;
+  position: fixed;
+  bottom: 25px;
+  padding: 8px 0;
+  background: #fff;
+  border: 0.5px solid #e4e4e4;
+  box-shadow: 0 3px 11px rgba(0, 0, 0, 0.08);
+  /* border-radius: 8px; */
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+  width: 244px;
+  left: calc(26% - 6px);
+}
+
+#tree-section.collapsed #more-options-open-dropdown,
+#tree-section.collapsed #suite-open-dropdown {
+  left: 62px;
+}
+
+#more-options-open-dropdown div {
+  /* line-height: calc(var(--left-size-item-height) + 2px); */
+  padding-left: 10px;
+  color: var(--header-color);
+}
+
+#more-options-open-dropdown div:hover {
+  background-color: var(--left-panel-selected-color);
+}
+
+.dropdown-header {
+  min-height: var(--left-size-action-height);
+  display: flex;
+  align-items: center;
+  width: initial;
+}
+
+.dropdown-title {
+  font-family: Roboto;
+  font-style: normal;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+#divider {
+  position: static;
+  width: 100%;
+  height: 2px;
+  background: #3E424C;
+  margin-bottom: 4px;
+}
+
+#tree-section.collapsed #divider {
+  display: none;
+}
+
+#testCase-filter div.test-suite-header {
+  padding-left: 44px;
+}

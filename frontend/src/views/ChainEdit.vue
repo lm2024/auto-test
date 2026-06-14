@@ -5,6 +5,16 @@
         <el-button @click="$router.back()" :icon="ArrowLeft">返回</el-button>
         <el-divider direction="vertical" />
         <span class="chain-title">链路编排</span>
+        <el-divider direction="vertical" />
+        <el-select v-model="currentVersion" placeholder="选择版本" size="small" @change="onVersionChange" style="width: 160px" clearable>
+          <el-option v-for="v in versions" :key="v.version" :label="'v' + v.version" :value="v.version" />
+        </el-select>
+        <div class="version-diff-summary" v-if="diffSummary">
+          <span class="diff-badge diff-added">新增 {{ diffSummary.added }}</span>
+          <span class="diff-badge diff-removed">删除 {{ diffSummary.removed }}</span>
+          <span class="diff-badge diff-modified">修改 {{ diffSummary.modified }}</span>
+          <span class="diff-badge diff-unchanged">未变 {{ diffSummary.unchanged }}</span>
+        </div>
       </div>
       <div class="toolbar-right">
         <el-button @click="undo" :disabled="!canUndo" :icon="RefreshLeft">撤销</el-button>
@@ -45,7 +55,7 @@
           <div class="node-list">
             <div v-for="(node, index) in sortedNodes" :key="node.nodeCode"
                  class="node-list-item"
-                 :class="{ active: selectedNode?.nodeCode === node.nodeCode }"
+                 :class="{ active: selectedNode?.nodeCode === node.nodeCode, ['change-' + (nodeChangeMap[node.nodeCode] || '')]: nodeChangeMap[node.nodeCode] }"
                  draggable="true"
                  @dragstart="onListDragStart($event, node.nodeCode)"
                  @dragover.prevent
@@ -58,6 +68,10 @@
             <div v-if="nodes.length === 0" class="empty-list">暂无节点</div>
           </div>
         </div>
+
+        <div class="panel-section" style="margin-top:16px" v-if="chainCode">
+          <VersionHistory :chainCode="chainCode" :selectedVersion="currentVersion" @select-version="onVersionChange" />
+        </div>
       </div>
 
       <div class="center-panel" ref="canvasRef" @dragover.prevent>
@@ -68,7 +82,7 @@
         </div>
         <template v-for="(node, index) in sortedNodes" :key="node.nodeCode">
           <div class="node-card"
-               :class="{ selected: selectedNode?.nodeCode === node.nodeCode, ['status-' + (nodeStatusMap[node.nodeCode] || '').toLowerCase()]: true, 'drag-over': dragOverIndex === index }"
+               :class="{ selected: selectedNode?.nodeCode === node.nodeCode, ['status-' + (nodeStatusMap[node.nodeCode] || '').toLowerCase()]: true, 'drag-over': dragOverIndex === index, ['change-' + (nodeChangeMap[node.nodeCode] || '')]: true }"
                draggable="true"
                @dragstart="onNodeDragStart($event, index)"
                @dragend="onNodeDragEnd"
@@ -87,6 +101,9 @@
               </div>
               <div class="node-card-right">
                 <el-tag size="small" :type="methodType(node.requestMethod)" effect="dark">{{ node.requestMethod }}</el-tag>
+                <div v-if="nodeChangeMap[node.nodeCode]" class="change-indicator" :class="nodeChangeMap[node.nodeCode]">
+                  {{ nodeChangeMap[node.nodeCode] === 'added' ? '+' : nodeChangeMap[node.nodeCode] === 'removed' ? '-' : '~' }}
+                </div>
                 <div v-if="nodeStatusMap[node.nodeCode]" class="status-badge" :class="'badge-' + nodeStatusMap[node.nodeCode].toLowerCase()">
                   {{ nodeStatusMap[node.nodeCode] }}
                 </div>
@@ -371,6 +388,23 @@
                 </div>
               </div>
             </el-tab-pane>
+
+            <el-tab-pane label="差异对比" name="diff" v-if="diffData && diffData.nodes">
+              <div class="config-section">
+                <div class="config-label">
+                  变更状态
+                  <el-tag v-if="getNodeDiffType(selectedNode)" :type="diffTagType(getNodeDiffType(selectedNode))" size="small" style="margin-left:6px">
+                    {{ diffLabel(getNodeDiffType(selectedNode)) }}
+                  </el-tag>
+                  <el-tag v-else type="info" size="small" style="margin-left:6px">无对比数据</el-tag>
+                </div>
+              </div>
+              <FieldDiff v-if="getNodeFieldChanges(selectedNode).length > 0" :changes="getNodeFieldChanges(selectedNode)" />
+              <div v-else class="config-section" style="color:#6b7280;font-size:13px;padding:12px 0">
+                该节点与上一版本无字段差异
+              </div>
+              <AiAnalysis v-if="diffData.aiAnalysis" :analysis="diffData.aiAnalysis" />
+            </el-tab-pane>
           </el-tabs>
 
           <div class="panel-footer">
@@ -483,6 +517,9 @@ import {
   UploadFilled, InfoFilled, Bottom, QuestionFilled, Rank, Top, Monitor, DataLine
 } from '@element-plus/icons-vue'
 import api from '../api'
+import FieldDiff from '../components/FieldDiff.vue'
+import AiAnalysis from '../components/AiAnalysis.vue'
+import VersionHistory from '../components/VersionHistory.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -514,6 +551,12 @@ const assertStatusMode = ref('eq')
 const assertStatusCode = ref('')
 const assertBodyRules = ref([])
 
+// Version management
+const versions = ref([])
+const currentVersion = ref(0)
+const diffSummary = ref(null)
+const diffData = ref(null)
+
 const sortedNodes = computed(() => {
   return [...nodes.value].sort((a, b) => (a.sortNo || 0) - (b.sortNo || 0))
 })
@@ -521,6 +564,18 @@ const sortedNodes = computed(() => {
 const selectedNodeIndex = computed(() => {
   if (!selectedNode.value) return -1
   return sortedNodes.value.findIndex(n => n.nodeCode === selectedNode.value.nodeCode)
+})
+
+// Node change map for diff highlighting
+const nodeChangeMap = computed(() => {
+  if (!diffData.value || !diffData.value.nodes) return {}
+  const map = {}
+  diffData.value.nodes.forEach(n => {
+    if (n.changeType && n.changeType !== 'UNCHANGED') {
+      map[n.nodeCode] = n.changeType.toLowerCase()
+    }
+  })
+  return map
 })
 
 const isFirstNode = computed(() => selectedNodeIndex.value <= 0)
@@ -1059,7 +1114,71 @@ const executeChain = async () => {
   router.push('/execute/detail/' + executionId)
 }
 
-onMounted(loadNodes)
+// Version management
+async function loadVersions() {
+  try {
+    const { data } = await api.get('/chain/versions', { params: { chainCode, all: 'false' } })
+    if (data.code === 200) {
+      versions.value = data.data.list || []
+      if (versions.value.length > 0 && !currentVersion.value) {
+        currentVersion.value = versions.value[0].version
+      }
+    }
+  } catch (e) {
+    console.error('加载版本列表失败:', e)
+  }
+}
+
+async function onVersionChange(version) {
+  if (!version) {
+    diffSummary.value = null
+    diffData.value = null
+    return
+  }
+  try {
+    const { data } = await api.get('/chain/version/diff', {
+      params: { chainCode, version }
+    })
+    if (data.code === 200) {
+      diffData.value = data.data
+      diffSummary.value = data.data.summary || null
+    }
+  } catch (e) {
+    console.error('加载Diff失败:', e)
+  }
+}
+
+function getNodeDiffType(node) {
+  if (!diffData.value || !diffData.value.nodes || !node) return null
+  const found = diffData.value.nodes.find(n => n.nodeCode === node.nodeCode)
+  return found ? found.changeType : null
+}
+
+function getNodeFieldChanges(node) {
+  if (!diffData.value || !diffData.value.nodes || !node) return []
+  const found = diffData.value.nodes.find(n => n.nodeCode === node.nodeCode)
+  return found && found.fieldChanges ? found.fieldChanges : []
+}
+
+function diffTagType(type) {
+  if (type === 'ADDED') return 'success'
+  if (type === 'REMOVED') return 'danger'
+  if (type === 'MODIFIED') return 'warning'
+  return 'info'
+}
+
+function diffLabel(type) {
+  if (type === 'ADDED') return '新增'
+  if (type === 'REMOVED') return '已删除'
+  if (type === 'MODIFIED') return '已修改'
+  if (type === 'UNCHANGED') return '未变化'
+  return type
+}
+
+onMounted(() => {
+  loadNodes()
+  loadVersions()
+})
 </script>
 
 <style scoped>
@@ -1689,5 +1808,68 @@ onMounted(loadNodes)
 :deep(.el-tabs__item.is-active) {
   color: #6366f1;
   font-weight: 600;
+}
+
+/* ── Version Diff Summary ── */
+.version-diff-summary {
+  display: flex;
+  gap: 8px;
+  margin-left: 8px;
+}
+.diff-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.diff-added { color: #16a34a; background: #f0fdf4; }
+.diff-removed { color: #dc2626; background: #fef2f2; }
+.diff-modified { color: #d97706; background: #fffbeb; }
+.diff-unchanged { color: #6b7280; background: #f9fafb; }
+
+/* ── Node Change Highlighting ── */
+.node-card.change-added {
+  border: 2px solid #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+.node-card.change-modified {
+  border: 2px solid #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+}
+.node-card.change-removed {
+  border: 2px solid #ef4444;
+  opacity: 0.6;
+}
+.node-card.change-unchanged {
+  border: 1px solid rgba(99, 102, 241, 0.1);
+}
+.change-indicator {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+}
+.change-indicator.added { background: #22c55e; }
+.change-indicator.modified { background: #f59e0b; }
+.change-indicator.removed { background: #ef4444; }
+
+/* ── Node List Change Items ── */
+.node-list-item.change-added {
+  border-left: 3px solid #22c55e;
+}
+.node-list-item.change-modified {
+  border-left: 3px solid #f59e0b;
+}
+.node-list-item.change-removed {
+  border-left: 3px solid #ef4444;
+  opacity: 0.6;
 }
 </style>

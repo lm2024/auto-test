@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS test_chain (
     update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     create_by VARCHAR(64) COMMENT '创建人',
     status TINYINT NOT NULL DEFAULT 1 COMMENT '状态: 1=启用, 0=禁用',
+    current_version INT NOT NULL DEFAULT 1 COMMENT '当前版本号',
+    chain_fingerprint VARCHAR(128) COMMENT '链路指纹(MD5)',
     PRIMARY KEY (id),
     UNIQUE INDEX uk_chain_code (chain_code),
     INDEX idx_chain_name (chain_name),
@@ -108,3 +110,50 @@ CREATE TABLE IF NOT EXISTS sys_config (
     PRIMARY KEY (id),
     UNIQUE KEY uk_config_key (config_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统配置表';
+
+-- 链路版本表
+CREATE TABLE IF NOT EXISTS test_chain_version (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+    chain_code VARCHAR(64) NOT NULL COMMENT '链路编码',
+    chain_fingerprint VARCHAR(128) NOT NULL COMMENT '链路指纹(MD5)',
+    version INT NOT NULL COMMENT '版本号',
+    chain_name VARCHAR(128) COMMENT '链路名称',
+    execute_mode TINYINT DEFAULT 1 COMMENT '执行模式: 1=串行, 2=分组并行',
+    description TEXT COMMENT '版本描述',
+    node_snapshot LONGTEXT COMMENT '节点快照JSON',
+    diff_result LONGTEXT COMMENT '与上一版本Diff结果JSON',
+    ai_analysis TEXT COMMENT 'AI差异分析结果',
+    status VARCHAR(16) NOT NULL DEFAULT 'ACTIVE' COMMENT '状态: ACTIVE/ARCHIVED',
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    create_by VARCHAR(64) COMMENT '创建者',
+    PRIMARY KEY (id),
+    UNIQUE INDEX uk_chain_version (chain_code, version),
+    INDEX idx_fingerprint (chain_fingerprint),
+    INDEX idx_create_time (create_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='链路版本表';
+
+-- 接口快照表
+CREATE TABLE IF NOT EXISTS test_node_snapshot (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+    version_id BIGINT NOT NULL COMMENT '关联test_chain_version.id',
+    chain_code VARCHAR(64) NOT NULL COMMENT '链路编码',
+    node_id BIGINT COMMENT '节点ID',
+    node_code VARCHAR(64) COMMENT '节点编码',
+    node_name VARCHAR(128) COMMENT '节点名称',
+    node_type VARCHAR(16) DEFAULT 'HTTP' COMMENT '节点类型',
+    sort_no INT COMMENT '排序号',
+    parallel_group VARCHAR(32) COMMENT '并行组标识',
+    request_url TEXT COMMENT '请求URL',
+    request_method VARCHAR(10) COMMENT '请求方法',
+    request_headers LONGTEXT COMMENT '请求头JSON',
+    body_type VARCHAR(32) COMMENT 'Body类型',
+    body_data LONGTEXT COMMENT '请求体',
+    response_code INT COMMENT '响应状态码',
+    response_headers LONGTEXT COMMENT '响应头JSON',
+    response_body LONGTEXT COMMENT '响应体',
+    duration_ms BIGINT COMMENT '请求耗时(ms)',
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    INDEX idx_version_id (version_id),
+    INDEX idx_chain_code (chain_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='接口快照表';

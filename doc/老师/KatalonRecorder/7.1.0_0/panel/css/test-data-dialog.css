@@ -1,0 +1,315 @@
+#test-data-info,
+#profiles-info,
+#extension-script-info,
+#dynamic-test-suite-info,
+#test-suites-info {
+    margin-right: 16px;
+    cursor: default;
+    background-image: url("/katalon/images/SVG/info-circle-icon.svg");
+    height: 18px;
+    width: 18px;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+#test-data-info,
+#extension-script-info {
+  margin-right: 14px;
+}
+
+#profiles-info,
+#dynamic-test-suite-info,
+#test-suites-info {
+    margin-right: 16px;
+}
+
+#test-data-info:hover,
+#profiles-info:hover,
+#extension-script-info:hover,
+#dynamic-test-suite-info:hover,
+#test-suites-info:hover{
+    cursor: pointer;
+    background-image: url("/katalon/images/SVG/info-circle-select-icon.svg");
+}
+
+#test-data-info-dialog .container,
+#test-suites-info-dialog .container,
+#extension-script-info-dialog .container,
+#profiles-info-dialog .container,
+#dynamic-test-suites-info-dialog .container{
+    padding: 20px 16px 16px 16px;
+    overflow: hidden;
+}
+
+#test-data-info-dialog .title,
+#dynamic-test-suites-info-dialog .title,
+#extension-script-info-dialog .title,
+#profiles-info-dialog .title,
+#test-suites-info-dialog .title{
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--main-txt-color);
+}
+
+#test-data-info-dialog .content,
+#dynamic-test-suites-info-dialog .content,
+#extension-script-info-dialog .content,
+#profiles-info-dialog .content,
+#test-suites-info-dialog .content{
+    display: block;
+    padding: 0;
+}
+
+#test-data-info-dialog .content ul,
+#dynamic-test-suites-info-dialog .content ul,
+#extension-script-info-dialog .content ul,
+#profiles-info-dialog .content ul,
+#test-suites-info-dialog .content ul{
+    padding: 0;
+    margin-left: 15px;
+    margin-top: 8px;
+    font-size: 13px;
+}
+
+#test-data-info-dialog .content li,
+#dynamic-test-suites-info-dialog .content li,
+#extension-script-info-dialog .content li,
+#profiles-info-dialog .content li,
+#test-suites-info-dialog .content li{
+    line-height: 20px;
+}
+
+#test-data-info-dialog .support .title,
+#dynamic-test-suites-info-dialog .support .title,
+#extension-script-info-dialog .support .title,
+#profiles-info-dialog .support .title,
+#test-suites-info-dialog .support .title{
+    display: flex;
+    font-size: 12px;
+    margin-bottom: 5px;
+}
+
+#test-data-info-dialog .support .title img,
+#dynamic-test-suites-info-dialog .support .title img,
+#extension-script-info-dialog .support .title img,
+#profiles-info-dialog .support .title img,
+#test-suites-info-dialog .support .title img{
+    margin-right: 7px;
+}
+
+#test-data-info-dialog .support-tab-container,
+#dynamic-test-suites-info-dialog .support-tab-container,
+#extension-script-info-dialog .support-tab-container,
+#profiles-info-dialog .support-tab-container,
+#test-suites-info-dialog .support-tab-container{
+    display: flex;
+    flex-direction: row;
+    margin-left: 13px;
+    margin-bottom: 12px;
+}
+
+#test-data-info-dialog .support-tab-container>div,
+#dynamic-test-suites-info-dialog .support-tab-container>div,
+#extension-script-info-dialog .support-tab-container>div,
+#profiles-info-dialog .support-tab-container>div,
+#test-suites-info-dialog .support-tab-container>div{
+    padding: 5px 8px;
+    background: #F0F8FF;
+    border-radius: 4px;
+    margin-right: 7px;
+}
+
+@media (prefers-color-scheme: dark) {
+    #test-data-info-dialog .support-tab-container>div,
+    #dynamic-test-suites-info-dialog .support-tab-container>div,
+    #extension-script-info-dialog .support-tab-container>div,
+    #profiles-info-dialog .support-tab-container>div,
+    #test-suites-info-dialog .support-tab-container>div{
+        background: black;
+    }
+}
+
+#test-data-info-dialog .footer,
+#dynamic-test-suites-info-dialog .footer,
+#extension-script-info-dialog .footer,
+#profiles-info-dialog .footer,
+#test-suites-info-dialog .footer{
+    height: initial;
+    padding: 0;
+    justify-content: flex-start;
+}
+
+#test-data-info-dialog .footer a,
+#dynamic-test-suites-info-dialog .footer a,
+#extension-script-info-dialog .footer a,
+#profiles-info-dialog .footer a,
+#test-suites-info-dialog .footer a{
+    font-style: normal;
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 16px;
+    color: #276EF1;
+    outline: none;
+}
+
+#test-data-info-dialog .footer a:hover,
+#dynamic-test-suites-info-dialog .footer a:hover,
+#extension-script-info-dialog .footer a:hover,
+#profiles-info-dialog .footer a:hover,
+#test-suites-info-dialog .footer a:hover{
+    text-decoration: none;
+}
+
+
+.useInTestCase .header{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    height: 56px;
+    box-sizing: border-box;
+    padding: 20px;
+}
+
+.useInTestCase .header .title{
+    font-family: Roboto;
+    font-style: normal;
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 24px;
+}
+
+.useInTestCase .header .dialog-close{
+    background-color: transparent;
+    width: 16px;
+    height: 16px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    outline: none;
+}
+
+.useInTestCase .content{
+    padding: 0px 20px;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.useInTestCase .content-header .step{
+    font-family: Roboto;
+    font-style: normal;
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 20px;
+    margin-bottom: 8px;
+}
+
+.useInTestCase .content-header .message{
+    font-family: Roboto;
+    font-style: normal;
+    font-weight: normal;
+    font-size: 14px;
+    line-height: 16px;
+    display: flex;
+    align-items: center;
+    color: #808B9A;
+}
+
+.useInTestCase .use-in-test-case-header{
+    display: flex;
+    flex-direction: row;
+}
+
+.useInTestCase .use-in-test-case-header .dropdown{
+    width: 24px;
+    height: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.useInTestCase .use-in-test-case-header img{
+    width: 10px;
+    height: 10px;
+}
+
+.useInTestCase .use-in-test-case-header .title{
+    font-family: Roboto;
+    font-style: normal;
+    font-weight: normal;
+    font-size: 14px;
+    line-height: 24px;
+}
+
+.useInTestCase .use-in-test-case-test-cases-container{
+    margin-left: 40px;
+}
+
+.useInTestCase .container{
+    margin-bottom: 0px;
+    overflow: hidden;
+}
+
+.useInTestCase .test-case-item{
+    width: max-content;
+    padding: 4px;
+    border-radius: 4px;
+
+}
+
+.useInTestCase .test-case-item:hover{
+    cursor: pointer;
+}
+
+.useInTestCase .test-case-item.selected{
+    background: #276EF1;
+    color: white;
+}
+
+#use-in-test-case-command-grid{
+    width: 100%;
+    font-size: 12px;
+}
+#use-in-test-case-command-grid th {
+    position: sticky;
+    position: -webkit-sticky;
+    top: 0;
+    background: var(--header-bg);
+    padding-left: 12px !important;
+    text-indent: 0;
+}
+
+#use-in-test-case-command-grid tbody tr td:first-child {
+    padding-left: 23px !important;
+    word-break: break-all;
+}
+
+#use-in-test-case-preview{
+    border: 1px #D5D8DD solid;
+    overflow: auto;
+    display: flex;
+    flex: 1;
+    border-radius: 6px;
+}
+
+#use-in-test-case-records-grid > tr > td:nth-child(3) > div:nth-child(1){
+    display: flex;
+    flex-direction: row;
+}
+
+#use-in-test-case-records-grid > tr > td:nth-child(3) > div:nth-child(1) > div:nth-child(2){
+    margin-left: auto;
+    margin-right: 20px;
+}
+
+#use-in-test-case-dialog-menu{
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+#use-in-test-case-dialog-menu ul{
+    color: var(--main-txt-color);
+}

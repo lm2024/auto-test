@@ -70,6 +70,8 @@ chrome.debugger.onEvent.addListener((source, method, params) => {
   if (method === 'Network.responseReceived') {
     if (!shouldCapture(params.response.url)) return;
     const p = pendingReqs[params.requestId];
+    const cdpType = params.type || 'Other';
+    const typeMap = { 'XHR': 'fetch_xhr', 'Fetch': 'fetch_xhr', 'Document': 'document', 'Stylesheet': 'stylesheet', 'Image': 'image', 'Media': 'media', 'Font': 'font', 'Script': 'script', 'WebSocket': 'websocket' };
     const data = {
       url: p ? p.url : params.response.url,
       method: p ? p.method : (params.response.requestMethod || 'GET'),
@@ -82,6 +84,7 @@ chrome.debugger.onEvent.addListener((source, method, params) => {
       duration: p ? Date.now() - p.timestamp : 0,
       timestamp: p ? p.timestamp : Date.now(),
       apiType: getType(p ? p.url : params.response.url),
+      resourceType: typeMap[cdpType] || 'other',
       tabId: source.tabId
     };
     chrome.debugger.sendCommand({ tabId: source.tabId }, 'Network.getResponseBody', { requestId: params.requestId }, (resp) => {
@@ -164,21 +167,28 @@ function saveApi(data) {
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === 'START_RECORDING') {
     isRecording = true;
-    // 启动录制时加载最新设置
     chrome.storage.local.get(['settings'], (r) => {
       currentSettings = r.settings || {};
     });
-    chrome.storage.local.set({ isRecording: true });
+    chrome.storage.local.set({ isRecordingApi: true });
     updateIcon();
     broadcast({ type: 'START_RECORDING' });
     attachAll();
     sendResponse({ ok: true });
   } else if (msg.type === 'STOP_RECORDING') {
     isRecording = false;
-    chrome.storage.local.set({ isRecording: false });
+    chrome.storage.local.set({ isRecordingApi: false });
     updateIcon();
     broadcast({ type: 'STOP_RECORDING' });
     detachAll();
+    sendResponse({ ok: true });
+  } else if (msg.type === 'START_MACRO_RECORDING') {
+    chrome.storage.local.set({ isRecordingMacro: true });
+    broadcast({ type: 'START_RECORDING' });
+    sendResponse({ ok: true });
+  } else if (msg.type === 'STOP_MACRO_RECORDING') {
+    chrome.storage.local.set({ isRecordingMacro: false });
+    broadcast({ type: 'STOP_RECORDING' });
     sendResponse({ ok: true });
   } else if (msg.type === 'GET_STATUS') {
     sendResponse({ isRecording });
@@ -203,6 +213,38 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       sendResponse({ ok: true });
     });
     return true;
+  } else if (msg.type === 'SAVE_MACRO_ACTION') {
+    chrome.storage.local.get(['macroActions'], (r) => {
+      const list = r.macroActions || [];
+      list.push(msg.action);
+      chrome.storage.local.set({ macroActions: list });
+    });
+    sendResponse({ ok: true });
+  } else if (msg.type === 'GET_MACRO_ACTIONS') {
+    chrome.storage.local.get(['macroActions'], (r) => {
+      sendResponse({ actions: r.macroActions || [] });
+    });
+    return true;
+  } else if (msg.type === 'CLEAR_MACRO_ACTIONS') {
+    chrome.storage.local.set({ macroActions: [] });
+    sendResponse({ ok: true });
+  } else if (msg.type === 'START_MACRO_REPLAY') {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]) {
+        chrome.tabs.sendMessage(tabs[0].id, { type: 'START_MACRO_REPLAY', actions: msg.actions, settings: msg.settings });
+      }
+    });
+    sendResponse({ ok: true });
+  } else if (msg.type === 'STOP_MACRO_REPLAY') {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]) {
+        chrome.tabs.sendMessage(tabs[0].id, { type: 'STOP_MACRO_REPLAY' });
+      }
+    });
+    sendResponse({ ok: true });
+  } else if (msg.type === 'MACRO_REPLAY_DONE') {
+    chrome.storage.local.set({ macroReplayResult: msg.result });
+    sendResponse({ ok: true });
   }
   return true;
 });

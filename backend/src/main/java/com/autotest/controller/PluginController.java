@@ -46,6 +46,33 @@ public class PluginController {
         return Result.success(data);
     }
 
+    @GetMapping("/chain/list")
+    public Result<?> getChainList(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String method,
+            @RequestParam(defaultValue = "1") int pageNum,
+            @RequestParam(defaultValue = "20") int pageSize) {
+        // keyword搜索链路名称
+        List<ChainVO> allChains = chainService.listChains(keyword, null);
+
+        // 分页
+        int total = allChains.size();
+        int start = (pageNum - 1) * pageSize;
+        int end = Math.min(start + pageSize, total);
+        List<ChainVO> pageList = start < total ? allChains.subList(start, end) : new ArrayList<>();
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("total", total);
+        data.put("list", pageList);
+        return Result.success(data);
+    }
+
+    @GetMapping("/chain/detail")
+    public Result<?> getChainDetail(@RequestParam String chainCode) {
+        ChainVO vo = chainService.getChainDetail(chainCode);
+        return Result.success(vo);
+    }
+
     @GetMapping("/config")
     public Result<?> getPluginConfig() {
         Map<String, Object> config = new HashMap<>();

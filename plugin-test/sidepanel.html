@@ -90,6 +90,20 @@
     .btn-danger-text { background: none; color: var(--text-muted); padding: 2px 5px; }
     .btn-danger-text:hover { color: var(--danger); background: var(--danger-bg); }
 
+    /* ===== Tabs ===== */
+    .tab-bar {
+      display: flex; border-bottom: 2px solid var(--border); background: var(--surface); flex-shrink: 0;
+    }
+    .tab-btn {
+      flex: 1; padding: 9px 0; border: none; background: none; cursor: pointer;
+      font-size: 12px; font-family: inherit; font-weight: 500; color: var(--text-muted);
+      border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all var(--transition);
+    }
+    .tab-btn:hover { color: var(--text); background: var(--surface-hover); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+    .tab-content { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+    .tab-content.active { display: flex; }
+
     /* ===== Toolbar ===== */
     .toolbar {
       padding: 8px 14px; border-bottom: 1px solid var(--border);
@@ -166,6 +180,51 @@
 
     .empty { text-align: center; color: var(--text-muted); padding: 50px 20px; font-size: 12px; line-height: 1.8; }
     .empty-icon { width: 48px; height: 48px; margin: 0 auto 10px; opacity: 0.3; }
+
+    /* ===== Chain List Items ===== */
+    .chain-item {
+      padding: 10px 14px; border-bottom: 1px solid var(--border);
+      transition: background var(--transition); cursor: pointer;
+    }
+    .chain-item:hover { background: var(--surface-hover); }
+    .chain-item.selected { background: rgba(37,99,235,0.06); border-left: 3px solid var(--accent); }
+    .chain-name { font-size: 12px; font-weight: 600; margin-bottom: 3px; display: flex; align-items: center; gap: 6px; }
+    .chain-meta { font-size: 10px; color: var(--text-muted); display: flex; gap: 8px; flex-wrap: wrap; }
+    .chain-meta .badge {
+      padding: 1px 5px; border-radius: 3px; font-size: 9px; font-weight: 600;
+    }
+    .chain-meta .badge-mode { background: rgba(37,99,235,0.1); color: var(--accent); }
+    .chain-meta .badge-ver { background: var(--purple-bg); color: var(--purple); }
+    .chain-actions { display: flex; gap: 4px; margin-top: 6px; }
+    .chain-versions { margin-top: 6px; border-top: 1px solid var(--border); }
+    .version-item {
+      padding: 4px 12px; font-size: 11px; display: flex; gap: 8px; align-items: center;
+      cursor: pointer; border-left: 2px solid transparent; transition: background 0.15s;
+    }
+    .version-item:hover { background: var(--surface-hover); }
+    .version-item.selected { background: rgba(37,99,235,0.06); border-left-color: var(--accent); }
+    .version-label { font-weight: 600; color: var(--purple); min-width: 28px; }
+    .version-info { flex: 1; color: var(--text-secondary); }
+    .version-time { color: var(--text-muted); font-size: 10px; }
+
+    /* ===== Replay Log Items ===== */
+    .log-item {
+      padding: 8px 14px; border-bottom: 1px solid var(--border);
+      font-size: 11px; display: flex; gap: 8px; align-items: flex-start;
+    }
+    .log-time { color: var(--text-muted); font-family: 'SF Mono', monospace; font-size: 10px; white-space: nowrap; }
+    .log-icon { font-size: 13px; flex-shrink: 0; }
+    .log-msg { flex: 1; word-break: break-all; }
+    .log-msg .node-name { font-weight: 600; }
+    .log-msg .status { font-weight: 600; }
+    .log-msg .status.ok { color: var(--success); }
+    .log-msg .status.err { color: var(--danger); }
+    .log-msg .cost { color: var(--text-muted); }
+    .log-summary {
+      padding: 10px 14px; border-top: 1px solid var(--border);
+      font-size: 11px; font-weight: 600; background: var(--bg);
+      display: flex; justify-content: space-between; align-items: center;
+    }
 
     /* ===== Bottom Actions ===== */
     .actions { padding: 10px 14px; border-top: 1px solid var(--border); display: flex; gap: 7px; flex-shrink: 0; background: var(--surface); }
@@ -316,6 +375,7 @@
     }
 
     /* ===== Reduced Motion ===== */
+    .form-hint { font-size: 11px; color: #9ca3af; margin-left: 8px; }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
     }
@@ -332,9 +392,17 @@
         <h3>接口录制助手</h3>
       </div>
       <div class="header-actions">
-        <button class="btn" id="recordBtn">
+        <button class="btn" id="goPlatformBtn" title="打开平台">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          <span class="btn-label-lg">平台</span><span class="btn-label-sm">平台</span>
+        </button>
+        <button class="btn" id="recordApiBtn" title="录制接口请求">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
-          <span class="btn-label-lg">开始录制</span><span class="btn-label-sm">录制</span>
+          <span class="btn-label-lg">录制接口</span><span class="btn-label-sm">接口</span>
+        </button>
+        <button class="btn" id="recordMacroBtn" title="录制页面操作">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="M9 12l2 2 4-4"/></svg>
+          <span class="btn-label-lg">录制宏</span><span class="btn-label-sm">宏</span>
         </button>
         <button class="btn" id="settingsBtn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
@@ -342,45 +410,102 @@
       </div>
     </div>
 
-    <!-- Toolbar -->
-    <div class="toolbar">
-      <label class="select-all"><input type="checkbox" id="selectAll"><span>全选</span></label>
-      <input type="text" class="search-input" id="searchInput" placeholder="搜索…">
-      <select class="filter-select" id="methodFilter"><option value="">方法</option><option value="GET">GET</option><option value="POST">POST</option><option value="PUT">PUT</option><option value="DELETE">DELETE</option></select>
-      <select class="filter-select" id="statusFilter"><option value="">状态</option><option value="success">2xx</option><option value="error">4xx/5xx</option></select>
-      <label class="auto-filter-label"><input type="checkbox" id="autoFilter" checked><span>自动过滤</span></label>
+    <!-- Tab Bar -->
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="record">录制</button>
+      <button class="tab-btn" data-tab="chains">链路管理</button>
+      <button class="tab-btn" data-tab="replayLog">回放日志</button>
     </div>
 
-    <!-- Stats -->
-    <div class="stats"><span id="statsText">共 0 条</span><span id="selText">已选 0 条</span></div>
-
-    <!-- API List -->
-    <div id="apiList">
-      <div class="empty" id="emptyHint">
-        <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
-        <div>点击「开始录制」后在页面中操作</div>
-        <div style="font-size:11px;margin-top:4px;color:var(--text-muted)">插件将自动捕获所有网络请求</div>
+    <!-- Tab: 录制 -->
+    <div class="tab-content active" id="tab-record">
+      <div class="toolbar">
+        <label class="select-all"><input type="checkbox" id="selectAll"><span>全选</span></label>
+        <input type="text" class="search-input" id="searchInput" placeholder="搜索…">
+        <select class="filter-select" id="resourceTypeFilter"><option value="fetch_xhr" selected>Fetch/XHR</option><option value="">全部</option><option value="script">JS</option><option value="stylesheet">CSS</option><option value="image">Img</option><option value="document">Doc</option><option value="media">Media</option><option value="font">Font</option><option value="websocket">WS</option><option value="other">Other</option></select>
+        <select class="filter-select" id="methodFilter"><option value="">方法</option><option value="GET">GET</option><option value="POST">POST</option><option value="PUT">PUT</option><option value="DELETE">DELETE</option></select>
+        <select class="filter-select" id="statusFilter"><option value="">状态</option><option value="success">2xx</option><option value="error">4xx/5xx</option></select>
+      </div>
+      <div class="stats"><span id="statsText">共 0 条</span><span id="selText">已选 0 条</span></div>
+      <div id="apiList" style="flex:1;overflow-y:auto">
+        <div class="empty" id="emptyHint">
+          <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+          <div>点击「开始录制」后在页面中操作</div>
+          <div style="font-size:11px;margin-top:4px;color:var(--text-muted)">插件将自动捕获所有网络请求</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn-solid btn-primary" id="pushBtn" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          <span class="btn-label-lg">推送至平台</span><span class="btn-label-sm">推送</span>
+        </button>
+        <button class="btn-solid btn-success" id="exportBtn" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="4"/></svg>
+          <span class="btn-label-lg">导出JSON</span><span class="btn-label-sm">导出</span>
+        </button>
+        <button class="btn-solid btn-purple" id="genDocBtn" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <span class="btn-label-lg">生成文档</span><span class="btn-label-sm">文档</span>
+        </button>
+        <button class="btn-solid btn-outline" id="clearBtn" disabled style="color:var(--danger);border-color:var(--danger)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          清空
+        </button>
       </div>
     </div>
 
-    <!-- Bottom Actions -->
-    <div class="actions">
-      <button class="btn-solid btn-primary" id="pushBtn" disabled>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-        <span class="btn-label-lg">推送至平台</span><span class="btn-label-sm">推送</span>
-      </button>
-      <button class="btn-solid btn-success" id="exportBtn" disabled>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="4"/></svg>
-        <span class="btn-label-lg">导出JSON</span><span class="btn-label-sm">导出</span>
-      </button>
-      <button class="btn-solid btn-purple" id="genDocBtn" disabled>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        <span class="btn-label-lg">生成文档</span><span class="btn-label-sm">文档</span>
-      </button>
-      <button class="btn-solid btn-outline" id="clearBtn" disabled style="color:var(--danger);border-color:var(--danger)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-        清空
-      </button>
+    <!-- Tab: 链路管理 -->
+    <div class="tab-content" id="tab-chains">
+      <div class="toolbar">
+        <input type="text" class="search-input" id="chainSearch" placeholder="搜索链路名称/URL…" style="flex:1">
+        <select class="filter-select" id="chainMethodFilter"><option value="">方法</option><option value="GET">GET</option><option value="POST">POST</option><option value="PUT">PUT</option><option value="DELETE">DELETE</option></select>
+        <button class="btn-solid btn-outline" id="chainRefreshBtn" style="padding:5px 8px;font-size:11px" title="刷新">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </button>
+      </div>
+      <div class="stats"><span id="chainStatsText">共 0 条链路</span></div>
+      <div id="chainList" style="flex:1;overflow-y:auto">
+        <div class="empty" id="chainEmptyHint">
+          <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          <div>暂无链路数据</div>
+          <div style="font-size:11px;margin-top:4px;color:var(--text-muted)">录制后推送至平台，或在此查看已有链路</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn-solid btn-primary" id="replayHttpBtn" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          HTTP回放
+        </button>
+        <button class="btn-solid btn-success" id="replayBrowserBtn" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          宏回放
+        </button>
+      </div>
+    </div>
+
+    <!-- Tab: 回放日志 -->
+    <div class="tab-content" id="tab-replayLog">
+      <div class="toolbar">
+        <span style="font-size:11px;font-weight:600;color:var(--text-secondary)" id="replayLogTitle">回放日志</span>
+        <button class="btn-solid btn-outline" id="replayLogClearBtn" style="margin-left:auto;padding:4px 8px;font-size:10px">清空日志</button>
+      </div>
+      <div id="replayLogList" style="flex:1;overflow-y:auto">
+        <div class="empty" id="replayLogEmpty">
+          <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <div>暂无回放记录</div>
+          <div style="font-size:11px;margin-top:4px;color:var(--text-muted)">在链路管理中选择链路进行回放</div>
+        </div>
+      </div>
+      <div class="actions" id="replayActions" style="display:none">
+        <button class="btn-solid btn-outline" id="replayPauseBtn" style="flex:1">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+          暂停
+        </button>
+        <button class="btn-solid btn-outline" id="replayStopBtn" style="flex:1;color:var(--danger);border-color:var(--danger)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/></svg>
+          停止
+        </button>
+      </div>
     </div>
   </div>
 
@@ -427,6 +552,35 @@
         <div class="form-g">
           <label>过滤域名 <span style="font-weight:400;color:var(--text-muted)">(每行一个，精确匹配域名)</span></label>
           <textarea id="cfgDomains" placeholder="例：&#10;cdn.example.com&#10;static.example.com"></textarea>
+        </div>
+      </div>
+      <div class="settings-group">
+        <div class="settings-group-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          回放设置
+        </div>
+        <div class="form-g">
+          <label>版本创建策略</label>
+          <select id="cfgVersionMode">
+            <option value="auto">自动创建（每次回放推送自动创建新版本）</option>
+            <option value="manual">手动创建（推送时不自动创建版本）</option>
+          </select>
+        </div>
+        <div class="form-g"><label>回放超时(秒)</label><input type="number" id="cfgReplayTimeout" value="30" min="5" max="120"></div>
+        <div class="form-g"><label>步骤间隔(秒)</label><input type="number" id="cfgReplayInterval" value="0" min="0" max="30" step="0.5"><span class="form-hint">每步执行后的等待时间，0表示无间隔连续执行</span></div>
+        <div class="form-g">
+          <label>失败策略</label>
+          <select id="cfgFailStrategy">
+            <option value="continue">继续执行（标记失败，继续下一个）</option>
+            <option value="stop">中断执行</option>
+          </select>
+        </div>
+        <div class="form-g">
+          <label>并行组支持</label>
+          <select id="cfgParallelGroup">
+            <option value="true">启用（同组接口并发执行）</option>
+            <option value="false">禁用（全部串行执行）</option>
+          </select>
         </div>
       </div>
       <div class="settings-group">

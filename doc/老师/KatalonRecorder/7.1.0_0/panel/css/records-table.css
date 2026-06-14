@@ -1,0 +1,232 @@
+#command-grid tr {
+    border: none;
+}
+
+#command-grid td:first-child {
+    background: #F7F7F7;
+    margin    : 0px;
+    padding   : 0px;
+}
+
+#command-grid td:first-child,
+#command-grid th:first-child,
+#command-grid td:nth-child(2),
+#command-grid th:nth-child(2),
+#command-grid td:nth-child(3),
+#command-grid th:nth-child(3) {
+    border-right: solid 1px #D5D8DD;
+}
+
+#command-grid td:nth-child(4) div.value {
+    max-height: 100px;
+    overflow  : auto !important;
+}
+
+#command-grid td div img {
+    float       : right;
+    margin-right: 5px;
+    margin-left : 2px;
+    order       : 2;
+    cursor      : pointer;
+}
+
+#command-grid td:nth-child(3) div:nth-child(2) {
+    display      : flex;
+    padding-right: 5px;
+}
+
+#command-grid td:nth-child(2),
+#command-grid td:last-child,
+#command-grid td:nth-child(3) {
+    cursor: text;
+}
+
+#command-grid td:last-child div {
+    padding-right: 5px;
+}
+
+#command-grid .addNewVariable {
+    margin-right: 10px;
+    cursor      : pointer;
+}
+
+.tablesorter {
+    position: relative;
+}
+
+.tablesorter tbody tr.selectedRecord {
+    background: #F0F8FF;
+}
+
+#command-grid .hoverRecord td,
+.tablesorter tbody tr.selectedRecord td {
+    border: 1px solid #276EF1;
+}
+
+#command-grid .selectedRecord td:first-child,
+#command-grid .hoverRecord td:first-child {
+    background: #5294FF;
+}
+
+#command-grid td:first-child .toolbar-btn,
+#command-grid td:nth-child(2) .toolbar-command-btn,
+#command-grid td:nth-child(3) .toolbar-target-btn,
+#command-grid td:last-child .toolbar-value-btn,
+#command-grid td:nth-child(2) .ctm-command-btn,
+#command-grid td:nth-child(3) .ctm-target-btn,
+#command-grid td:last-child .ctm-value-btn {
+    display      : none;
+    position     : absolute;
+    left         : 35px;
+    background   : #FFFFFF;
+    border-radius: 4px;
+    padding      : 3px;
+    z-index      : 2;
+    box-shadow   : 0px 8px 12px rgb(76 101 145 / 15%), 0px 0px 1px rgb(76 101 145 / 30%);
+    margin-left  : -26px;
+}
+
+#command-grid td:nth-child(2) .toolbar-command-btn {
+    left: 7%;
+}
+
+#command-grid td:nth-child(3) .toolbar-target-btn {
+    left: 35%;
+}
+
+#command-grid td:last-child .toolbar-value-btn {
+    left: 70%;
+}
+
+#command-grid td:first-child .toolbar-btn div:hover,
+#command-grid td:nth-child(2) .toolbar-command-btn div:hover,
+#command-grid td:nth-child(3) .toolbar-target-btn div:hover,
+#command-grid td:last-child .toolbar-value-btn div:hover,
+#command-grid td:nth-child(3) .ctm-target-btn div:hover,
+#command-grid td:nth-child(2) .ctm-command-btn div:hover,
+#command-grid td:last-child .ctm-value-btn div:hover {
+    background: #F0F0F0;
+}
+
+#command-grid td:first-child .toolbar-btn div,
+#command-grid td:nth-child(2) .toolbar-command-btn div,
+#command-grid td:nth-child(3) .toolbar-target-btn div,
+#command-grid td:last-child .toolbar-value-btn div {
+    padding: 6px 9px 6px 6px;
+}
+
+#command-grid td:first-child .toolbar-btn div img,
+#command-grid td:nth-child(2) .toolbar-command-btn div img,
+#command-grid td:nth-child(3) .toolbar-target-btn div img,
+#command-grid td:last-child .toolbar-value-btn div img {
+    margin-right: 0;
+}
+
+#command-grid .removeRecord td:first-child {
+    background: #FA6F50;
+}
+
+#command-grid .removeRecord td {
+    border          : 1px solid #FA6F50;
+    background-color: #FFEDE6;
+}
+
+#command-grid td.selectedTd {
+    border: solid 1px #276EF1;
+}
+
+#selectElementButton,
+#showElementButton {
+    background: none;
+    border    : none;
+}
+
+#command-grid td:nth-child(3) #target-dropdown {
+    padding-left: 0px;
+    position    : absolute;
+    margin-left : 13px;
+    max-height  : 143px;
+    overflow-y  : scroll !important;
+}
+
+#command-grid tr td:nth-child(2) div {
+    padding-left: 15px;
+}
+
+#command-grid td:first-child .grid-add-btn img {
+    padding-top: 2px;
+}
+
+#command-grid td:first-child .grid-add-btn,
+#command-grid td:first-child .grid-paste-btn,
+#command-grid td:first-child .grid-redo-btn,
+#command-grid td:nth-child(3) .showElementButton,
+#command-grid td:nth-child(3) .grid-cell-paste-btn,
+#command-grid td:nth-child(2) .grid-cell-paste-btn,
+#command-grid td:last-child .grid-cell-paste-btn {
+    border-right : 1px solid #D5D8DD;
+    padding-right: 10px;
+}
+
+#grid-breakpoint,
+#grid-record {
+    border-bottom: 1px solid #D5D8DD;
+}
+
+#grid-delete a {
+    color: #B41400;
+}
+
+.ui-autocomplete {
+    max-height: 180px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Contextmenu for input*/
+#command-grid td:nth-child(3) .ctm-target-btn,
+#command-grid td:nth-child(2) .ctm-command-btn,
+#command-grid td:last-child .ctm-value-btn {
+    width: 25%;
+}
+
+#command-grid td:nth-child(3) .ctm-target-btn .grid-cell-delete-ctm,
+#command-grid td:nth-child(3) .ctm-target-btn .grid-cell-copy-ctm,
+#command-grid td:nth-child(2) .ctm-command-btn .grid-cell-delete-ctm,
+#command-grid td:last-child .ctm-value-btn .grid-cell-delete-ctm {
+    border-top: 1px solid #D5D8DD;
+}
+
+
+#command-grid td:nth-child(3) .ctm-target-btn div,
+#command-grid td:nth-child(2) .ctm-command-btn div,
+#command-grid td:last-child .ctm-value-btn div {
+    display       : flex;
+    flex-direction: row;
+    cursor        : pointer;
+}
+
+#command-grid td:nth-child(3) .ctm-target-btn div img:first-child,
+#command-grid td:nth-child(2) .ctm-command-btn div img:first-child,
+#command-grid td:last-child .ctm-value-btn div img:first-child{
+    order: 0;
+}
+
+#command-grid td:nth-child(3) .ctm-target-btn div p,
+#command-grid td:nth-child(2) .ctm-command-btn div p,
+#command-grid td:last-child .ctm-value-btn div p {
+    flex: 8;
+    color: #111;
+}
+
+#records-grid tr.selectedRecord td div {
+  color: #233145;
+}
+
+#records-grid tr.fail.selectedRecord td div {
+  color: #D63031;
+}
+
+#records-grid tr.success.selectedRecord td div {
+  color: #008000;
+}

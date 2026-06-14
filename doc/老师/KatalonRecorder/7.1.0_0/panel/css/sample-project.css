@@ -1,0 +1,63 @@
+#old-sample-project{
+    overflow: hidden;
+}
+
+#old-sample-project-content{
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    width: auto;
+    min-height: 35px;
+    height: auto;
+    overflow: auto;
+    padding: 10px;
+}
+
+#old-sample-project-content>div{
+    flex: 0 30%;
+    margin-bottom: 2%;
+    border: 1px black solid;
+    padding: 5px;
+}
+#old-sample-project-content>div:hover{
+    background-color: #E4E4E47F;
+    cursor: pointer;
+}
+
+#old-sample-project-content>div.selected{
+    background-color: rgba(180, 178, 178, 0.47);
+}
+
+#old-sample-project-content>div h3{
+    line-height: 16px;
+}
+
+#old-sample-project .footer{
+    max-height: 64px;
+    box-sizing: border-box;
+}
+
+#old-sample-project-add{
+    background-color: #276EF1;
+    color: white;
+}
+
+#old-sample-project-add .disable{
+    opacity: 0.5;
+}
+
+#old-sample-project-content p{
+    display: block;
+    font-size: 12px;
+}
+
+#old-sample-project-content p:hover{
+    background-color: initial;
+    border: 0;
+    color: inherit;
+}
+
+#old-sample-project .content{
+    overflow: auto;
+}

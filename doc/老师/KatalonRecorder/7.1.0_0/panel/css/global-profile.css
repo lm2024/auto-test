@@ -1,0 +1,488 @@
+.profile-item{
+    display: flex;
+    min-height: var(--left-size-item-height);
+    justify-content: center;
+    align-items: center;
+    border-radius: 6px;
+}
+
+.profile-item:hover{
+    /* background-color: var(--selected-test-case-background); */
+    background-color: #2C3D56;
+    border: 0;
+    /* color: #276EF1; */
+    cursor: pointer;
+}
+
+#profile-list{
+    flex-direction: column;
+}
+
+.profile-item:hover .btn-more{
+    visibility: visible;
+}
+
+.profile-item div:nth-child(2){
+    margin-left: 4px;
+    font-size: 12px;
+    font-weight: 400;
+    word-break: normal;
+}
+
+.profile-item div:nth-child(1){
+    margin-left: 45px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 14px;
+    width: 14px;
+    margin-right: 3px;
+}
+
+.profile-item div:nth-child(1) img{
+    height: 4px;
+}
+
+#profile-list{
+    display: none;
+}
+
+#profile-list .default img {
+    width: 14px;
+    height: 14px;
+}
+
+#profile-list .default div:nth-child(2){
+    margin-left: 4px;
+    font-size: 12px;
+    font-weight: 400;
+    word-break: normal;
+}
+
+#profile-list .selected {
+    /* background-color: var(--selected-test-case-background); */
+    /* background-color: #276EF1; */
+    border: 0;
+    color: #FFFFFF;
+}
+
+.profile-item:not(.default).selected div.profileIcon img {
+  content: url("/katalon/images/SVG/inverted-test-case-dot.svg/");
+  height: 3px;
+}
+
+div.profile-item.selected .btn-more img {
+  content: url("/katalon/images/SVG/inverted-more-icon.svg");
+}
+
+#profile-variable-container{
+    width: 100%;
+    border-radius: 8px;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+#profile-variable-grid{
+    width: 100%;
+}
+
+
+#profile-variable-grid tbody tr {
+    height: 34px;
+}
+
+#profile-variable-grid tbody tr td:first-child {
+    padding-left: 23px !important;
+}
+
+#profile-variable-grid tbody tr td {
+    padding-left: 12px !important;
+    word-break: break-all;
+}
+
+#profile-section{
+    display: none;
+    flex-direction: column;
+}
+
+#profile-section th{
+    position: sticky;
+    position: -webkit-sticky;
+    top: 0;
+    background: var(--header-bg);
+    padding-left: 12px !important;
+    text-indent: 0;
+}
+
+#profile-section th:first-child {
+    padding-left: 23px !important;
+}
+
+#profile-toolbar{
+    flex-grow: 0;
+    flex-shrink: 0;
+    height: auto;
+}
+
+#profile-toolbar-buttons{
+    border-top: 1px solid var(--border-color);
+    background-color: initial;
+    height: 34px;
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--border-color);
+    padding-left: 10px;
+}
+
+#profile-toolbar-buttons > button{
+    width: 16px;
+    flex-grow: 0;
+    flex-shrink: 0;
+    border-top: none;
+    border-left: none;
+    border-bottom: none;
+    border-right: none;
+    padding: 5px 8px;
+    font-weight: 500;
+    background-repeat: no-repeat;
+    height: 32px;
+    background-position: center center;
+    margin-right: 18.5px;
+    background-color: transparent;
+}
+
+#variable-add-btn {
+    background-image: url(/katalon/images/SVG/add-icon.svg);
+}
+
+#variable-add-btn:hover {
+    background-image: url(/katalon/images/SVG/add-icon-hover.svg);
+    cursor: pointer;
+}
+
+
+#variable-delete-btn:hover {
+    cursor: pointer;
+    background-image: url(/katalon/images/SVG/new-delete-icon-hover.svg);
+}
+
+#variable-delete-btn {
+    background-image: url(/katalon/images/SVG/new-delete-icon.svg);
+}
+
+#variable-copy-btn {
+    background-image: url(/katalon/images/SVG/copy-icon.svg);
+}
+
+#variable-copy-btn:hover {
+    cursor: pointer;
+    background-image: url(/katalon/images/SVG/copy-icon-hover.svg);
+}
+
+#variable-paste-btn {
+    background-image: url(/katalon/images/SVG/paste-icon.svg);
+}
+
+#variable-paste-btn:hover {
+    cursor: pointer;
+    background-image: url(/katalon/images/SVG/paste-icon-hover.svg);
+}
+
+#profile-grid .selected{
+    background-color: var(--selected-bg-color);
+}
+
+.tablesorter tbody tr:hover .addNewVariable{
+    background-image: url(/katalon/images/SVG/add-icon.svg);
+}
+
+#command-grid .addNewVariable{
+    padding: 0px;
+    margin-left: auto;
+    width: 16px;
+    height: 16px !important;
+    margin-right: 20px;
+    flex-shrink: 0;
+}
+
+#command-grid td .menu{
+    padding-left: 0px;
+}
+
+.globalVariable{
+    color: #276EF1!important;
+}
+
+.globalVariable:hover{
+    text-decoration: underline;
+    text-decoration-color: #276EF1;
+}
+
+#profile-toolbar .fieldset{
+    display: flex;
+    flex-direction: row;
+    height: 70px;
+    background-color: var(--header-bg);
+    flex-grow: 0;
+    flex-shrink: 0;
+    flex-wrap: nowrap;
+    padding: 0px 10px 10px;
+    border-bottom-right-radius: 5px;
+    border-bottom-left-radius: 5px;
+    border-top-left-radius: 0px;
+    border-top-right-radius: 0px;
+}
+
+#profile-toolbar .input-row{
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin: 10px 17px 0 0;
+}
+
+#profile-toolbar label{
+    text-align: left;
+    clear: both;
+    display: block;
+    width: 75px;
+    line-height: 16px;
+    margin: 5px 0;
+    flex-grow: 0;
+    flex-shrink: 0;
+    text-transform: capitalize;
+    font-weight: normal;
+    float: none;
+    text-shadow: none;
+}
+
+.fieldset input[type="text"]{
+    width: 90%;
+}
+
+#profile-list .modified div:nth-child(2):after {
+    content: " *";
+}
+
+.profile-item.modified::after{
+    content: ""
+}
+
+#grid-add-global-variable-btn{
+    background-image: url(/katalon/images/SVG/add-to-default-profile-icon.svg);
+}
+
+#grid-add-global-variable-btn:hover{
+    background-image: url(/katalon/images/SVG/add-to-default-profile-icon-hover.svg);
+}
+
+.globalProfileAssignValueDialog .header{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    height: 56px;
+    box-sizing: border-box;
+    padding: 20px;
+}
+
+.globalProfileAssignValueDialog .header .title{
+    font-family: Roboto;
+    font-style: normal;
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 24px;
+}
+
+.globalProfileAssignValueDialog .header .dialog-close{
+    background-color: transparent;
+    width: 16px;
+    height: 16px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    outline: none;
+}
+
+.globalProfileAssignValueDialog .content{
+    padding: 0px 20px;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.globalProfileAssignValueDialog .content-header .step{
+    font-family: Roboto;
+    font-style: normal;
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 20px;
+    margin-bottom: 8px;
+}
+
+.globalProfileAssignValueDialog .content-header .message{
+    font-family: Roboto;
+    font-style: normal;
+    font-weight: normal;
+    font-size: 14px;
+    line-height: 16px;
+    display: flex;
+    align-items: center;
+    color: #808B9A;
+}
+
+.globalProfileAssignValueDialog .use-in-test-case-header{
+    display: flex;
+    flex-direction: row;
+}
+
+.globalProfileAssignValueDialog .use-in-test-case-header .dropdown{
+    width: 24px;
+    height: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.globalProfileAssignValueDialog .use-in-test-case-header img{
+    width: 10px;
+    height: 10px;
+}
+
+.globalProfileAssignValueDialog .use-in-test-case-header .title{
+    font-family: Roboto;
+    font-style: normal;
+    font-weight: normal;
+    font-size: 14px;
+    line-height: 24px;
+}
+
+.globalProfileAssignValueDialog .use-in-test-case-test-cases-container{
+    margin-left: 40px;
+}
+
+.globalProfileAssignValueDialog .container{
+    margin-bottom: 0px;
+    overflow: hidden;
+}
+
+.globalProfileAssignValueDialog .test-case-item{
+    width: max-content;
+    padding: 4px;
+    border-radius: 4px;
+
+}
+
+.globalProfileAssignValueDialog .test-case-item:hover{
+    cursor: pointer;
+}
+
+.globalProfileAssignValueDialog .test-case-item.selected{
+    background: #276EF1;
+    color: white;
+}
+
+#use-profile-in-test-case-command-grid{
+    width: 100%;
+    font-size: 12px;
+}
+#use-profile-in-test-case-command-grid th {
+    position: sticky;
+    position: -webkit-sticky;
+    top: 0;
+    background: var(--header-bg);
+    padding-left: 12px !important;
+    text-indent: 0;
+}
+
+#use-profile-in-test-case-command-grid tbody tr td:first-child {
+    padding-left: 23px !important;
+    word-break: break-all;
+}
+
+#use-profile-in-test-case-preview{
+    border: 1px #D5D8DD solid;
+    overflow: auto;
+    display: flex;
+    flex: 1;
+    border-radius: 6px;
+}
+
+#use-profile-in-test-case-records-grid > tr > td:nth-child(3) > div:nth-child(1){
+    display: flex;
+    flex-direction: row;
+}
+
+#use-profile-in-test-case-records-grid > tr > td:nth-child(3) > div:nth-child(1) > div:nth-child(2){
+    margin-left: auto;
+    margin-right: 20px;
+}
+
+#use-profile-in-test-case-dialog-menu{
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+#use-profile-in-test-case-dialog-menu ul{
+    color: var(--main-txt-color);
+}
+
+
+
+#delete-profile-dialog .content{
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    padding: 0 20px;
+    overflow: auto;
+}
+
+#delete-profile-dialog .content .message:hover {
+    cursor: default;
+}
+
+#delete-profile-dialog .content .message{
+    font-size: 14px;
+    display: flex;
+    flex-direction: column;
+}
+
+#delete-profile-dialog .content .message div:nth-child(1){
+    line-height: 20px;
+    margin-bottom: 10px;
+}
+
+#delete-profile-dialog .content .message div:nth-child(2){
+    font-weight: 500;
+    font-size: 12px;
+}
+
+#delete-profile-dialog .content .message div:nth-child(3){
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+#delete-profile-dialog .content .message div:nth-child(4){
+    font-size: 13px;
+    color: #808B9A;
+}
+
+#delete-profile-test-case-list div{
+    border-bottom: 1px solid #e8ebed;
+    padding: 10px;
+}
+
+#delete-profile-dialog-cancel{
+    font-weight: 500;
+}
+
+#delete-profile-dialog-delete{
+    background: #E11900;
+    color: white;
+    font-weight: 500;
+    width: 64px
+}
+

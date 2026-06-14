@@ -1,0 +1,25 @@
+
+#export-open-dropdown {
+    padding: 4px 0;
+}
+
+#export-open-dropdown div {
+    height: 30px;
+    line-height: calc(var(--left-size-item-height));
+    padding-left: 10px;
+    color: var(--main-txt-color);
+}
+
+/* #actions {
+    flex: 1;
+    justify-content: flex-end;
+    margin-top: 0;
+    height: auto;
+    padding-bottom: 4px;
+} */
+
+#workspace {
+    flex: 9;
+    overflow-y: scroll;
+    display: block;
+}

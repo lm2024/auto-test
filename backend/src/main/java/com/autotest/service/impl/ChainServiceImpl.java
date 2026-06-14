@@ -187,7 +187,7 @@ public class ChainServiceImpl implements ChainService {
             node.setNodeId((long) nodeId);
             node.setNodeCode(CodeGenerator.generateNodeCode(chainCode, nodeId));
             node.setNodeName(iface.getNodeName() != null ? iface.getNodeName() : "节点" + nodeId);
-            node.setNodeType("HTTP");
+            node.setNodeType("MACRO".equals(iface.getMethod()) ? "MACRO" : "HTTP");
             node.setSortNo(iface.getSort() != null ? iface.getSort() : nodeId);
             node.setParallelGroup(iface.getParallelGroup());
             node.setRequestUrl(iface.getUrl());

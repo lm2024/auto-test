@@ -1,0 +1,35 @@
+{
+   "action": {
+      "default_icon": {
+         "128": "icons/icon-128.png",
+         "16": "icons/icon-16.png",
+         "48": "icons/icon-48.png"
+      },
+      "default_popup": "popup.html",
+      "default_title": "API文档生成器"
+   },
+   "background": {
+      "service_worker": "background.js"
+   },
+   "content_scripts": [ {
+      "js": [ "content.js" ],
+      "matches": [ "\u003Call_urls>" ]
+   } ],
+   "description": "解析网络请求并生成API文档",
+   "host_permissions": [ "\u003Call_urls>" ],
+   "icons": {
+      "128": "icons/icon-128.png",
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png"
+   },
+   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxqdn+9GT6IHXLudoC96XyZiABaFTzuvXjjlZqyeAxvwch6DBGJZtQXkagf1yMzrQ64esE1yqFo6B8PI05EB7Niddi6Lmnx05Eqdo1t5P4kecm8o+X1EB/EG7M/m022lJdcpPBrE4O2nc5RoKa7L4XM7+lEr0yTvygHkg9BOdgn68QuiJXaGiVsVeu5CxDwhBI9M1iaK05VNjSyUE39ChyA1SV8/Ue5NgaV4y0CRkKam6r0JyTmz2SXS9l5Mww8u87jTkDfVb56I6niiBzBgKi8Zc9Li/LtgZKWdjCUcf9IC4bZ8ymNov8d0VYkhoHa28oSM56xp4ki0XvCOotODQ7wIDAQAB",
+   "manifest_version": 3,
+   "name": "API-Helper",
+   "permissions": [ "activeTab", "storage", "debugger" ],
+   "update_url": "https://clients2.google.com/service/update2/crx",
+   "version": "0.1",
+   "web_accessible_resources": [ {
+      "matches": [ "\u003Call_urls>" ],
+      "resources": [ "inject.js", "debugger.js", "debugger.css", "panel.js", "panel.css", "doc-generator.js" ]
+   } ]
+}

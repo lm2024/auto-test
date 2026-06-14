@@ -1,0 +1,355 @@
+/* API Debugger Sidebar Styles */
+
+#api-debugger-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999998;
+  display: none;
+}
+
+#api-debugger-overlay.show {
+  display: block;
+}
+
+#api-debugger-sidebar {
+  position: fixed;
+  top: 0;
+  right: -500px;
+  width: 500px;
+  height: 100vh;
+  background: white;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.3);
+  transition: right 0.3s ease;
+  z-index: 999999;
+  overflow-y: auto;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+#api-debugger-sidebar.show {
+  right: 0;
+}
+
+#api-debugger-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+#api-debugger-header h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+#api-debugger-close {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#api-debugger-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+#api-debugger-content {
+  padding: 12px;
+}
+
+/* Section Styles */
+.api-debug-section {
+  margin-bottom: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fafafa;
+}
+
+.api-debug-section.required {
+  border: none;
+  background: transparent;
+  margin-bottom: 10px;
+}
+
+.api-debug-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 10px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s;
+  border-radius: 6px;
+}
+
+.api-debug-section-header:hover {
+  background: #f3f4f6;
+}
+
+.api-debug-section.required .api-debug-section-header {
+  padding: 0;
+  cursor: default;
+  pointer-events: none;
+}
+
+.api-debug-section.required .api-debug-section-header:hover {
+  background: transparent;
+}
+
+.api-debug-section-title {
+  font-weight: 600;
+  color: #374151;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.api-debug-section.required .api-debug-section-title {
+  margin-bottom: 6px;
+}
+
+.api-debug-collapse-icon {
+  font-size: 11px;
+  transition: transform 0.2s;
+  color: #6b7280;
+}
+
+.api-debug-section.collapsed .api-debug-collapse-icon {
+  transform: rotate(-90deg);
+}
+
+.api-debug-section-content {
+  padding: 0 10px 10px 10px;
+  max-height: 1000px;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+}
+
+.api-debug-section.collapsed .api-debug-section-content {
+  max-height: 0;
+  padding: 0 10px;
+}
+
+/* Input Styles */
+.api-debug-input,
+.api-debug-select,
+.api-debug-textarea {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  font-size: 13px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.api-debug-input:focus,
+.api-debug-textarea:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.api-debug-select {
+  background: white;
+  cursor: pointer;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.api-debug-textarea {
+  min-height: 120px;
+  resize: vertical;
+  line-height: 1.5;
+  font-size: 12px;
+}
+
+.api-debug-key-value {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.api-debug-add-btn {
+  background: #f3f4f6;
+  border: 1px dashed #9ca3af;
+  color: #6b7280;
+  padding: 6px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+  margin-top: 6px;
+  width: 100%;
+}
+
+.api-debug-add-btn:hover {
+  background: #e5e7eb;
+  border-color: #6b7280;
+}
+
+.api-debug-remove-btn {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #dc2626;
+  padding: 6px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.api-debug-remove-btn:hover {
+  background: #fca5a5;
+  color: white;
+}
+
+.api-debug-send-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: white;
+  padding: 11px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 3px 10px rgba(102, 126, 234, 0.4);
+  margin-top: 10px;
+}
+
+.api-debug-send-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(102, 126, 234, 0.6);
+}
+
+.api-debug-send-btn:active {
+  transform: translateY(0);
+}
+
+.api-debug-send-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Response Styles */
+.api-debug-response {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 12px;
+  margin-top: 12px;
+  display: none;
+}
+
+.api-debug-response.show {
+  display: block;
+}
+
+.api-debug-response-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.api-debug-response-status {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.api-debug-status-success {
+  color: #059669;
+}
+
+.api-debug-status-error {
+  color: #dc2626;
+}
+
+.api-debug-copy-btn {
+  background: #667eea;
+  border: none;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.api-debug-copy-btn:hover {
+  background: #5568d3;
+}
+
+.api-debug-response-body {
+  background: #1f2937;
+  border-radius: 5px;
+  padding: 10px;
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.api-debug-response-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.api-debug-response-body::-webkit-scrollbar-track {
+  background: #111827;
+}
+
+.api-debug-response-body::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 3px;
+}
+
+.api-debug-response-body::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+.api-debug-response-body pre {
+  margin: 0;
+  color: #e5e7eb;
+  font-size: 11px;
+  line-height: 1.5;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.api-debug-duration {
+  color: #6b7280;
+  font-size: 11px;
+  margin-left: 10px;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  #api-debugger-sidebar {
+    width: 100%;
+    right: -100%;
+  }
+}

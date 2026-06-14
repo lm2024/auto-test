@@ -1,10 +1,9 @@
 package com.autotest.controller;
 
-import com.autotest.model.dto.ChainCreateDTO;
-import com.autotest.model.dto.ChainEditDTO;
-import com.autotest.model.vo.ChainVO;
-import com.autotest.model.vo.Result;
+import com.autotest.model.dto.*;
+import com.autotest.model.vo.*;
 import com.autotest.service.ChainService;
+import com.autotest.service.VersionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,6 +18,9 @@ public class ChainController {
 
     @Autowired
     private ChainService chainService;
+
+    @Autowired
+    private VersionService versionService;
 
     @PostMapping("/create")
     public Result<?> createChain(@Valid @RequestBody ChainCreateDTO dto) {
@@ -85,5 +87,36 @@ public class ChainController {
         data.put("successCount", success);
         data.put("failCount", chainCodes.size() - success);
         return Result.success(data);
+    }
+
+    @GetMapping("/versions")
+    public Result<?> getVersions(
+            @RequestParam String chainCode,
+            @RequestParam(defaultValue = "false") boolean all) {
+        List<VersionVO> versions = versionService.getVersions(chainCode, all);
+        Map<String, Object> data = new HashMap<>();
+        data.put("total", versions.size());
+        data.put("list", versions);
+        return Result.success(data);
+    }
+
+    @GetMapping("/version/diff")
+    public Result<?> getVersionDiff(
+            @RequestParam String chainCode,
+            @RequestParam int version) {
+        DiffVO diff = versionService.getVersionDiff(chainCode, version);
+        return Result.success(diff);
+    }
+
+    @DeleteMapping("/version/delete")
+    public Result<?> deleteVersion(@Valid @RequestBody VersionDeleteDTO dto) {
+        versionService.deleteVersion(dto);
+        return Result.success();
+    }
+
+    @PostMapping("/version/batchDelete")
+    public Result<?> batchDeleteVersions(@Valid @RequestBody BatchVersionDeleteDTO dto) {
+        versionService.batchDeleteVersions(dto.getChainCode(), dto.getBeforeVersion());
+        return Result.success();
     }
 }

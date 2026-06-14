@@ -1,0 +1,75 @@
+{
+   "action": {
+      "default_icon": "katalon/images/branding/branding_16.png",
+      "default_title": "Katalon Recorder"
+   },
+   "applications": {
+      "gecko": {
+         "id": "{91f05833-bab1-4fb1-b9e4-187091a4d75d}"
+      }
+   },
+   "background": {
+      "service_worker": "worker_wrapper.js"
+   },
+   "content_scripts": [ {
+      "all_frames": true,
+      "js": [ "common/browser-polyfill-content.js", "common/remote-object-helper-content.js", "common/chrome-polyfill-server.js" ],
+      "match_about_blank": true,
+      "matches": [ "\u003Call_urls>" ],
+      "run_at": "document_start"
+   }, {
+      "all_frames": true,
+      "js": [ "common/remote-object-helper-page.js" ],
+      "match_about_blank": true,
+      "matches": [ "\u003Call_urls>" ],
+      "run_at": "document_start",
+      "world": "MAIN"
+   }, {
+      "all_frames": true,
+      "js": [ "bundles/content.1.bundle.js" ],
+      "match_about_blank": true,
+      "matches": [ "\u003Call_urls>" ],
+      "run_at": "document_start",
+      "world": "MAIN"
+   }, {
+      "all_frames": true,
+      "js": [ "bundles/content.2.bundle.js" ],
+      "match_about_blank": true,
+      "matches": [ "https://www.facebook.com/dialog/share?*", "https://twitter.com/intent/tweet?*", "https://www.linkedin.com/sharing/share-offsite/?*" ],
+      "world": "MAIN"
+   } ],
+   "content_security_policy": {
+      "extension_pages": "script-src 'self'; object-src 'self'; unsafe-eval; unsafe-inline;"
+   },
+   "default_popup": "popup-browser/index.html",
+   "description": "Selenium IDE alternative to record and export Selenium scripts. With reports & screenshots. Fast & open-source.",
+   "externally_connectable": {
+      "accepts_tls_channel_id": false,
+      "ids": [ "*" ],
+      "matches": [ "https://developer.mozilla.org/*", "https://katalon.com/*" ]
+   },
+   "homepage_url": "https://web-api.katalon.com/",
+   "host_permissions": [ "http://*/", "https://*/", "\u003Call_urls>" ],
+   "hubspot_url": "https://web-api.katalon.com/",
+   "icons": {
+      "128": "katalon/images/branding/branding_128.png",
+      "16": "katalon/images/branding/branding_16.png",
+      "48": "katalon/images/branding/branding_48.png"
+   },
+   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApPBt0KSi9NMDRIecv0hJc/Qd+lNiG1OH23YppKEtBxtrBLM34ytpdfUx5uLS9bRQMagFQe3/eNL4nD0xRBsix/OPyDnCXKk4PR4Ck3AuTOVCr6b7cdnKe4l5DCmQvZNW56WntrkUaWkvNtmfuGpWPPiHxUcJQnEBnwktbNaSBDUnjLmHqsJBlON4OnGCexNe8keLQ8ukXPVkEcpWgiCZftMwDj9NQgy5z+nhyWED0li/bavNLe4lHAa/pxf71Y1wUk5dXk1974cXu72oOdgOYbemFCwjyltm4Np3ip7vpbgiJEmONU8j6uQsU8VGkjtN6hqyrIhYzN0UYoznGTWsdwIDAQAB",
+   "manifest_version": 3,
+   "name": "Katalon Recorder (Selenium tests generator)",
+   "offline_enabled": true,
+   "options_page": "katalon/options.html",
+   "permissions": [ "tabs", "activeTab", "contextMenus", "downloads", "webNavigation", "notifications", "cookies", "storage", "unlimitedStorage", "debugger", "scripting", "offscreen" ],
+   "sandbox": {
+      "pages": [ "panel/sandbox.html" ]
+   },
+   "segment_url": "https://backend.katalon.com/api",
+   "update_url": "https://clients2.google.com/service/update2/crx",
+   "version": "7.1.0",
+   "web_accessible_resources": [ {
+      "matches": [ "\u003Call_urls>" ],
+      "resources": [ "page/prompt.js", "page/runScript.js", "katalon/authenticated.html" ]
+   } ]
+}
