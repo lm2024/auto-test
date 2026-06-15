@@ -67,11 +67,5 @@
       "Read(./plugin废弃/**)",
       "Glob(./plugin废弃/**)"
     ]
-  },
-  "mcpServers": {
-    "filesystem": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "C:\\Users\\Li"]
-    }
   }
 }

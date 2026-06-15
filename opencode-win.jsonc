@@ -15,6 +15,17 @@
       ],
       "enabled": true
     },
+    "context7": {
+      "command": [
+        "cmd",
+        "/c",
+        "npx",
+        "-y",
+        "@upstash/context7-mcp"
+      ],
+      "enabled": true,
+      "type": "local"
+    },
     "memory": {
       "command": [
         "npx",
@@ -24,11 +35,13 @@
       "enabled": true,
       "type": "local"
     },
-    "context7": {
+    "sequential-thinking": {
       "command": [
+        "cmd",
+        "/c",
         "npx",
         "-y",
-        "@upstash/context7-mcp"
+        "@modelcontextprotocol/server-sequential-thinking"
       ],
       "enabled": true,
       "type": "local"
