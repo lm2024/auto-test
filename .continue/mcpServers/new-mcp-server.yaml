@@ -1,0 +1,43 @@
+name: auto-test MCP Servers
+version: 1.0.0
+schema: v1
+mcpServers:
+  - name: filesystem
+    command: npx
+    args:
+      - -y
+      - "@modelcontextprotocol/server-filesystem"
+      - C:/Users/Li/Downloads/GitHub/auto-test
+    env: {}
+
+  - name: codegraph
+    command: codegraph
+    args:
+      - serve
+      - --mcp
+    env: {}
+
+  - name: context7
+    command: cmd
+    args:
+      - /c
+      - npx
+      - -y
+      - "@upstash/context7-mcp"
+    env: {}
+
+  - name: memory
+    command: npx
+    args:
+      - -y
+      - "@modelcontextprotocol/server-memory"
+    env: {}
+
+  - name: sequential-thinking
+    command: cmd
+    args:
+      - /c
+      - npx
+      - -y
+      - "@modelcontextprotocol/server-sequential-thinking"
+    env: {}
