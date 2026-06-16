@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.autotest.mapper.TestNodeConfigMapper">
+
+    <resultMap id="BaseResultMap" type="com.autotest.model.entity.TestNodeConfig">
+        <id column="id" property="id"/>
+        <result column="chain_code" property="chainCode"/>
+        <result column="node_id" property="nodeId"/>
+        <result column="node_code" property="nodeCode"/>
+        <result column="node_name" property="nodeName"/>
+        <result column="node_type" property="nodeType"/>
+        <result column="sort_no" property="sortNo"/>
+        <result column="parallel_group" property="parallelGroup"/>
+        <result column="request_url" property="requestUrl"/>
+        <result column="request_method" property="requestMethod"/>
+        <result column="request_headers" property="requestHeaders"/>
+        <result column="body_type" property="bodyType"/>
+        <result column="body_data" property="bodyData"/>
+        <result column="extract_rules" property="extractRules"/>
+        <result column="assert_rules" property="assertRules"/>
+        <result column="variable_mapping" property="variableMapping"/>
+        <result column="delay_seconds" property="delaySeconds"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="biz_oper_trace_id" property="bizOperTraceId"/>
+        <result column="trigger_event" property="triggerEvent"/>
+        <result column="target_dom" property="targetDom"/>
+        <result column="page_url" property="pageUrl"/>
+        <result column="window_id" property="windowId"/>
+        <result column="ignore" property="ignore"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO test_node_config (chain_code, node_id, node_code, node_name, node_type, sort_no,
+            parallel_group, request_url, request_method, request_headers, body_type, body_data,
+            extract_rules, assert_rules, variable_mapping, delay_seconds,
+            biz_oper_trace_id, trigger_event, target_dom, page_url, window_id, ignore)
+        VALUES (#{chainCode}, #{nodeId}, #{nodeCode}, #{nodeName}, #{nodeType}, #{sortNo},
+            #{parallelGroup}, #{requestUrl}, #{requestMethod}, #{requestHeaders}, #{bodyType}, #{bodyData},
+            #{extractRules}, #{assertRules}, #{variableMapping}, #{delaySeconds},
+            #{bizOperTraceId}, #{triggerEvent}, #{targetDom}, #{pageUrl}, #{windowId}, #{ignore})
+    </insert>
+
+    <insert id="batchInsert">
+        INSERT INTO test_node_config (chain_code, node_id, node_code, node_name, node_type, sort_no,
+            parallel_group, request_url, request_method, request_headers, body_type, body_data,
+            extract_rules, assert_rules, variable_mapping, delay_seconds,
+            biz_oper_trace_id, trigger_event, target_dom, page_url, window_id, ignore)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.chainCode}, #{item.nodeId}, #{item.nodeCode}, #{item.nodeName}, #{item.nodeType}, #{item.sortNo},
+             #{item.parallelGroup}, #{item.requestUrl}, #{item.requestMethod}, #{item.requestHeaders}, #{item.bodyType}, #{item.bodyData},
+             #{item.extractRules}, #{item.assertRules}, #{item.variableMapping}, #{item.delaySeconds},
+             #{item.bizOperTraceId}, #{item.triggerEvent}, #{item.targetDom}, #{item.pageUrl}, #{item.windowId}, #{item.ignore})
+        </foreach>
+    </insert>
+
+    <update id="update">
+        UPDATE test_node_config
+        <set>
+            <if test="nodeName != null">node_name = #{nodeName},</if>
+            <if test="sortNo != null">sort_no = #{sortNo},</if>
+            <if test="parallelGroup != null">parallel_group = #{parallelGroup},</if>
+            <if test="requestUrl != null">request_url = #{requestUrl},</if>
+            <if test="requestMethod != null">request_method = #{requestMethod},</if>
+            <if test="requestHeaders != null">request_headers = #{requestHeaders},</if>
+            <if test="bodyType != null">body_type = #{bodyType},</if>
+            <if test="bodyData != null">body_data = #{bodyData},</if>
+            <if test="extractRules != null">extract_rules = #{extractRules},</if>
+            <if test="assertRules != null">assert_rules = #{assertRules},</if>
+            <if test="variableMapping != null">variable_mapping = #{variableMapping},</if>
+            <if test="delaySeconds != null">delay_seconds = #{delaySeconds},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteByChainCode">
+        DELETE FROM test_node_config WHERE chain_code = #{chainCode}
+    </delete>
+
+    <delete id="deleteById">
+        DELETE FROM test_node_config WHERE id = #{id}
+    </delete>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT * FROM test_node_config WHERE id = #{id}
+    </select>
+
+    <select id="selectByNodeCode" resultMap="BaseResultMap">
+        SELECT * FROM test_node_config WHERE chain_code = #{chainCode} AND node_code = #{nodeCode}
+    </select>
+
+    <select id="selectByChainCode" resultMap="BaseResultMap">
+        SELECT * FROM test_node_config WHERE chain_code = #{chainCode} ORDER BY sort_no ASC
+    </select>
+
+    <select id="getMaxSortNo" resultType="int">
+        SELECT COALESCE(MAX(sort_no), 0) FROM test_node_config WHERE chain_code = #{chainCode}
+    </select>
+
+    <select id="getMaxNodeId" resultType="int">
+        SELECT COALESCE(MAX(node_id), 0) FROM test_node_config WHERE chain_code = #{chainCode}
+    </select>
+
+    <select id="countByChainCode" resultType="int">
+        SELECT COUNT(*) FROM test_node_config WHERE chain_code = #{chainCode}
+    </select>
+
+    <update id="incrementSortNoFrom">
+        UPDATE test_node_config SET sort_no = sort_no + 1
+        WHERE chain_code = #{chainCode} AND sort_no >= #{fromSortNo}
+    </update>
+</mapper>

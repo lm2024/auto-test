@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.autotest.mapper.TestAccountMapper">
+
+    <resultMap id="BaseResultMap" type="com.autotest.model.entity.TestAccount">
+        <id column="id" property="id"/>
+        <result column="account_code" property="accountCode"/>
+        <result column="account_name" property="accountName"/>
+        <result column="system_name" property="systemName"/>
+        <result column="username" property="username"/>
+        <result column="password" property="password"/>
+        <result column="auth_type" property="authType"/>
+        <result column="auth_config" property="authConfig"/>
+        <result column="status" property="status"/>
+        <result column="last_used_time" property="lastUsedTime"/>
+        <result column="lock_until" property="lockUntil"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO test_account (account_code, account_name, system_name, username, password,
+            auth_type, auth_config, status)
+        VALUES (#{accountCode}, #{accountName}, #{systemName}, #{username}, #{password},
+            #{authType}, #{authConfig}, #{status})
+    </insert>
+
+    <update id="update">
+        UPDATE test_account
+        <set>
+            <if test="accountName != null">account_name = #{accountName},</if>
+            <if test="systemName != null">system_name = #{systemName},</if>
+            <if test="username != null">username = #{username},</if>
+            <if test="password != null">password = #{password},</if>
+            <if test="authType != null">auth_type = #{authType},</if>
+            <if test="authConfig != null">auth_config = #{authConfig},</if>
+            <if test="status != null">status = #{status},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM test_account WHERE id = #{id}
+    </delete>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT * FROM test_account WHERE id = #{id}
+    </select>
+
+    <select id="selectByAccountCode" resultMap="BaseResultMap">
+        SELECT * FROM test_account WHERE account_code = #{accountCode}
+    </select>
+
+    <select id="selectList" resultMap="BaseResultMap">
+        SELECT * FROM test_account
+        <where>
+            <if test="systemName != null and systemName != ''">
+                AND system_name LIKE CONCAT('%', #{systemName}, '%')
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+    <update id="lockAccount">
+        UPDATE test_account
+        SET status = 2, lock_until = #{lockUntil}, last_used_time = NOW()
+        WHERE account_code = #{accountCode}
+          AND (status = 1 OR (status = 2 AND lock_until IS NOT NULL AND lock_until &lt; NOW()))
+    </update>
+
+    <update id="releaseAccount">
+        UPDATE test_account
+        SET status = 1, lock_until = NULL
+        WHERE account_code = #{accountCode}
+    </update>
+
+    <select id="selectAvailableByCode" resultMap="BaseResultMap">
+        SELECT * FROM test_account
+        WHERE account_code = #{accountCode}
+          AND (status = 1 OR (status = 2 AND lock_until IS NOT NULL AND lock_until &lt; NOW()))
+        LIMIT 1
+    </select>
+
+</mapper>

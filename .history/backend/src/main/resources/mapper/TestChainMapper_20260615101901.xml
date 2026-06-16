@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.autotest.mapper.TestChainMapper">
+
+    <resultMap id="BaseResultMap" type="com.autotest.model.entity.TestChain">
+        <id column="id" property="id"/>
+        <result column="chain_code" property="chainCode"/>
+        <result column="chain_name" property="chainName"/>
+        <result column="execute_mode" property="executeMode"/>
+        <result column="description" property="description"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="create_by" property="createBy"/>
+        <result column="status" property="status"/>
+        <result column="current_version" property="currentVersion"/>
+        <result column="chain_fingerprint" property="chainFingerprint"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO test_chain (chain_code, chain_name, execute_mode, description, create_by, status, current_version, chain_fingerprint)
+        VALUES (#{chainCode}, #{chainName}, #{executeMode}, #{description}, #{createBy}, #{status}, #{currentVersion}, #{chainFingerprint})
+    </insert>
+
+    <update id="update">
+        UPDATE test_chain
+        <set>
+            <if test="chainName != null">chain_name = #{chainName},</if>
+            <if test="executeMode != null">execute_mode = #{executeMode},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="currentVersion != null">current_version = #{currentVersion},</if>
+            <if test="chainFingerprint != null">chain_fingerprint = #{chainFingerprint},</if>
+        </set>
+        WHERE chain_code = #{chainCode}
+    </update>
+
+    <delete id="deleteByChainCode">
+        DELETE FROM test_chain WHERE chain_code = #{chainCode}
+    </delete>
+
+    <select id="selectByChainCode" resultMap="BaseResultMap">
+        SELECT * FROM test_chain WHERE chain_code = #{chainCode}
+    </select>
+
+    <select id="selectList" resultMap="BaseResultMap">
+        SELECT * FROM test_chain
+        <where>
+            <if test="chainName != null and chainName != ''">
+                AND chain_name LIKE CONCAT('%', #{chainName}, '%')
+            </if>
+            <if test="executeMode != null">
+                AND execute_mode = #{executeMode}
+            </if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="countByChainCode" resultType="int">
+        SELECT COUNT(*) FROM test_chain WHERE chain_code = #{chainCode}
+    </select>
+
+    <select id="countByChainName" resultType="int">
+        SELECT COUNT(*) FROM test_chain WHERE chain_name LIKE CONCAT('%', #{chainName}, '%')
+    </select>
+</mapper>

@@ -44,3 +44,7 @@ ai:
   model: qwen-max
   timeout-seconds: 120
   max-retries: 1
+
+# 测试账号密码 AES 加密密钥（必须为16字节）
+account:
+  aes-key: autotest_key_16!

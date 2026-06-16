@@ -22,26 +22,36 @@
         <result column="delay_seconds" property="delaySeconds"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
+        <result column="biz_oper_trace_id" property="bizOperTraceId"/>
+        <result column="trigger_event" property="triggerEvent"/>
+        <result column="target_dom" property="targetDom"/>
+        <result column="page_url" property="pageUrl"/>
+        <result column="window_id" property="windowId"/>
+        <result column="is_ignored" property="isIgnored"/>
     </resultMap>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO test_node_config (chain_code, node_id, node_code, node_name, node_type, sort_no,
             parallel_group, request_url, request_method, request_headers, body_type, body_data,
-            extract_rules, assert_rules, variable_mapping, delay_seconds)
+            extract_rules, assert_rules, variable_mapping, delay_seconds,
+            biz_oper_trace_id, trigger_event, target_dom, page_url, window_id, is_ignored)
         VALUES (#{chainCode}, #{nodeId}, #{nodeCode}, #{nodeName}, #{nodeType}, #{sortNo},
             #{parallelGroup}, #{requestUrl}, #{requestMethod}, #{requestHeaders}, #{bodyType}, #{bodyData},
-            #{extractRules}, #{assertRules}, #{variableMapping}, #{delaySeconds})
+            #{extractRules}, #{assertRules}, #{variableMapping}, #{delaySeconds},
+            #{bizOperTraceId}, #{triggerEvent}, #{targetDom}, #{pageUrl}, #{windowId}, #{isIgnored})
     </insert>
 
     <insert id="batchInsert">
         INSERT INTO test_node_config (chain_code, node_id, node_code, node_name, node_type, sort_no,
             parallel_group, request_url, request_method, request_headers, body_type, body_data,
-            extract_rules, assert_rules, variable_mapping, delay_seconds)
+            extract_rules, assert_rules, variable_mapping, delay_seconds,
+            biz_oper_trace_id, trigger_event, target_dom, page_url, window_id, is_ignored)
         VALUES
         <foreach collection="list" item="item" separator=",">
             (#{item.chainCode}, #{item.nodeId}, #{item.nodeCode}, #{item.nodeName}, #{item.nodeType}, #{item.sortNo},
              #{item.parallelGroup}, #{item.requestUrl}, #{item.requestMethod}, #{item.requestHeaders}, #{item.bodyType}, #{item.bodyData},
-             #{item.extractRules}, #{item.assertRules}, #{item.variableMapping}, #{item.delaySeconds})
+             #{item.extractRules}, #{item.assertRules}, #{item.variableMapping}, #{item.delaySeconds},
+             #{item.bizOperTraceId}, #{item.triggerEvent}, #{item.targetDom}, #{item.pageUrl}, #{item.windowId}, #{item.isIgnored})
         </foreach>
     </insert>
 
@@ -100,4 +110,21 @@
         UPDATE test_node_config SET sort_no = sort_no + 1
         WHERE chain_code = #{chainCode} AND sort_no >= #{fromSortNo}
     </update>
+
+    <select id="selectByTraceId" resultMap="BaseResultMap">
+        SELECT * FROM test_node_config
+        WHERE chain_code = #{chainCode}
+        <if test="bizOperTraceId != null and bizOperTraceId != ''">
+            AND biz_oper_trace_id = #{bizOperTraceId}
+        </if>
+        ORDER BY sort_no ASC
+    </select>
+
+    <select id="selectTraceIdsByChainCode" resultType="string">
+        SELECT DISTINCT biz_oper_trace_id FROM test_node_config
+        WHERE chain_code = #{chainCode}
+          AND biz_oper_trace_id IS NOT NULL
+          AND biz_oper_trace_id != ''
+        ORDER BY biz_oper_trace_id ASC
+    </select>
 </mapper>
