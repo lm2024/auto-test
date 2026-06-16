@@ -11,6 +11,8 @@
   var isReplayStopped = false;
   var currentReplayer = null;
   var macroReplayFilter = null;
+  var apiBtnState = 'idle'; // idle | recording | stopped
+  var stoppedTimer = null;
 
   function el(id) { return document.getElementById(id); }
   function narrow() { return window.innerWidth <= 360; }
@@ -18,6 +20,7 @@
   function init() {
     bindAll();
     loadData();
+    pollWindowState();
     chrome.storage.onChanged.addListener(function(changes, area) {
       if (area === 'local' && changes.recordedApis) {
         var n = (changes.recordedApis.newValue || []).length;
@@ -30,46 +33,107 @@
     });
   }
 
+  var currentBizTrace = null;
+  var windowPollTimer = null;
+
+  function pollWindowState() {
+    chrome.runtime.sendMessage({ type: 'GET_BIZ_TRACE_STATE' }, function(resp) {
+      if (resp) {
+        currentBizTrace = resp.currentTrace;
+        updateWindowIndicator();
+      }
+    });
+    windowPollTimer = setTimeout(pollWindowState, 1000);
+  }
+
+  function updateWindowIndicator() {
+    var indicator = el('windowIndicator');
+    var dot = el('windowDot');
+    var info = el('windowInfo');
+    var trace = el('windowTrace');
+    if (!indicator) return;
+    if (apiBtnState !== 'recording') {
+      indicator.classList.remove('show');
+      return;
+    }
+    indicator.classList.add('show');
+    if (currentBizTrace && currentBizTrace.windowActive) {
+      dot.className = 'window-dot active';
+      var remain = Math.max(0, Math.ceil((currentBizTrace.expiresAt - Date.now()) / 1000));
+      info.textContent = '窗口激活中 (' + remain + 's)';
+      trace.textContent = currentBizTrace.traceId ? currentBizTrace.traceId.substring(0, 22) : '';
+    } else {
+      dot.className = 'window-dot idle';
+      info.textContent = '等待操作...';
+      trace.textContent = '';
+    }
+  }
+
   function loadData() {
-    chrome.storage.local.get(['isRecordingApi', 'isRecordingMacro', 'recordedApis', 'settings'], function(r) {
+    chrome.storage.local.get(['isRecordingApi', 'recordedApis', 'settings'], function(r) {
       var recApi = r.isRecordingApi || false;
-      var recMacro = r.isRecordingMacro || false;
-      var btnApi = el('recordApiBtn');
-      var btnMacro = el('recordMacroBtn');
-      var labelApi = narrow() ? (recApi ? '停止' : '接口') : (recApi ? '停止录制' : '录制接口');
-      var labelMacro = narrow() ? (recMacro ? '停止' : '宏') : (recMacro ? '停止录制' : '录制宏');
-      btnApi.textContent = labelApi;
-      btnApi.className = recApi ? 'btn btn-stop' : 'btn';
-      btnMacro.textContent = labelMacro;
-      btnMacro.className = recMacro ? 'btn btn-stop' : 'btn';
+      // 根据实际状态设置按钮
+      if (recApi) {
+        apiBtnState = 'recording';
+      } else if (apiBtnState === 'recording') {
+        // 从录制中变为停止
+        apiBtnState = 'stopped';
+      }
+      updateApiButton();
       apis = r.recordedApis || []; lastApisLength = apis.length;
       if (r.settings) settings = r.settings;
       render();
     });
   }
 
+  function updateApiButton() {
+    var btn = el('recordApiBtn');
+    var isN = narrow();
+    if (apiBtnState === 'recording') {
+      btn.textContent = isN ? '停止' : '停止录制';
+      btn.className = 'btn btn-stop';
+    } else if (apiBtnState === 'stopped') {
+      btn.textContent = '已停止 ✓';
+      btn.className = 'btn btn-stopped';
+      if (stoppedTimer) clearTimeout(stoppedTimer);
+      stoppedTimer = setTimeout(function() {
+        apiBtnState = 'idle';
+        updateApiButton();
+      }, 2000);
+    } else {
+      btn.textContent = isN ? '接口' : '录制接口';
+      btn.className = 'btn';
+    }
+  }
+
   function bindAll() {
     el('recordApiBtn').addEventListener('click', function() {
-      var isNarrow = narrow();
-      var isRec = this.classList.contains('btn-stop');
+      var isRec = apiBtnState === 'recording';
+      apiBtnState = isRec ? 'stopped' : 'recording';
       chrome.storage.local.set({ isRecordingApi: !isRec });
-      chrome.runtime.sendMessage({ type: isRec ? 'STOP_RECORDING' : 'START_RECORDING' });
-      if (!isRec) macroReplayFilter = null;
-      var label = isNarrow ? (isRec ? '录制接口' : '停止') : (isRec ? '录制接口' : '停止录制');
-      this.textContent = label;
-      this.className = isRec ? 'btn' : 'btn btn-stop';
-    });
-    el('recordMacroBtn').addEventListener('click', function() {
-      var isNarrow = narrow();
-      var isRec = this.classList.contains('btn-stop');
-      chrome.storage.local.set({ isRecordingMacro: !isRec });
-      chrome.runtime.sendMessage({ type: isRec ? 'STOP_MACRO_RECORDING' : 'START_MACRO_RECORDING' });
-      if (!isRec) {
+      if (isRec) {
+        // 停止录制：停止接口录制 + 停止宏录制
+        chrome.runtime.sendMessage({ type: 'STOP_RECORDING' });
+        chrome.runtime.sendMessage({ type: 'STOP_MACRO_RECORDING' });
+        // 从内容脚本获取宏操作并保存
+        chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+          if (tabs[0]) {
+            chrome.tabs.sendMessage(tabs[0].id, { type: 'STOP_MACRO_RECORDING' }, function(resp) {
+              if (chrome.runtime.lastError || !resp) return;
+              var actions = (resp && resp.actions) ? resp.actions : [];
+              if (actions.length > 0) {
+                chrome.storage.local.set({ macroActions: actions });
+              }
+            });
+          }
+        });
+      } else {
+        // 开始录制：清空之前的操作，START_RECORDING 会同时启动接口和宏录制
         chrome.storage.local.set({ macroActions: [] });
+        chrome.runtime.sendMessage({ type: 'START_RECORDING' });
       }
-      var label = isNarrow ? (isRec ? '录制宏' : '停止') : (isRec ? '录制宏' : '停止录制');
-      this.textContent = label;
-      this.className = isRec ? 'btn' : 'btn btn-stop';
+      macroReplayFilter = null;
+      updateApiButton();
     });
     el('searchInput').addEventListener('input', render);
     el('methodFilter').addEventListener('change', render);
@@ -175,6 +239,7 @@
   }
 
   function render() {
+    updateWindowIndicator();
     var search = (el('searchInput').value || '').toLowerCase();
     var method = el('methodFilter').value;
     var st = el('statusFilter').value;
@@ -215,31 +280,75 @@
     empty.style.display = 'none';
     el('pushBtn').disabled = false; el('exportBtn').disabled = false; el('genDocBtn').disabled = false; el('clearBtn').disabled = false;
 
+    // 按 bizOperTraceId 分组
+    var groups = {};
+    var ungrouped = [];
+    filtered.forEach(function(a) {
+      var traceId = a.bizOperTraceId || '';
+      if (traceId && traceId !== '') {
+        if (!groups[traceId]) groups[traceId] = { traceId: traceId, items: [], event: a.triggerEvent || 'auto', pageUrl: a.pageUrl || '' };
+        groups[traceId].items.push(a);
+      } else {
+        ungrouped.push(a);
+      }
+    });
+
     var toRemove = [];
     for (var i = 0; i < list.childNodes.length; i++) { if (list.childNodes[i] !== empty) toRemove.push(list.childNodes[i]); }
     toRemove.forEach(function(n) { list.removeChild(n); });
 
-    for (var k = 0; k < filtered.length; k++) {
-      var a = filtered[k], idx = apis.indexOf(a);
-      var ok = a.status >= 200 && a.status < 300;
-      var nm = a.nodeName || getName(a.url);
-      var m = (a.method || 'GET').toUpperCase();
-      var chk = checkedIdxs[idx] ? ' checked' : '';
-      var div = document.createElement('div');
-      div.className = 'api-item'; div.setAttribute('data-i', idx); div.setAttribute('draggable', 'true');
-      div.innerHTML = '<input type="checkbox" class="api-check" data-i="' + idx + '"' + chk + '>'
-        + '<span class="method-badge m-' + m + '">' + m + '</span>'
-        + '<div class="api-info" data-i="' + idx + '"><div class="api-name" title="' + enc(a.url) + '">' + enc(nm) + '</div>'
-        + '<div class="api-meta"><span>' + enc(shortUrl(a.url)) + '</span><span>' + (a.duration || 0) + 'ms</span></div></div>'
-        + '<span class="status-badge ' + (ok ? 'st-ok' : 'st-err') + '">' + (a.status || 'ERR') + '</span>'
-        + '<div class="api-acts">'
-        + '<button class="act-btn" data-a="debug" data-i="' + idx + '" title="调试"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></button>'
-        + '<button class="act-btn" data-a="copy" data-i="' + idx + '" title="复制OpenAPI"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>'
-        + '<button class="act-btn" data-a="edit" data-i="' + idx + '" title="编辑"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>'
-        + '<button class="act-btn del" data-a="del" data-i="' + idx + '" title="删除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>';
-      list.appendChild(div);
-    }
+    // 渲染分组
+    var groupKeys = Object.keys(groups);
+    groupKeys.forEach(function(traceId) {
+      var g = groups[traceId];
+      var groupDiv = document.createElement('div');
+      groupDiv.className = 'trace-group';
+      var shortTrace = traceId.length > 20 ? traceId.substring(0, 20) + '...' : traceId;
+      var eventLabel = g.event === 'click' ? '点击' : g.event === 'change' ? '选择' : g.event === 'keydown' ? '回车' : g.event === 'submit' ? '提交' : g.event;
+      var shortPage = g.pageUrl ? (function() { try { return new URL(g.pageUrl).pathname; } catch(e) { return g.pageUrl.substring(0, 30); } })() : '';
+      groupDiv.innerHTML = '<div class="trace-group-header">'
+        + '<span class="trace-id" title="' + enc(traceId) + '">' + enc(shortTrace) + '</span>'
+        + '<span class="trace-event">' + enc(eventLabel) + '</span>'
+        + '<span class="trace-page" title="' + enc(g.pageUrl) + '">' + enc(shortPage) + '</span>'
+        + '<span class="trace-count">' + g.items.length + ' 条</span>'
+        + '</div><div class="trace-group-body"></div>';
+      var body = groupDiv.querySelector('.trace-group-body');
+      g.items.forEach(function(a) { body.appendChild(createApiItem(a, checkedIdxs)); });
+      groupDiv.querySelector('.trace-group-header').addEventListener('click', function() {
+        groupDiv.classList.toggle('collapsed');
+      });
+      list.appendChild(groupDiv);
+    });
 
+    // 渲染未分组
+    ungrouped.forEach(function(a) { list.appendChild(createApiItem(a, checkedIdxs)); });
+
+    bindListEvents(list);
+  }
+
+  function createApiItem(a, checkedIdxs) {
+    var idx = apis.indexOf(a);
+    var ok = a.status >= 200 && a.status < 300;
+    var nm = a.nodeName || getName(a.url);
+    var m = (a.method || 'GET').toUpperCase();
+    var chk = checkedIdxs[idx] ? ' checked' : '';
+    var ignoreClass = a.ignore ? ' api-item-ignored' : '';
+    var div = document.createElement('div');
+    div.className = 'api-item' + ignoreClass; div.setAttribute('data-i', idx); div.setAttribute('draggable', 'true');
+    div.innerHTML = '<input type="checkbox" class="api-check" data-i="' + idx + '"' + chk + '>'
+      + '<span class="method-badge m-' + m + '">' + m + '</span>'
+      + '<div class="api-info" data-i="' + idx + '"><div class="api-name" title="' + enc(a.url) + '">' + enc(nm) + '</div>'
+      + '<div class="api-meta"><span>' + enc(shortUrl(a.url)) + '</span><span>' + (a.duration || 0) + 'ms</span></div></div>'
+      + '<span class="status-badge ' + (ok ? 'st-ok' : 'st-err') + '">' + (a.status || 'ERR') + '</span>'
+      + '<div class="api-acts">'
+      + '<button class="act-btn" data-a="debug" data-i="' + idx + '" title="调试"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></button>'
+      + '<button class="act-btn" data-a="copy" data-i="' + idx + '" title="复制OpenAPI"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>'
+      + '<button class="act-btn" data-a="edit" data-i="' + idx + '" title="编辑"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>'
+      + '<button class="act-btn del" data-a="del" data-i="' + idx + '" title="删除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>';
+    return div;
+  }
+
+  function bindListEvents(list) {
     list.querySelectorAll('.api-check').forEach(function(c) {
       c.addEventListener('change', function() { el('selText').textContent = '已选 ' + list.querySelectorAll('.api-check:checked').length + ' 条'; });
     });
@@ -583,6 +692,10 @@
       }
 
       var nodeList = d.data.nodeList;
+      console.log('[AutoTest][browserReplay] nodeList:', nodeList.length, 'nodes');
+      nodeList.forEach(function(n, i) {
+        console.log('[AutoTest][browserReplay] node[' + i + ']:', n.nodeType, n.nodeName, n.requestMethod, (n.bodyData || '').substring(0, 80));
+      });
       var macroActions = null;
       var firstUrl = '';
       var chainUrls = [];
@@ -604,8 +717,33 @@
         return;
       }
 
+      // 从宏操作中找到最早的有效页面 URL
       var origin = '';
-      try { origin = new URL(firstUrl).origin; } catch(e) { origin = firstUrl; }
+      var originHost = '';
+      var ignoreHosts = ['zhihu-web-analytics', 'google-analytics', 'analytics', 'beacon', 'track', 'log', 'stat', 'monitor'];
+      for (var j = 0; j < macroActions.length; j++) {
+        if (macroActions[j].pageUrl) {
+          try {
+            var parsedUrl = new URL(macroActions[j].pageUrl);
+            if (parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') {
+              // 跳过 analytics/tracking 域名
+              var isAnalytics = ignoreHosts.some(function(h) { return parsedUrl.hostname.indexOf(h) !== -1; });
+              if (!isAnalytics && !origin) {
+                origin = parsedUrl.href;
+                originHost = parsedUrl.hostname;
+              }
+              // 如果后续有同域名的完整路径，优先使用
+              if (!isAnalytics && originHost && parsedUrl.hostname === originHost && parsedUrl.pathname !== '/') {
+                origin = parsedUrl.href;
+              }
+            }
+          } catch(e) {}
+        }
+      }
+      // 回退：从接口 URL 提取 origin
+      if (!origin) {
+        try { origin = new URL(firstUrl).origin; } catch(e) { origin = firstUrl; }
+      }
 
       document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
       document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
@@ -865,6 +1003,7 @@
 
     chrome.storage.local.get(['macroActions'], function(macroR) {
       var macroActions = macroR.macroActions || [];
+      console.log('[AutoTest][doPush] macroActions from storage:', macroActions.length, macroActions.length > 0 ? macroActions[0] : '(empty)');
       var ifList = list.map(function(a, i) { return { nodeName: a.nodeName || getName(a.url), method: a.method || 'GET', url: a.url, headers: a.headers ? JSON.stringify(a.headers) : '', bodyData: a.body || '', responseData: typeof a.response === 'string' ? a.response : JSON.stringify(a.response || ''), sort: i + 1, parallelGroup: '' }; });
 
       if (macroActions.length > 0) {
@@ -879,9 +1018,11 @@
           parallelGroup: ''
         });
       }
+      console.log('[AutoTest][doPush] ifList length:', ifList.length, 'methods:', ifList.map(function(x){return x.method}));
 
       var url = (settings.platformUrl || 'http://localhost:8080') + '/api/plugin/chain/' + (mode === 'create' ? 'create' : 'append');
       var body = mode === 'create' ? JSON.stringify({ chainName: name, interfaceList: ifList }) : JSON.stringify({ chainCode: code, interfaceList: ifList });
+      console.log('[AutoTest][doPush] request body:', body.substring(0, 500));
       fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body }).then(function(r) { return r.json(); }).then(function(d) {
         if (d.code === 200) {
           var code = d.data.chainCode || code;

@@ -1,4 +1,34 @@
 // content.js - 注入到页面上下文，负责录制HTTP请求 + 宏操作录制
+console.log('[AutoTest][content] script loaded on', window.location.href.substring(0, 60));
+
+// 全局错误捕获：忽略 Extension context invalidated
+window.addEventListener('error', function(e) {
+  if (e.message && e.message.indexOf('Extension context invalidated') !== -1) {
+    e.preventDefault();
+    return false;
+  }
+});
+
+// 安全发送消息：检查扩展上下文是否有效
+function safeSendMessage(msg) {
+  try {
+    if (!chrome.runtime || !chrome.runtime.id) return;
+    chrome.runtime.sendMessage(msg, function() {
+      if (chrome.runtime.lastError) { /* ignore */ }
+    });
+  } catch(e) {}
+}
+
+// 安全存储读取
+function safeStorageGet(keys, cb) {
+  try {
+    if (!chrome.runtime || !chrome.runtime.id) return;
+    chrome.storage.local.get(keys, function(r) {
+      if (chrome.runtime.lastError) return;
+      cb(r);
+    });
+  } catch(e) {}
+}
 
 // ========== inject.js 注入 ==========
 var s = document.createElement('script');
@@ -10,40 +40,53 @@ s.onload = function() { s.remove(); };
 window.addEventListener('message', function(event) {
   if (event.source !== window) return;
   if (event.data && event.data.type === 'AUTOTEST_API_REQUEST') {
-    try {
-      chrome.runtime.sendMessage({ type: 'SAVE_API', data: event.data.data }, function() {
-        if (chrome.runtime.lastError) { /* ignore */ }
-      });
-    } catch(e) {}
+    safeSendMessage({ type: 'SAVE_API', data: event.data.data });
+  }
+  if (event.data && event.data.type === 'AUTOTEST_TRIGGER_INTERACTION') {
+    safeSendMessage({
+      type: 'TRIGGER_INTERACTION',
+      interactionType: event.data.interactionType,
+      selector: event.data.selector,
+      pageUrl: event.data.pageUrl,
+      timestamp: event.data.timestamp
+    });
   }
 });
 
 // 页面加载时自动检查录制状态，如果正在录制则启动宏录制
-chrome.storage.local.get(['isRecordingMacro'], function(r) {
+safeStorageGet(['isRecordingMacro'], function(r) {
   if (r.isRecordingMacro) {
     macroRecorder.start();
   }
 });
 
 // 监听 background 消息
-chrome.runtime.onMessage.addListener(function(msg) {
-  if (msg.type === 'START_RECORDING') {
-    window.postMessage({ type: 'AUTOTEST_RECORDING_STATE', isRecording: true }, '*');
-  } else if (msg.type === 'STOP_RECORDING') {
-    window.postMessage({ type: 'AUTOTEST_RECORDING_STATE', isRecording: false }, '*');
-  } else if (msg.type === 'START_MACRO_RECORDING') {
-    macroRecorder.start();
-  } else if (msg.type === 'STOP_MACRO_RECORDING') {
-    macroRecorder.stop();
-  }
-  if (msg.type === 'START_MACRO_REPLAY') {
-    macroReplayer.start(msg.actions, msg.settings).then(function(result) {
-      chrome.runtime.sendMessage({ type: 'MACRO_REPLAY_DONE', result: result });
-    });
-  }
-  if (msg.type === 'STOP_MACRO_REPLAY') {
-    macroReplayer.stop();
-  }
+chrome.runtime.onMessage.addListener(function(msg, sender, sendResponse) {
+  console.log('[AutoTest][content] received msg:', msg.type);
+  try {
+    if (msg.type === 'START_RECORDING') {
+      window.postMessage({ type: 'AUTOTEST_RECORDING_STATE', isRecording: true }, '*');
+    } else if (msg.type === 'STOP_RECORDING') {
+      window.postMessage({ type: 'AUTOTEST_RECORDING_STATE', isRecording: false }, '*');
+    } else if (msg.type === 'BIZ_TRACE_UPDATE') {
+      window.postMessage({ type: 'AUTOTEST_BIZ_TRACE_UPDATE', trace: msg.trace }, '*');
+    } else if (msg.type === 'START_MACRO_RECORDING') {
+      macroRecorder.start();
+      sendResponse({ ok: true });
+    } else if (msg.type === 'STOP_MACRO_RECORDING') {
+      var actions = macroRecorder.stop();
+      sendResponse({ actions: actions || [] });
+      return true;
+    }
+    if (msg.type === 'START_MACRO_REPLAY') {
+      macroReplayer.start(msg.actions, msg.settings).then(function(result) {
+        safeSendMessage({ type: 'MACRO_REPLAY_DONE', result: result });
+      });
+    }
+    if (msg.type === 'STOP_MACRO_REPLAY') {
+      macroReplayer.stop();
+    }
+  } catch(e) {}
 });
 
 // ========== 宏录制器 ==========
@@ -99,7 +142,8 @@ var macroRecorder = (function() {
       for (var k in extra) { action[k] = extra[k]; }
     }
     actions.push(action);
-    chrome.runtime.sendMessage({ type: 'SAVE_MACRO_ACTION', action: action });
+    console.log('[AutoTest][macroRecord] action:', type, 'total:', actions.length, 'pageUrl:', window.location.href.substring(0, 60));
+    safeSendMessage({ type: 'SAVE_MACRO_ACTION', action: action });
   }
 
   function onClick(e) {
@@ -143,13 +187,13 @@ var macroRecorder = (function() {
   function start() {
     if (recording) return;
     recording = true;
-    actions = [];
+    // 不清空 actions，页面跳转后重新注入时保留之前的操作
     document.addEventListener('click', onClick, true);
     document.addEventListener('input', onInput, true);
     document.addEventListener('change', onChange, true);
     document.addEventListener('submit', onSubmit, true);
     document.addEventListener('keydown', onKeydown, true);
-    console.log('[AutoTest] Macro recording started');
+    console.log('[AutoTest] Macro recording started on', window.location.href.substring(0, 60));
   }
 
   function stop() {

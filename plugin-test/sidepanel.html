@@ -70,6 +70,8 @@
     .btn svg { width: 14px; height: 14px; flex-shrink: 0; }
     .btn-stop { background: var(--danger); border-color: var(--danger); color: #fff; }
     .btn-stop:hover { background: #B91C1C; border-color: #B91C1C; }
+    .btn-stopped { background: var(--success); border-color: var(--success); color: #fff; }
+    .btn-stopped:hover { background: #15803D; border-color: #15803D; }
 
     /* Solid buttons */
     .btn-solid {
@@ -143,6 +145,7 @@
       transition: background var(--transition); cursor: default;
     }
     .api-item:hover { background: var(--surface-hover); }
+    .api-item-ignored { opacity: 0.45; background: var(--bg); }
     .api-item[draggable]:hover { cursor: grab; }
     .api-item[draggable]:active { cursor: grabbing; }
 
@@ -319,6 +322,39 @@
     .dbg-status.ok { color: var(--success); } .dbg-status.err { color: var(--danger); }
     .dbg-meta-row { display: flex; gap: 10px; align-items: center; margin-bottom: 6px; }
 
+    /* ===== Window State Indicator ===== */
+    .window-indicator {
+      padding: 4px 14px; font-size: 10px; display: none; align-items: center; gap: 6px;
+      border-bottom: 1px solid var(--border); background: var(--surface);
+    }
+    .window-indicator.show { display: flex; }
+    .window-dot {
+      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+    }
+    .window-dot.idle { background: var(--text-muted); }
+    .window-dot.active { background: var(--success); animation: pulse-dot 1.5s infinite; }
+    @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .window-info { flex: 1; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .window-trace { font-family: 'SF Mono', monospace; color: var(--accent); font-weight: 500; }
+
+    /* ===== Trace Group ===== */
+    .trace-group { border-bottom: 2px solid var(--border); }
+    .trace-group-header {
+      padding: 7px 14px; background: var(--bg); cursor: pointer;
+      display: flex; align-items: center; gap: 8px; font-size: 11px;
+      user-select: none; transition: background var(--transition);
+    }
+    .trace-group-header:hover { background: var(--surface-hover); }
+    .trace-group-header .trace-id { font-family: 'SF Mono', monospace; color: var(--accent); font-weight: 500; }
+    .trace-group-header .trace-event {
+      padding: 1px 5px; border-radius: 3px; font-size: 9px; font-weight: 600;
+      background: rgba(124,58,237,0.1); color: var(--purple);
+    }
+    .trace-group-header .trace-count { color: var(--text-muted); margin-left: auto; }
+    .trace-group-header .trace-page { color: var(--text-muted); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
+    .trace-group.collapsed .trace-group-body { display: none; }
+    .trace-group-body { }
+
     /* ===== Focus States ===== */
     :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
     input:focus, select:focus, textarea:focus { outline: none; }
@@ -396,13 +432,9 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           <span class="btn-label-lg">平台</span><span class="btn-label-sm">平台</span>
         </button>
-        <button class="btn" id="recordApiBtn" title="录制接口请求">
+        <button class="btn" id="recordApiBtn" title="同时录制接口请求和页面操作">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
-          <span class="btn-label-lg">录制接口</span><span class="btn-label-sm">接口</span>
-        </button>
-        <button class="btn" id="recordMacroBtn" title="录制页面操作">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="M9 12l2 2 4-4"/></svg>
-          <span class="btn-label-lg">录制宏</span><span class="btn-label-sm">宏</span>
+          <span class="btn-label-lg">录制</span><span class="btn-label-sm">录制</span>
         </button>
         <button class="btn" id="settingsBtn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
@@ -425,6 +457,11 @@
         <select class="filter-select" id="resourceTypeFilter"><option value="fetch_xhr" selected>Fetch/XHR</option><option value="">全部</option><option value="script">JS</option><option value="stylesheet">CSS</option><option value="image">Img</option><option value="document">Doc</option><option value="media">Media</option><option value="font">Font</option><option value="websocket">WS</option><option value="other">Other</option></select>
         <select class="filter-select" id="methodFilter"><option value="">方法</option><option value="GET">GET</option><option value="POST">POST</option><option value="PUT">PUT</option><option value="DELETE">DELETE</option></select>
         <select class="filter-select" id="statusFilter"><option value="">状态</option><option value="success">2xx</option><option value="error">4xx/5xx</option></select>
+      </div>
+      <div class="window-indicator" id="windowIndicator">
+        <span class="window-dot idle" id="windowDot"></span>
+        <span class="window-info" id="windowInfo">等待操作...</span>
+        <span class="window-trace" id="windowTrace"></span>
       </div>
       <div class="stats"><span id="statsText">共 0 条</span><span id="selText">已选 0 条</span></div>
       <div id="apiList" style="flex:1;overflow-y:auto">

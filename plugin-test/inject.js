@@ -3,16 +3,91 @@
   window.__AUTOTEST_INJECTED__ = true;
 
   var isRecording = false;
+  var currentBizTrace = null;
+  var lastTriggerEvent = 'auto';
+  var lastTriggerDom = '';
 
-  // 监听 recording 状态变更
+  // 监听 recording 状态变更和 Trace 更新
   window.addEventListener('message', function(event) {
     if (event.source !== window) return;
     if (event.data && event.data.type === 'AUTOTEST_RECORDING_STATE') {
       isRecording = event.data.isRecording;
+      if (!isRecording) {
+        currentBizTrace = null;
+        lastTriggerEvent = 'auto';
+        lastTriggerDom = '';
+      }
+    }
+    if (event.data && event.data.type === 'AUTOTEST_BIZ_TRACE_UPDATE') {
+      currentBizTrace = event.data.trace;
     }
   });
 
+  function getSelector(el) {
+    if (!el || el === document || el === document.body) return 'body';
+    if (el.id) return '#' + CSS.escape(el.id);
+    if (el.name) return el.tagName.toLowerCase() + '[name="' + el.name + '"]';
+    if (el.dataset && el.dataset.testid) return '[data-testid="' + el.dataset.testid + '"]';
+    if (el.className && typeof el.className === 'string') {
+      var classes = el.className.trim().split(/\s+/).filter(function(c) {
+        return c && !c.match(/^(active|show|open|visible|selected|focused|hover|disabled)$/);
+      });
+      if (classes.length > 0 && classes.length <= 3) {
+        var sel = el.tagName.toLowerCase() + '.' + classes.map(function(c) { return CSS.escape(c); }).join('.');
+        if (document.querySelectorAll(sel).length === 1) return sel;
+      }
+    }
+    var parent = el.parentElement;
+    if (!parent) return el.tagName.toLowerCase();
+    var siblings = Array.prototype.filter.call(parent.children, function(c) { return c.tagName === el.tagName; });
+    if (siblings.length === 1) return getSelector(parent) + ' > ' + el.tagName.toLowerCase();
+    var idx = Array.prototype.indexOf.call(siblings, el) + 1;
+    return getSelector(parent) + ' > ' + el.tagName.toLowerCase() + ':nth-of-type(' + idx + ')';
+  }
+
+  // ========== DOM 事件监听 - 触发操作窗口 ==========
+  function onDomInteraction(e) {
+    if (!isRecording) return;
+    var eventType = e.type;
+    var selector = getSelector(e.target);
+    lastTriggerEvent = eventType;
+    lastTriggerDom = selector;
+    window.postMessage({
+      type: 'AUTOTEST_TRIGGER_INTERACTION',
+      interactionType: eventType,
+      selector: selector,
+      pageUrl: window.location.href,
+      timestamp: Date.now()
+    }, '*');
+  }
+
+  document.addEventListener('click', onDomInteraction, true);
+  document.addEventListener('change', onDomInteraction, true);
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+      onDomInteraction(e);
+    }
+  }, true);
+  document.addEventListener('submit', onDomInteraction, true);
+
+  // ========== 窗口状态检查 ==========
+  function isWindowActive() {
+    return currentBizTrace && currentBizTrace.windowActive === true && currentBizTrace.expiresAt > Date.now();
+  }
+
   function save(d) {
+    if (!isRecording) return;
+    // 添加 TraceId 元数据（如果有的话）
+    if (currentBizTrace) {
+      d.bizOperTraceId = currentBizTrace.traceId;
+      d.windowActive = currentBizTrace.windowActive;
+      d.windowId = currentBizTrace.windowId;
+    }
+    d.triggerEvent = lastTriggerEvent;
+    d.targetDom = lastTriggerDom;
+    d.pageUrl = window.location.href;
+    d.ignore = false;
+    // 始终保存请求（由 background.js 决定是否过滤）
     window.postMessage({ type: 'AUTOTEST_API_REQUEST', data: d }, '*');
   }
 
@@ -48,6 +123,10 @@
       else try { body = JSON.stringify(init.body); } catch(e) { body = '[Object]'; }
     }
     var m = method.toUpperCase(), u = url, h = Object.assign({}, headers), b = body;
+    // 注入 bizOperTraceId 到请求头
+    if (currentBizTrace && currentBizTrace.traceId) {
+      h['X-Biz-Oper-Trace'] = currentBizTrace.traceId;
+    }
     return origFetch.apply(this, arguments).then(function(r) {
       var dur = Date.now() - st;
       var respH = {};
@@ -76,6 +155,10 @@
         else if (b instanceof URLSearchParams) this._at.body = b.toString();
         else if (b instanceof FormData) this._at.body = '[FormData]';
         else try { this._at.body = JSON.stringify(b); } catch(e) { this._at.body = '[Object]'; }
+      }
+      // 注入 bizOperTraceId 到请求头
+      if (currentBizTrace && currentBizTrace.traceId) {
+        try { oSet.call(this, 'X-Biz-Oper-Trace', currentBizTrace.traceId); } catch(e) {}
       }
       var self = this;
       this.addEventListener('load', function() {

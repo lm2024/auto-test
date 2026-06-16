@@ -50,6 +50,7 @@ public class ChainServiceImpl implements ChainService {
         chain.setExecuteMode(dto.getExecuteMode() != null ? dto.getExecuteMode() : 1);
         chain.setDescription(dto.getDescription());
         chain.setStatus(1);
+        chain.setCurrentVersion(1);
         chainMapper.insert(chain);
 
         return buildChainVO(chain);
@@ -131,6 +132,7 @@ public class ChainServiceImpl implements ChainService {
         newChain.setExecuteMode(original.getExecuteMode());
         newChain.setDescription(original.getDescription());
         newChain.setStatus(1);
+        newChain.setCurrentVersion(1);
         chainMapper.insert(newChain);
 
         // Copy nodes
@@ -172,6 +174,7 @@ public class ChainServiceImpl implements ChainService {
         chain.setChainName(dto.getChainName());
         chain.setExecuteMode(1); // Default serial
         chain.setStatus(1);
+        chain.setCurrentVersion(1);
         chainMapper.insert(chain);
 
         // Create nodes and identify dependencies
