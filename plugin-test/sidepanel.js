@@ -18,6 +18,7 @@
   function narrow() { return window.innerWidth <= 360; }
 
   function init() {
+    document.querySelector('.app').classList.add('slide-in');
     bindAll();
     loadData();
     pollWindowState();
@@ -101,12 +102,13 @@
         updateApiButton();
       }, 2000);
     } else {
-      btn.textContent = isN ? '接口' : '录制接口';
+      btn.textContent = isN ? '录制' : '开始录制';
       btn.className = 'btn';
     }
   }
 
   function bindAll() {
+    el('hidePanelBtn').addEventListener('click', hidePanel);
     el('recordApiBtn').addEventListener('click', function() {
       var isRec = apiBtnState === 'recording';
       apiBtnState = isRec ? 'stopped' : 'recording';
@@ -154,6 +156,10 @@
       window.open(url, '_blank');
     });
     el('saveSettingsBtn').addEventListener('click', saveSettings);
+    el('clearAuthTokens').addEventListener('click', function() {
+      chrome.storage.local.set({ authContext: {} });
+      el('authTokenList').innerHTML = '<span style="color:var(--text-muted)">认证信息已清除。</span>';
+    });
     el('pushCancel').addEventListener('click', function() { el('pushDialog').classList.remove('open'); });
     el('pushOk').addEventListener('click', doPush);
     el('pushMode').addEventListener('change', function() { el('pushCodeWrap').style.display = this.value === 'append' ? 'block' : 'none'; });
@@ -968,7 +974,13 @@
     el('cfgReplayInterval').value = settings.replayInterval || 0;
     el('cfgFailStrategy').value = settings.failStrategy || 'continue';
     el('cfgParallelGroup').value = settings.enableParallelGroup !== false ? 'true' : 'false';
+    // Phase 4: Encryption config
+    el('cfgEncryptEnabled').value = settings.encryptEnabled ? 'true' : 'false';
+    el('cfgDecryptRequest').value = settings.decryptRequestCode || '';
+    el('cfgDecryptResponse').value = settings.decryptResponseCode || '';
+    el('cfgEncryptAlgo').value = settings.encryptAlgo || 'AES';
     updateFilterHelp();
+    loadAuthTokenList();
     openP('settings');
   }
   function saveSettings() {
@@ -984,8 +996,30 @@
     settings.replayInterval = parseFloat(el('cfgReplayInterval').value) || 0;
     settings.failStrategy = el('cfgFailStrategy').value;
     settings.enableParallelGroup = el('cfgParallelGroup').value === 'true';
+    // Phase 4: Encryption config
+    settings.encryptEnabled = el('cfgEncryptEnabled').value === 'true';
+    settings.decryptRequestCode = el('cfgDecryptRequest').value;
+    settings.decryptResponseCode = el('cfgDecryptResponse').value;
+    settings.encryptAlgo = el('cfgEncryptAlgo').value;
     chrome.storage.local.set({ settings: settings });
     alert('设置已保存'); closeP('settings'); render();
+  }
+  function loadAuthTokenList() {
+    chrome.runtime.sendMessage({ type: 'GET_AUTH_CONTEXT' }, function(resp) {
+      var tokens = (resp && resp.tokens) || {};
+      var html = '';
+      var keys = Object.keys(tokens);
+      if (keys.length === 0) {
+        html = '<span style="color:var(--text-muted)">录制期间自动提取的认证信息将显示在此处。</span>';
+      } else {
+        keys.forEach(function(k) {
+          var v = String(tokens[k]);
+          if (v.length > 60) v = v.substring(0, 30) + '...' + v.substring(v.length - 20);
+          html += '<div style="margin-bottom:4px"><b>' + enc(k) + ':</b> <code style="font-size:10px;word-break:break-all">' + enc(v) + '</code></div>';
+        });
+      }
+      el('authTokenList').innerHTML = html;
+    });
   }
 
   // ========== 推送 ==========
@@ -1004,36 +1038,136 @@
     chrome.storage.local.get(['macroActions'], function(macroR) {
       var macroActions = macroR.macroActions || [];
       console.log('[AutoTest][doPush] macroActions from storage:', macroActions.length, macroActions.length > 0 ? macroActions[0] : '(empty)');
-      var ifList = list.map(function(a, i) { return { nodeName: a.nodeName || getName(a.url), method: a.method || 'GET', url: a.url, headers: a.headers ? JSON.stringify(a.headers) : '', bodyData: a.body || '', responseData: typeof a.response === 'string' ? a.response : JSON.stringify(a.response || ''), sort: i + 1, parallelGroup: '' }; });
 
-      if (macroActions.length > 0) {
-        ifList.push({
-          nodeName: '宏操作 (' + macroActions.length + ' 步)',
-          method: 'MACRO',
-          url: macroActions[0] ? macroActions[0].pageUrl : '',
-          headers: '',
-          bodyData: JSON.stringify(macroActions),
-          responseData: JSON.stringify(macroActions),
-          sort: ifList.length + 1,
-          parallelGroup: ''
+      // Phase 5: Group by bizOperTraceId
+      var groups = {};
+      var ungrouped = [];
+      list.forEach(function(a, i) {
+        var traceId = a.bizOperTraceId || '';
+        if (traceId) {
+          if (!groups[traceId]) groups[traceId] = { traceId: traceId, apis: [], triggerEvent: a.triggerEvent || 'auto', pageUrl: a.pageUrl || '' };
+          groups[traceId].apis.push(a);
+        } else {
+          ungrouped.push(a);
+        }
+      });
+
+      var traceKeys = Object.keys(groups);
+      var totalGroups = traceKeys.length + (ungrouped.length > 0 ? 1 : 0);
+
+      function buildInterfaceList(apis) {
+        return apis.map(function(a, i) {
+          return {
+            nodeName: a.nodeName || getName(a.url),
+            method: a.method || 'GET',
+            url: a.url,
+            headers: a.headers ? JSON.stringify(a.headers) : '',
+            bodyData: a.body || '',
+            responseData: typeof a.response === 'string' ? a.response : JSON.stringify(a.response || ''),
+            sort: i + 1,
+            parallelGroup: '',
+            bizOperTraceId: a.bizOperTraceId || '',
+            triggerEvent: a.triggerEvent || 'auto',
+            targetDom: a.targetDom || '',
+            pageUrl: a.pageUrl || '',
+            windowId: a.windowId || '',
+            isIgnored: a.ignore || false
+          };
         });
       }
-      console.log('[AutoTest][doPush] ifList length:', ifList.length, 'methods:', ifList.map(function(x){return x.method}));
 
-      var url = (settings.platformUrl || 'http://localhost:8080') + '/api/plugin/chain/' + (mode === 'create' ? 'create' : 'append');
-      var body = mode === 'create' ? JSON.stringify({ chainName: name, interfaceList: ifList }) : JSON.stringify({ chainCode: code, interfaceList: ifList });
-      console.log('[AutoTest][doPush] request body:', body.substring(0, 500));
-      fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body }).then(function(r) { return r.json(); }).then(function(d) {
-        if (d.code === 200) {
-          var code = d.data.chainCode || code;
-          el('pushDialog').classList.remove('open');
-          var platformUrl = (settings.frontendUrl || 'http://localhost:3001') + '/chain/edit/' + code;
-          if (confirm('推送成功！链路编码: ' + code + '\n\n是否跳转到平台查看？')) {
-            window.open(platformUrl, '_blank');
+      function pushGroup(ifList, chainName) {
+        var url = (settings.platformUrl || 'http://localhost:8080') + '/api/plugin/chain/' + (mode === 'create' ? 'create' : 'append');
+        var body = mode === 'create'
+          ? JSON.stringify({ chainName: chainName, interfaceList: ifList })
+          : JSON.stringify({ chainCode: code, interfaceList: ifList });
+        return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body })
+          .then(function(r) { return r.json(); });
+      }
+
+      if (totalGroups <= 1) {
+        // Single group or no groups - push as one chain
+        var ifList = buildInterfaceList(list);
+        if (macroActions.length > 0) {
+          ifList.push({
+            nodeName: '宏操作 (' + macroActions.length + ' 步)',
+            method: 'MACRO',
+            url: macroActions[0] ? macroActions[0].pageUrl : '',
+            headers: '',
+            bodyData: JSON.stringify(macroActions),
+            responseData: JSON.stringify(macroActions),
+            sort: ifList.length + 1,
+            parallelGroup: ''
+          });
+        }
+        pushGroup(ifList, name).then(function(d) {
+          if (d.code === 200) {
+            var chainCode = d.data.chainCode || code;
+            el('pushDialog').classList.remove('open');
+            var platformUrl = (settings.frontendUrl || 'http://localhost:3001') + '/chain/edit/' + chainCode;
+            if (confirm('推送成功！链路编码: ' + chainCode + '\n\n是否跳转到平台查看？')) {
+              window.open(platformUrl, '_blank');
+            }
+          } else {
+            alert('失败: ' + (d.message || ''));
+          }
+        }).catch(function(e) { alert('失败: ' + e.message); });
+      } else {
+        // Multiple trace groups - push each as separate chain
+        var pushed = 0, failed = 0;
+        var allCodes = [];
+
+        function pushNext(idx) {
+          if (idx >= traceKeys.length) {
+            // Push ungrouped nodes last
+            if (ungrouped.length > 0) {
+              var ungroupedList = buildInterfaceList(ungrouped);
+              pushGroup(ungroupedList, name + '_未分组').then(function(d) {
+                finishPush(d, '_未分组');
+              }).catch(function() { failed++; checkDone(); });
+            } else {
+              checkDone();
+            }
+            return;
+          }
+          var key = traceKeys[idx];
+          var group = groups[key];
+          var groupList = buildInterfaceList(group.apis);
+          var suffix = '_' + (group.triggerEvent || 'auto') + '_' + key.substring(4, 12);
+          pushGroup(groupList, name + suffix).then(function(d) {
+            finishPush(d, suffix);
+            pushNext(idx + 1);
+          }).catch(function() { failed++; checkDone(); pushNext(idx + 1); });
+        }
+
+        function finishPush(d, suffix) {
+          if (d.code === 200) {
+            pushed++;
+            allCodes.push(d.data.chainCode);
+          } else {
+            failed++;
+          }
+          checkDone();
+        }
+
+        function checkDone() {
+          if (pushed + failed >= totalGroups) {
+            el('pushDialog').classList.remove('open');
+            if (pushed > 0) {
+              var msg = '推送完成！成功 ' + pushed + ' 条';
+              if (failed > 0) msg += '，失败 ' + failed + ' 条';
+              msg += '\n链路编码: ' + allCodes.join(', ');
+              if (confirm(msg + '\n\n是否跳转到平台查看？')) {
+                window.open((settings.frontendUrl || 'http://localhost:3001') + '/chain/list', '_blank');
+              }
+            } else {
+              alert('全部推送失败');
+            }
           }
         }
-        else alert('失败: ' + (d.message || ''));
-      }).catch(function(e) { alert('失败: ' + e.message); });
+
+        pushNext(0);
+      }
     });
   }
 
@@ -1044,6 +1178,15 @@
     var data = { chainName: '录制接口-' + new Date().toLocaleDateString(), interfaceList: list.map(function(a, i) { return { nodeName: a.nodeName || getName(a.url), method: a.method || 'GET', url: a.url, headers: a.headers ? JSON.stringify(a.headers) : '', bodyData: a.body || '', responseData: typeof a.response === 'string' ? a.response : JSON.stringify(a.response || ''), sort: i + 1, parallelGroup: '' }; }) };
     var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     var u = URL.createObjectURL(blob); var a = document.createElement('a'); a.href = u; a.download = 'apis-' + Date.now() + '.json'; a.click(); URL.revokeObjectURL(u);
+  }
+
+  // ========== Hide Panel ==========
+  function hidePanel() {
+    var app = document.querySelector('.app');
+    app.classList.add('slide-out');
+    setTimeout(function() {
+      chrome.runtime.sendMessage({ type: 'HIDE_SIDE_PANEL' });
+    }, 250);
   }
 
   // ========== 工具 ==========

@@ -14,7 +14,9 @@ public interface TestAccountMapper {
     int deleteById(@Param("id") Long id);
     TestAccount selectById(@Param("id") Long id);
     TestAccount selectByAccountCode(@Param("accountCode") String accountCode);
-    List<TestAccount> selectList(@Param("systemName") String systemName, @Param("status") Integer status);
+    List<TestAccount> selectList(@Param("systemName") String systemName, @Param("status") Integer status,
+                                  @Param("offset") int offset, @Param("pageSize") int pageSize);
+    int countList(@Param("systemName") String systemName, @Param("status") Integer status);
 
     /**
      * 锁定账号

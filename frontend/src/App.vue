@@ -1,22 +1,49 @@
 <template>
   <el-container class="app-container">
-    <el-aside width="200px" class="app-aside">
-      <div class="logo">接口测试平台</div>
-      <el-menu :default-active="route.path" router>
+    <el-aside :width="asideWidth + 'px'" class="app-aside" ref="asideRef">
+      <div class="logo">
+        <span v-if="!isCollapsed">接口测试平台</span>
+        <span v-else>AT</span>
+      </div>
+      <el-menu
+        :default-active="route.path"
+        :collapse="isCollapsed"
+        :collapse-transition="false"
+        router
+      >
         <el-menu-item index="/chain/list">
           <el-icon><List /></el-icon>
-          <span>测试链路管理</span>
+          <template #title>测试链路管理</template>
         </el-menu-item>
         <el-menu-item index="/execute/list">
           <el-icon><Document /></el-icon>
-          <span>执行记录查询</span>
+          <template #title>执行记录查询</template>
+        </el-menu-item>
+        <el-menu-item index="/account/list">
+          <el-icon><User /></el-icon>
+          <template #title>测试账号管理</template>
+        </el-menu-item>
+        <el-menu-item index="/dict/category">
+          <el-icon><Collection /></el-icon>
+          <template #title>分类字典管理</template>
         </el-menu-item>
         <el-menu-item index="/system/config">
           <el-icon><Setting /></el-icon>
-          <span>系统设置</span>
+          <template #title>系统设置</template>
         </el-menu-item>
       </el-menu>
+      <div class="collapse-btn" @click="toggleCollapse">
+        <el-icon :size="18">
+          <Fold v-if="!isCollapsed" />
+          <Expand v-else />
+        </el-icon>
+      </div>
     </el-aside>
+    <div
+      class="resize-handle"
+      @mousedown="startResize"
+      v-show="!isCollapsed"
+    ></div>
     <el-main class="app-main">
       <router-view />
     </el-main>
@@ -24,9 +51,57 @@
 </template>
 
 <script setup>
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { List, Document, Setting } from '@element-plus/icons-vue'
+import { List, Document, Setting, User, Collection, Fold, Expand } from '@element-plus/icons-vue'
+
 const route = useRoute()
+const asideRef = ref(null)
+
+const isCollapsed = ref(localStorage.getItem('menuCollapsed') === 'true')
+const asideWidth = ref(parseInt(localStorage.getItem('menuWidth') || '240'))
+const isResizing = ref(false)
+
+const toggleCollapse = () => {
+  isCollapsed.value = !isCollapsed.value
+  localStorage.setItem('menuCollapsed', isCollapsed.value)
+  if (isCollapsed.value) {
+    asideWidth.value = 64
+  } else {
+    asideWidth.value = parseInt(localStorage.getItem('menuWidth') || '240')
+  }
+}
+
+const startResize = (e) => {
+  isResizing.value = true
+  const startX = e.clientX
+  const startWidth = asideWidth.value
+
+  const onMouseMove = (e) => {
+    if (!isResizing.value) return
+    const diff = e.clientX - startX
+    let newWidth = startWidth + diff
+    if (newWidth < 64) newWidth = 64
+    if (newWidth > 400) newWidth = 400
+    asideWidth.value = newWidth
+  }
+
+  const onMouseUp = () => {
+    isResizing.value = false
+    localStorage.setItem('menuWidth', asideWidth.value)
+    document.removeEventListener('mousemove', onMouseMove)
+    document.removeEventListener('mouseup', onMouseUp)
+  }
+
+  document.addEventListener('mousemove', onMouseMove)
+  document.addEventListener('mouseup', onMouseUp)
+}
+
+onMounted(() => {
+  if (isCollapsed.value) {
+    asideWidth.value = 64
+  }
+})
 </script>
 
 <style>
@@ -46,13 +121,28 @@ html, body, #app {
 
 /* ── Sidebar ── */
 .app-aside {
-  width: 240px;
-  min-width: 240px;
+  min-width: 64px;
   display: flex;
   flex-direction: column;
   background: linear-gradient(180deg, #1e1b4b 0%, #312e81 50%, #3730a3 100%);
   box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
   z-index: 10;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+/* ── Resize Handle ── */
+.resize-handle {
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.2s;
+  z-index: 11;
+  flex-shrink: 0;
+}
+
+.resize-handle:hover {
+  background: rgba(99, 102, 241, 0.5);
 }
 
 /* ── Logo Area ── */
@@ -65,6 +155,8 @@ html, body, #app {
   padding: 0 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   position: relative;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .logo::before {
@@ -95,6 +187,23 @@ html, body, #app {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* ── Collapse Button ── */
+.collapse-btn {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: rgba(191, 203, 217, 0.7);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.25s;
+}
+
+.collapse-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e0e7ff;
 }
 
 /* ── Navigation Menu ── */
@@ -185,12 +294,15 @@ html, body, #app {
 
 /* ── Element Plus Overrides ── */
 :deep(.el-menu--collapse) {
-  width: 72px;
+  width: 64px;
 }
 :deep(.el-menu--collapse .el-menu-item) {
   padding: 0;
   margin: 4px 6px;
   height: 48px;
   border-radius: 12px;
+}
+:deep(.el-menu--collapse .el-menu-item span) {
+  display: none;
 }
 </style>

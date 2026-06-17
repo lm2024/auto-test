@@ -69,6 +69,10 @@ public class ChainServiceImpl implements ChainService {
         if (dto.getChainName() != null) chain.setChainName(dto.getChainName());
         if (dto.getExecuteMode() != null) chain.setExecuteMode(dto.getExecuteMode());
         if (dto.getDescription() != null) chain.setDescription(dto.getDescription());
+        if (dto.getAccountCode() != null) chain.setAccountCode(dto.getAccountCode());
+        if (dto.getSystemCategory() != null) chain.setSystemCategory(dto.getSystemCategory());
+        if (dto.getFuncCategory() != null) chain.setFuncCategory(dto.getFuncCategory());
+        if (dto.getPriority() != null) chain.setPriority(dto.getPriority());
         chainMapper.update(chain);
 
         return getChainDetail(dto.getChainCode());
@@ -93,6 +97,24 @@ public class ChainServiceImpl implements ChainService {
             vo.setNodeCount(nodeConfigMapper.countByChainCode(chain.getChainCode()));
             return vo;
         }).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ChainVO> listChainsByCategory(String chainName, Integer executeMode,
+                                               String systemCategory, String funcCategory, Integer priority,
+                                               int offset, int pageSize) {
+        List<TestChain> chains = chainMapper.selectListByCategory(chainName, executeMode, systemCategory, funcCategory, priority, offset, pageSize);
+        return chains.stream().map(chain -> {
+            ChainVO vo = buildChainVO(chain);
+            vo.setNodeCount(nodeConfigMapper.countByChainCode(chain.getChainCode()));
+            return vo;
+        }).collect(Collectors.toList());
+    }
+
+    @Override
+    public int countChainsByCategory(String chainName, Integer executeMode,
+                                      String systemCategory, String funcCategory, Integer priority) {
+        return chainMapper.countByCategory(chainName, executeMode, systemCategory, funcCategory, priority);
     }
 
     @Override
@@ -285,6 +307,12 @@ public class ChainServiceImpl implements ChainService {
             node.setRequestMethod(iface.getMethod());
             node.setRequestHeaders(iface.getHeaders());
             node.setBodyData(iface.getBodyData());
+            node.setBizOperTraceId(iface.getBizOperTraceId());
+            node.setTriggerEvent(iface.getTriggerEvent());
+            node.setTargetDom(iface.getTargetDom());
+            node.setPageUrl(iface.getPageUrl());
+            node.setWindowId(iface.getWindowId());
+            node.setIsIgnored(iface.getIsIgnored() != null && iface.getIsIgnored() ? 1 : 0);
             newNodes.add(node);
         }
 

@@ -216,6 +216,12 @@ public class NodeConfigServiceImpl implements NodeConfigService {
         vo.setAssertRules(node.getAssertRules());
         vo.setVariableMapping(node.getVariableMapping());
         vo.setDelaySeconds(node.getDelaySeconds());
+        vo.setBizOperTraceId(node.getBizOperTraceId());
+        vo.setTriggerEvent(node.getTriggerEvent());
+        vo.setTargetDom(node.getTargetDom());
+        vo.setPageUrl(node.getPageUrl());
+        vo.setWindowId(node.getWindowId());
+        vo.setIsIgnored(node.getIsIgnored());
         return vo;
     }
 }

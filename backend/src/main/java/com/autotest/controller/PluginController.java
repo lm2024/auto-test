@@ -58,7 +58,7 @@ public class PluginController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String method,
             @RequestParam(defaultValue = "1") int pageNum,
-            @RequestParam(defaultValue = "20") int pageSize) {
+            @RequestParam(defaultValue = "10") int pageSize) {
         // keyword搜索链路名称
         List<ChainVO> allChains = chainService.listChains(keyword, null);
 

@@ -8,10 +8,12 @@ import java.util.List;
 
 public interface ExecuteService {
     String runChain(String chainCode);
+    String runChain(String chainCode, String traceId, boolean parallel);
     ExecutionPlan parseChain(String chainCode);
     ExecuteMainVO getExecuteStatus(String executionId);
     List<NodeExecuteLogVO> getNodeLogs(String executionId);
     List<ExecuteMainVO> listExecuteRecords(String chainCode, String status,
                                             String startTime, String endTime,
                                             int pageNo, int pageSize);
+    int countExecuteRecords(String chainCode, String status, String startTime, String endTime);
 }

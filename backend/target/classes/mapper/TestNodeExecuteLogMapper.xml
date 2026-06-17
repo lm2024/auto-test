@@ -21,19 +21,23 @@
         <result column="start_time" property="startTime"/>
         <result column="end_time" property="endTime"/>
         <result column="create_time" property="createTime"/>
+        <result column="biz_oper_trace_id" property="bizOperTraceId"/>
+        <result column="sort_no" property="sortNo"/>
     </resultMap>
 
     <insert id="batchInsert">
         INSERT INTO test_node_execute_log (execution_id, node_code, node_name, status,
             request_url, request_method, request_headers, request_body,
             response_code, response_headers, response_body,
-            cost_ms, error_message, extracted_vars, start_time, end_time)
+            cost_ms, error_message, extracted_vars, start_time, end_time,
+            biz_oper_trace_id, sort_no)
         VALUES
         <foreach collection="list" item="item" separator=",">
             (#{item.executionId}, #{item.nodeCode}, #{item.nodeName}, #{item.status},
              #{item.requestUrl}, #{item.requestMethod}, #{item.requestHeaders}, #{item.requestBody},
              #{item.responseCode}, #{item.responseHeaders}, #{item.responseBody},
-             #{item.costMs}, #{item.errorMessage}, #{item.extractedVars}, #{item.startTime}, #{item.endTime})
+             #{item.costMs}, #{item.errorMessage}, #{item.extractedVars}, #{item.startTime}, #{item.endTime},
+             #{item.bizOperTraceId}, #{item.sortNo})
         </foreach>
     </insert>
 

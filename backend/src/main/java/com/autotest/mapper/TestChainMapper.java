@@ -14,9 +14,17 @@ public interface TestChainMapper {
     TestChain selectByChainCode(@Param("chainCode") String chainCode);
     List<TestChain> selectList(@Param("chainName") String chainName, @Param("executeMode") Integer executeMode);
     List<TestChain> selectListByCategory(@Param("chainName") String chainName,
+                                         @Param("executeMode") Integer executeMode,
                                          @Param("systemCategory") String systemCategory,
                                          @Param("funcCategory") String funcCategory,
-                                         @Param("priority") Integer priority);
+                                         @Param("priority") Integer priority,
+                                         @Param("offset") int offset,
+                                         @Param("pageSize") int pageSize);
+    int countByCategory(@Param("chainName") String chainName,
+                        @Param("executeMode") Integer executeMode,
+                        @Param("systemCategory") String systemCategory,
+                        @Param("funcCategory") String funcCategory,
+                        @Param("priority") Integer priority);
     int countByChainCode(@Param("chainCode") String chainCode);
     int countByChainName(@Param("chainName") String chainName);
 }

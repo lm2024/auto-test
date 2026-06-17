@@ -73,6 +73,9 @@
             <if test="chainName != null and chainName != ''">
                 AND chain_name LIKE CONCAT('%', #{chainName}, '%')
             </if>
+            <if test="executeMode != null">
+                AND execute_mode = #{executeMode}
+            </if>
             <if test="systemCategory != null and systemCategory != ''">
                 AND system_category = #{systemCategory}
             </if>
@@ -84,6 +87,28 @@
             </if>
         </where>
         ORDER BY create_time DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countByCategory" resultType="int">
+        SELECT COUNT(*) FROM test_chain
+        <where>
+            <if test="chainName != null and chainName != ''">
+                AND chain_name LIKE CONCAT('%', #{chainName}, '%')
+            </if>
+            <if test="executeMode != null">
+                AND execute_mode = #{executeMode}
+            </if>
+            <if test="systemCategory != null and systemCategory != ''">
+                AND system_category = #{systemCategory}
+            </if>
+            <if test="funcCategory != null and funcCategory != ''">
+                AND func_category = #{funcCategory}
+            </if>
+            <if test="priority != null">
+                AND priority = #{priority}
+            </if>
+        </where>
     </select>
 
     <select id="countByChainCode" resultType="int">

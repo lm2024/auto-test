@@ -12,6 +12,9 @@ public interface DictCategoryMapper {
     int update(DictCategory category);
     int deleteById(@Param("id") Long id);
     DictCategory selectById(@Param("id") Long id);
-    List<DictCategory> selectByType(@Param("categoryType") String categoryType);
-    List<DictCategory> selectAll();
+    List<DictCategory> selectByType(@Param("categoryType") String categoryType,
+                                     @Param("offset") int offset, @Param("pageSize") int pageSize);
+    int countByType(@Param("categoryType") String categoryType);
+    List<DictCategory> selectAll(@Param("offset") int offset, @Param("pageSize") int pageSize);
+    int countAll();
 }

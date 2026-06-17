@@ -17,6 +17,14 @@
         </div>
       </div>
       <div class="toolbar-right">
+        <el-button-group>
+          <el-button :type="viewMode === 'list' ? 'primary' : ''" @click="viewMode = 'list'" size="small">
+            <el-icon><List /></el-icon> 列表视图
+          </el-button>
+          <el-button :type="viewMode === 'trace' ? 'primary' : ''" @click="viewMode = 'trace'; loadTraceGroups()" size="small">
+            <el-icon><Connection /></el-icon> 分组视图
+          </el-button>
+        </el-button-group>
         <el-button @click="undo" :disabled="!canUndo" :icon="RefreshLeft">撤销</el-button>
         <el-button @click="redo" :disabled="!canRedo" :icon="RefreshRight">重做</el-button>
         <el-button @click="autoLayout" :icon="Grid">自动布局</el-button>
@@ -28,7 +36,7 @@
     </div>
 
     <div class="main-area">
-      <div class="left-panel">
+      <div class="left-panel" :style="{ width: leftPanelWidth + 'px' }">
         <div class="panel-section">
           <div class="panel-title">
             <el-icon><Box /></el-icon>
@@ -74,7 +82,50 @@
         </div>
       </div>
 
-      <div class="center-panel" ref="canvasRef" @dragover.prevent>
+      <!-- Left-Center Resizer -->
+      <div class="panel-resizer left-resizer" @mousedown="startResizeLeft"></div>
+
+      <!-- TraceId分组视图 -->
+      <div class="center-panel trace-group-view" v-if="viewMode === 'trace'" ref="traceCanvasRef" @dragover.prevent>
+        <div v-if="traceGroups.length === 0" class="empty-canvas">
+          <el-icon class="empty-icon"><Connection /></el-icon>
+          <div class="empty-title">暂无分组数据</div>
+          <div class="empty-desc">链路节点未携带 bizOperTraceId 信息</div>
+        </div>
+        <div v-for="(group, gIdx) in traceGroups" :key="group.traceId" class="trace-group-card">
+          <div class="trace-group-header">
+            <div class="trace-group-info">
+              <el-tag size="small" type="primary" effect="dark">TraceId</el-tag>
+              <span class="trace-group-id">{{ group.traceId === '__ungrouped__' ? '未分组' : group.traceId }}</span>
+            </div>
+            <div class="trace-group-meta">
+              <el-tag size="small" v-if="group.triggerEvent" type="info">{{ group.triggerEvent }}</el-tag>
+              <span class="trace-group-url" v-if="group.pageUrl">{{ group.pageUrl }}</span>
+              <el-tag size="small" type="success">{{ group.nodeCount }} 个节点</el-tag>
+            </div>
+          </div>
+          <div class="trace-group-nodes">
+            <div v-for="(node, nIdx) in group.nodes" :key="node.nodeCode" class="trace-node-card"
+                 :class="{ selected: selectedNode?.nodeCode === node.nodeCode, ignored: node.isIgnored }"
+                 @click="selectNode(node)">
+              <div class="trace-node-index">{{ nIdx + 1 }}</div>
+              <div class="trace-node-info">
+                <div class="trace-node-name">{{ node.nodeName || node.nodeCode }}</div>
+                <div class="trace-node-url">{{ node.requestUrl }}</div>
+              </div>
+              <div class="trace-node-right">
+                <el-tag size="small" :type="methodType(node.requestMethod)" effect="dark">{{ node.requestMethod }}</el-tag>
+                <span v-if="node.isIgnored" class="trace-node-ignored">已忽略</span>
+              </div>
+            </div>
+          </div>
+          <div class="trace-group-footer">
+            <el-button size="small" type="primary" plain @click="runTraceGroup(group.traceId)">执行此分组</el-button>
+          </div>
+        </div>
+      </div>
+
+      <div class="center-panel" v-if="viewMode === 'list'" ref="canvasRef" @dragover.prevent>
         <div v-if="nodes.length === 0" class="empty-canvas" @drop="onDrop" @dragover.prevent>
           <el-icon class="empty-icon"><Connection /></el-icon>
           <div class="empty-title">拖拽节点到此处</div>
@@ -128,8 +179,11 @@
         </div>
       </div>
 
+      <!-- Center-Right Resizer -->
+      <div class="panel-resizer right-resizer" @mousedown="startResizeRight" v-if="selectedNode"></div>
+
       <transition name="slide-right">
-        <div class="right-panel" v-if="selectedNode">
+        <div class="right-panel" :style="{ width: rightPanelWidth + 'px' }" v-if="selectedNode">
           <div class="panel-header">
             <div class="panel-title-row">
               <el-icon class="config-icon"><Setting /></el-icon>
@@ -531,9 +585,69 @@ const activeTab = ref('basic')
 const aiLoading = ref(false)
 const canUndo = ref(false)
 const canRedo = ref(false)
+
+// Panel resize
+const leftPanelWidth = ref(260)
+const rightPanelWidth = ref(440)
+let isResizingLeft = false
+let isResizingRight = false
+let startX = 0
+let startWidth = 0
+
+const startResizeLeft = (e) => {
+  isResizingLeft = true
+  startX = e.clientX
+  startWidth = leftPanelWidth.value
+  document.addEventListener('mousemove', onResizeLeft)
+  document.addEventListener('mouseup', stopResizeLeft)
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+}
+
+const onResizeLeft = (e) => {
+  if (!isResizingLeft) return
+  const diff = e.clientX - startX
+  const newWidth = Math.min(Math.max(startWidth + diff, 200), 400)
+  leftPanelWidth.value = newWidth
+}
+
+const stopResizeLeft = () => {
+  isResizingLeft = false
+  document.removeEventListener('mousemove', onResizeLeft)
+  document.removeEventListener('mouseup', stopResizeLeft)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
+
+const startResizeRight = (e) => {
+  isResizingRight = true
+  startX = e.clientX
+  startWidth = rightPanelWidth.value
+  document.addEventListener('mousemove', onResizeRight)
+  document.addEventListener('mouseup', stopResizeRight)
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+}
+
+const onResizeRight = (e) => {
+  if (!isResizingRight) return
+  const diff = startX - e.clientX
+  const newWidth = Math.min(Math.max(startWidth + diff, 300), 600)
+  rightPanelWidth.value = newWidth
+}
+
+const stopResizeRight = () => {
+  isResizingRight = false
+  document.removeEventListener('mousemove', onResizeRight)
+  document.removeEventListener('mouseup', stopResizeRight)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
 const nodeStatusMap = ref({})
 const dragIndex = ref(null)
 const dragOverIndex = ref(null)
+const viewMode = ref('list')
+const traceGroups = ref([])
 
 const importDialogVisible = ref(false)
 const importTab = ref('swagger')
@@ -690,6 +804,29 @@ const onListDrop = (e, targetCode) => {
 const loadNodes = async () => {
   const res = await api.get('/node/list', { params: { chainCode } })
   nodes.value = res.data || []
+}
+
+const loadTraceGroups = async () => {
+  if (!chainCode) return
+  try {
+    const res = await api.get('/chain/trace-groups', { params: { chainCode } })
+    traceGroups.value = res.data || []
+  } catch (e) {
+    console.error('加载Trace分组失败:', e)
+  }
+}
+
+const runTraceGroup = async (traceId) => {
+  try {
+    const res = await api.post('/chain/runByTrace', null, {
+      params: { chainCode, traceId, parallel: false }
+    })
+    const executionId = res.data.executionId
+    ElMessage.success('分组执行已启动')
+    router.push('/execute/detail/' + executionId)
+  } catch (e) {
+    ElMessage.error('执行失败: ' + (e.message || '未知错误'))
+  }
 }
 
 const selectNode = (node) => {
@@ -1257,17 +1394,54 @@ onMounted(() => {
 
 /* ── Left Panel ── */
 .left-panel {
-  width: 260px;
-  min-width: 260px;
+  min-width: 200px;
+  max-width: 400px;
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border-right: 1px solid rgba(99, 102, 241, 0.08);
   padding: 18px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 18px;
+  flex-shrink: 0;
+}
+
+/* ── Panel Resizer ── */
+.panel-resizer {
+  width: 6px;
+  cursor: col-resize;
+  background: rgba(99, 102, 241, 0.1);
+  transition: background 0.2s, width 0.2s;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.panel-resizer::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 40px;
+  background: rgba(99, 102, 241, 0.3);
+  border-radius: 1px;
+  transition: all 0.2s;
+}
+
+.panel-resizer:hover {
+  background: rgba(99, 102, 241, 0.2);
+  width: 8px;
+}
+
+.panel-resizer:hover::after {
+  background: rgba(99, 102, 241, 0.6);
+  height: 60px;
+}
+
+.panel-resizer:active {
+  background: rgba(99, 102, 241, 0.3);
 }
 
 .panel-title {
@@ -1544,15 +1718,15 @@ onMounted(() => {
 
 /* ── Right Panel (Config) ── */
 .right-panel {
-  width: 440px;
-  min-width: 440px;
+  min-width: 300px;
+  max-width: 600px;
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border-left: 1px solid rgba(99, 102, 241, 0.08);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .empty-right { align-items: center; justify-content: center; }
@@ -1871,5 +2045,147 @@ onMounted(() => {
 .node-list-item.change-removed {
   border-left: 3px solid #ef4444;
   opacity: 0.6;
+}
+
+/* ── Trace Group View ── */
+.trace-group-view {
+  padding: 24px;
+  display: block;
+}
+
+.trace-group-card {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(99, 102, 241, 0.12);
+  border-radius: 14px;
+  margin-bottom: 20px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.trace-group-header {
+  padding: 14px 18px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.06), rgba(129, 140, 248, 0.03));
+  border-bottom: 1px solid rgba(99, 102, 241, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.trace-group-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trace-group-id {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e1b4b;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+.trace-group-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trace-group-url {
+  font-size: 12px;
+  color: #9ca3af;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trace-group-nodes {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.trace-node-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid rgba(99, 102, 241, 0.08);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #fff;
+}
+
+.trace-node-card:hover {
+  border-color: rgba(99, 102, 241, 0.25);
+  background: rgba(99, 102, 241, 0.02);
+}
+
+.trace-node-card.selected {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
+
+.trace-node-card.ignored {
+  opacity: 0.5;
+  background: #f9fafb;
+}
+
+.trace-node-index {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6366f1;
+  flex-shrink: 0;
+}
+
+.trace-node-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.trace-node-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1e1b4b;
+}
+
+.trace-node-url {
+  font-size: 11px;
+  color: #9ca3af;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+.trace-node-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.trace-node-ignored {
+  font-size: 11px;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.trace-group-footer {
+  padding: 10px 18px;
+  border-top: 1px solid rgba(99, 102, 241, 0.08);
+  display: flex;
+  justify-content: flex-end;
 }
 </style>

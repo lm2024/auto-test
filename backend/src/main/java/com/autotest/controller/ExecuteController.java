@@ -23,7 +23,14 @@ public class ExecuteController {
     @PostMapping("/run")
     public Result<?> runChain(@RequestBody Map<String, String> params) {
         String chainCode = params.get("chainCode");
-        String executionId = executeService.runChain(chainCode);
+        String traceId = params.get("traceId");
+        Boolean parallel = params.containsKey("parallel") ? Boolean.parseBoolean(params.get("parallel")) : false;
+        String executionId;
+        if (traceId != null && !traceId.isEmpty()) {
+            executionId = executeService.runChain(chainCode, traceId, parallel);
+        } else {
+            executionId = executeService.runChain(chainCode);
+        }
         Map<String, Object> data = new HashMap<>();
         data.put("executionId", executionId);
         return Result.success(data);
@@ -48,11 +55,13 @@ public class ExecuteController {
             @RequestParam(required = false) String startTime,
             @RequestParam(required = false) String endTime,
             @RequestParam(defaultValue = "1") int pageNo,
-            @RequestParam(defaultValue = "20") int pageSize) {
+            @RequestParam(defaultValue = "10") int pageSize) {
         List<ExecuteMainVO> records = executeService.listExecuteRecords(
                 chainCode, status, startTime, endTime, pageNo, pageSize);
+        int total = executeService.countExecuteRecords(chainCode, status, startTime, endTime);
         Map<String, Object> data = new HashMap<>();
         data.put("list", records);
+        data.put("total", total);
         data.put("pageNo", pageNo);
         data.put("pageSize", pageSize);
         return Result.success(data);

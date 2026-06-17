@@ -7,7 +7,9 @@ import com.autotest.service.AccountService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 测试账号管理 Controller
@@ -47,9 +49,18 @@ public class AccountController {
     @GetMapping("/list")
     public Result<?> listAccounts(
             @RequestParam(required = false) String systemName,
-            @RequestParam(required = false) Integer status) {
-        List<TestAccount> accounts = accountService.listAccounts(systemName, status);
-        return Result.success(accounts);
+            @RequestParam(required = false) Integer status,
+            @RequestParam(defaultValue = "1") int pageNo,
+            @RequestParam(defaultValue = "10") int pageSize) {
+        int offset = (pageNo - 1) * pageSize;
+        List<TestAccount> accounts = accountService.listAccounts(systemName, status, offset, pageSize);
+        int total = accountService.countAccounts(systemName, status);
+        Map<String, Object> data = new HashMap<>();
+        data.put("list", accounts);
+        data.put("total", total);
+        data.put("pageNo", pageNo);
+        data.put("pageSize", pageSize);
+        return Result.success(data);
     }
 
     @PostMapping("/acquire")

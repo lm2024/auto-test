@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "接口录制助手",
-  "version": "1.0.0",
+  "name": "捉接口 TraceFlow",
+  "version": "1.1.0",
   "description": "录制页面所有网络请求，支持链路回放与版本对比，一键推送至自动化测试平台",
   "permissions": [
     "storage",
@@ -15,7 +15,7 @@
     "<all_urls>"
   ],
   "action": {
-    "default_title": "打开接口录制助手"
+    "default_title": "打开捉接口 TraceFlow"
   },
   "side_panel": {
     "default_path": "sidepanel.html"
@@ -32,7 +32,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["inject.js"],
+      "resources": ["inject.js", "sandbox.html"],
       "matches": ["<all_urls>"]
     }
   ],

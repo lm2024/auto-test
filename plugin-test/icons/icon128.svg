@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563EB"/>
+      <stop offset="50%" stop-color="#4F46E5"/>
+      <stop offset="100%" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60A5FA"/>
+      <stop offset="100%" stop-color="#A78BFA"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+    <filter id="innerGlow">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+  <!-- Background -->
+  <rect width="128" height="128" rx="28" fill="url(#bg)" filter="url(#shadow)"/>
+  <!-- Subtle grid pattern -->
+  <g opacity="0.06">
+    <line x1="32" y1="0" x2="32" y2="128" stroke="#fff" stroke-width="1"/>
+    <line x1="64" y1="0" x2="64" y2="128" stroke="#fff" stroke-width="1"/>
+    <line x1="96" y1="0" x2="96" y2="128" stroke="#fff" stroke-width="1"/>
+    <line x1="0" y1="32" x2="128" y2="32" stroke="#fff" stroke-width="1"/>
+    <line x1="0" y1="64" x2="128" y2="64" stroke="#fff" stroke-width="1"/>
+    <line x1="0" y1="96" x2="128" y2="96" stroke="#fff" stroke-width="1"/>
+  </g>
+  <!-- Network nodes -->
+  <circle cx="32" cy="64" r="10" fill="#fff" opacity="0.95"/>
+  <circle cx="32" cy="64" r="5" fill="url(#glow)" opacity="0.4"/>
+  <circle cx="96" cy="36" r="10" fill="#fff" opacity="0.95"/>
+  <circle cx="96" cy="36" r="5" fill="url(#glow)" opacity="0.4"/>
+  <circle cx="96" cy="92" r="10" fill="#fff" opacity="0.95"/>
+  <circle cx="96" cy="92" r="5" fill="url(#glow)" opacity="0.4"/>
+  <!-- Connection lines with glow -->
+  <g filter="url(#innerGlow)">
+    <line x1="42" y1="61" x2="86" y2="39" stroke="#fff" stroke-width="3" opacity="0.5" stroke-linecap="round"/>
+    <line x1="42" y1="67" x2="86" y2="89" stroke="#fff" stroke-width="3" opacity="0.5" stroke-linecap="round"/>
+    <line x1="96" y1="46" x2="96" y2="82" stroke="#fff" stroke-width="3" opacity="0.5" stroke-linecap="round"/>
+  </g>
+  <!-- Center capture symbol -->
+  <circle cx="64" cy="64" r="12" fill="#fff" opacity="0.95"/>
+  <circle cx="64" cy="64" r="6" fill="url(#glow)"/>
+  <circle cx="64" cy="64" r="2.5" fill="#fff"/>
+  <!-- Recording indicator with pulse -->
+  <circle cx="108" cy="20" r="14" fill="#EF4444"/>
+  <circle cx="108" cy="20" r="7" fill="#FCA5A5" opacity="0.5"/>
+  <circle cx="108" cy="20" r="3" fill="#fff"/>
+</svg>

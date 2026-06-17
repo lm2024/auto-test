@@ -33,7 +33,12 @@ public interface AccountService {
     /**
      * 查询账号列表
      */
-    List<TestAccount> listAccounts(String systemName, Integer status);
+    List<TestAccount> listAccounts(String systemName, Integer status, int offset, int pageSize);
+
+    /**
+     * 查询账号总数
+     */
+    int countAccounts(String systemName, Integer status);
 
     /**
      * 获取并锁定可用账号
@@ -46,4 +51,11 @@ public interface AccountService {
      * 释放账号锁定
      */
     void releaseAccount(String accountCode);
+
+    /**
+     * 批量锁定账号
+     * @param accountCode 账号编码
+     * @param minutes 锁定时长（分钟）
+     */
+    void batchLock(String accountCode, int minutes);
 }

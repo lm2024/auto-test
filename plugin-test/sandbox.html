@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>AutoTest Sandbox</title></head>
+<body>
+<script>
+window.addEventListener('message', function(event) {
+  var data = event.data;
+  if (!data || !data.id) return;
+  try {
+    var fn = new Function('data', 'return (' + data.code + ')(data);');
+    var result = fn(data.data);
+    if (result && typeof result.then === 'function') {
+      result.then(function(r) {
+        parent.postMessage({ id: data.id, result: r }, '*');
+      }).catch(function(e) {
+        parent.postMessage({ id: data.id, error: String(e) }, '*');
+      });
+    } else {
+      parent.postMessage({ id: data.id, result: result }, '*');
+    }
+  } catch(e) {
+    parent.postMessage({ id: data.id, error: String(e) }, '*');
+  }
+});
+</script>
+</body>
+</html>

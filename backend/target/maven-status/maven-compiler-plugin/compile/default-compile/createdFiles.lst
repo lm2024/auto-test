@@ -8,6 +8,7 @@ com\autotest\model\entity\NodeSnapshot.class
 com\autotest\service\AiService.class
 com\autotest\model\dto\BatchVersionDeleteDTO.class
 com\autotest\model\entity\TestNodeConfig.class
+com\autotest\controller\DictCategoryController.class
 com\autotest\controller\AccountController.class
 com\autotest\engine\plan\ExecutionPlan.class
 com\autotest\config\CorsConfig.class
@@ -23,6 +24,7 @@ com\autotest\service\impl\AccountServiceImpl.class
 com\autotest\util\ChainFingerprintUtil.class
 com\autotest\model\vo\DiffVO.class
 com\autotest\service\NodeConfigService$DependencyRelation.class
+com\autotest\model\dto\dict\DictCategoryCreateDTO.class
 com\autotest\util\CodeGenerator.class
 com\autotest\controller\PluginReplayController.class
 com\autotest\filter\BizOperTraceContext.class
@@ -44,11 +46,13 @@ com\autotest\model\dto\TestDataGenerateDTO.class
 com\autotest\mapper\TestAccountMapper.class
 com\autotest\controller\AiController.class
 com\autotest\exception\GlobalExceptionHandler.class
+com\autotest\service\impl\DictCategoryServiceImpl.class
 com\autotest\mapper\NodeSnapshotMapper.class
 com\autotest\model\dto\ChainCreateDTO.class
 com\autotest\model\vo\ChainVO.class
 com\autotest\model\dto\FailureAnalyzeDTO.class
 com\autotest\config\ThreadPoolConfig$1.class
+com\autotest\service\impl\AuthServiceImpl.class
 com\autotest\engine\plan\ExecutionGroup.class
 com\autotest\model\dto\NodeEditDTO.class
 com\autotest\service\impl\ChainServiceImpl$1.class
@@ -62,6 +66,8 @@ com\autotest\service\impl\ChainServiceImpl$DependencyResult.class
 com\autotest\model\vo\Result.class
 com\autotest\filter\BizOperTraceFilter.class
 com\autotest\model\dto\NodeCreateDTO.class
+com\autotest\model\entity\DictCategory.class
+com\autotest\controller\AuthController.class
 com\autotest\model\vo\VersionVO.class
 com\autotest\model\dto\AccountCreateDTO.class
 com\autotest\mapper\TestExecuteMainMapper.class
@@ -69,6 +75,8 @@ com\autotest\service\impl\ChainServiceImpl.class
 com\autotest\service\impl\ExecuteServiceImpl$NodeResult.class
 com\autotest\model\vo\NodeExecuteLogVO.class
 com\autotest\mapper\TestNodeExecuteLogMapper.class
+com\autotest\service\AuthService.class
+com\autotest\mapper\DictCategoryMapper.class
 com\autotest\service\DiffService.class
 com\autotest\service\VersionService.class
 com\autotest\service\impl\NodeConfigServiceImpl.class
@@ -85,6 +93,8 @@ com\autotest\mapper\TestChainMapper.class
 com\autotest\engine\plan\ExecuteNode.class
 com\autotest\service\AccountService.class
 com\autotest\model\dto\PluginChainCreateDTO.class
+com\autotest\service\DictCategoryService.class
+com\autotest\model\vo\TraceGroupVO.class
 com\autotest\model\dto\NodeImportDTO.class
 com\autotest\config\ThreadPoolConfig.class
 com\autotest\model\dto\ReplayPushDTO.class

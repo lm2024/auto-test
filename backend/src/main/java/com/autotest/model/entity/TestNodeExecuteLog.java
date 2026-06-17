@@ -21,6 +21,8 @@ public class TestNodeExecuteLog {
     private Date startTime;
     private Date endTime;
     private Date createTime;
+    private String bizOperTraceId;
+    private Integer sortNo;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -58,4 +60,8 @@ public class TestNodeExecuteLog {
     public void setEndTime(Date endTime) { this.endTime = endTime; }
     public Date getCreateTime() { return createTime; }
     public void setCreateTime(Date createTime) { this.createTime = createTime; }
+    public String getBizOperTraceId() { return bizOperTraceId; }
+    public void setBizOperTraceId(String bizOperTraceId) { this.bizOperTraceId = bizOperTraceId; }
+    public Integer getSortNo() { return sortNo; }
+    public void setSortNo(Integer sortNo) { this.sortNo = sortNo; }
 }

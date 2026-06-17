@@ -95,11 +95,16 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public List<TestAccount> listAccounts(String systemName, Integer status) {
-        List<TestAccount> accounts = accountMapper.selectList(systemName, status);
+    public List<TestAccount> listAccounts(String systemName, Integer status, int offset, int pageSize) {
+        List<TestAccount> accounts = accountMapper.selectList(systemName, status, offset, pageSize);
         // 返回时解密密码
         accounts.forEach(this::decryptPassword);
         return accounts;
+    }
+
+    @Override
+    public int countAccounts(String systemName, Integer status) {
+        return accountMapper.countList(systemName, status);
     }
 
     @Override
@@ -126,6 +131,17 @@ public class AccountServiceImpl implements AccountService {
     public void releaseAccount(String accountCode) {
         accountMapper.releaseAccount(accountCode);
         log.info("[Account] 释放账号: {}", accountCode);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void batchLock(String accountCode, int minutes) {
+        Date lockUntil = new Date(System.currentTimeMillis() + minutes * 60L * 1000);
+        int updated = accountMapper.lockAccount(accountCode, lockUntil);
+        if (updated == 0) {
+            throw new BusinessException(409, "账号不可用: " + accountCode);
+        }
+        log.info("[Account] 批量锁定账号: {}, 时长: {}分钟", accountCode, minutes);
     }
 
     /**

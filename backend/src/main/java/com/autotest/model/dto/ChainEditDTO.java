@@ -9,6 +9,10 @@ public class ChainEditDTO {
     private String chainName;
     private Integer executeMode;
     private String description;
+    private String accountCode;
+    private String systemCategory;
+    private String funcCategory;
+    private Integer priority;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -20,4 +24,12 @@ public class ChainEditDTO {
     public void setExecuteMode(Integer executeMode) { this.executeMode = executeMode; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+    public String getAccountCode() { return accountCode; }
+    public void setAccountCode(String accountCode) { this.accountCode = accountCode; }
+    public String getSystemCategory() { return systemCategory; }
+    public void setSystemCategory(String systemCategory) { this.systemCategory = systemCategory; }
+    public String getFuncCategory() { return funcCategory; }
+    public void setFuncCategory(String funcCategory) { this.funcCategory = funcCategory; }
+    public Integer getPriority() { return priority; }
+    public void setPriority(Integer priority) { this.priority = priority; }
 }

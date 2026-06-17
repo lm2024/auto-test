@@ -13,6 +13,12 @@ public interface ChainService {
     ChainVO editChain(ChainEditDTO dto);
     void deleteChain(String chainCode);
     List<ChainVO> listChains(String chainName, Integer executeMode);
+
+    List<ChainVO> listChainsByCategory(String chainName, Integer executeMode,
+                                         String systemCategory, String funcCategory, Integer priority,
+                                         int offset, int pageSize);
+    int countChainsByCategory(String chainName, Integer executeMode,
+                               String systemCategory, String funcCategory, Integer priority);
     ChainVO getChainDetail(String chainCode);
     ChainVO copyChain(String chainCode);
     ChainVO pluginCreateChain(PluginChainCreateDTO dto);

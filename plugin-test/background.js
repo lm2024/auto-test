@@ -2,6 +2,7 @@ let isRecording = false;
 const debuggerTabs = new Set();
 const pendingReqs = {};
 let currentSettings = {};
+const capturedTokens = {}; // Phase 4: SSO token capture
 
 // ========== 窗口状态机 ==========
 let windowState = 'IDLE'; // IDLE | ACTIVE
@@ -81,6 +82,12 @@ chrome.storage.onChanged.addListener((changes) => {
 });
 
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
+
+chrome.action.onClicked.addListener(() => {
+  chrome.sidePanel.setOptions({ enabled: true }).then(() => {
+    chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
+  });
+});
 
 function updateIcon() {
   const p = isRecording ? 'icons/icon_active.png' : 'icons/icon16.png';
@@ -165,8 +172,16 @@ chrome.debugger.onEvent.addListener((source, method, params) => {
     if (!shouldCapture(req.url)) return;
     pendingReqs[params.requestId] = {
       url: req.url, method: req.method, headers: req.headers || {},
-      body: req.postData || null, timestamp: Date.now(), tabId: source.tabId
+      body: req.postData || null, timestamp: Date.now(), tabId: source.tabId,
+      redirectChain: params.redirectResponse ? params.redirectChain || [] : []
     };
+    // Phase 4: SSO redirect detection - record redirect chain
+    if (params.redirectResponse) {
+      const redirData = pendingReqs[params.requestId];
+      redirData.isRedirect = true;
+      redirData.redirectFrom = params.redirectResponse.url;
+      redirData.redirectStatus = params.redirectResponse.status;
+    }
   }
   if (method === 'Network.responseReceived') {
     if (!shouldCapture(params.response.url)) return;
@@ -188,6 +203,16 @@ chrome.debugger.onEvent.addListener((source, method, params) => {
       resourceType: typeMap[cdpType] || 'other',
       tabId: source.tabId
     };
+    // Phase 4: Extract auth tokens from response
+    extractAuthTokens(data);
+    // Phase 4: SSO redirect - if 301/302, track the redirect chain
+    if (data.status === 301 || data.status === 302) {
+      const location = data.responseHeaders && (data.responseHeaders.location || data.responseHeaders.Location);
+      if (location) {
+        data.ssoRedirect = true;
+        data.redirectLocation = location;
+      }
+    }
     // 注入 bizOperTraceId 到 CDP 捕获的请求
     if (currentTrace && currentTrace.windowActive && currentTrace.traceId) {
       data.bizOperTraceId = currentTrace.traceId;
@@ -208,6 +233,8 @@ chrome.debugger.onEvent.addListener((source, method, params) => {
       }
       if (resp && resp.body) {
         try { data.response = JSON.parse(resp.body); } catch(e) { data.response = resp.body; }
+        // Phase 4: Extract tokens from response body
+        extractTokensFromBody(data.response, data.url);
       }
       saveApi(data);
       if (p) delete pendingReqs[params.requestId];
@@ -222,6 +249,102 @@ chrome.tabs.onRemoved.addListener((id) => {
     if (pendingReqs[key].tabId === id) delete pendingReqs[key];
   });
 });
+
+// ========== Phase 4: Token 提取 ==========
+function extractAuthTokens(data) {
+  if (!data) return;
+  const respHeaders = data.responseHeaders || {};
+  const reqHeaders = data.headers || {};
+
+  // 1. Extract from Set-Cookie
+  const setCookie = respHeaders['set-cookie'] || respHeaders['Set-Cookie'];
+  if (setCookie) {
+    const cookies = setCookie.split(',').map(c => c.trim().split(';')[0]);
+    cookies.forEach(c => {
+      const [name, ...valParts] = c.split('=');
+      if (name && valParts.length) {
+        const val = valParts.join('=');
+        if (/^(token|session|auth|jwt|access|sid|jsessionid|connect\.sid)$/i.test(name.trim())) {
+          capturedTokens[name.trim()] = val;
+        }
+      }
+    });
+  }
+
+  // 2. Extract from Authorization header
+  const auth = reqHeaders['authorization'] || reqHeaders['Authorization'];
+  if (auth && auth.startsWith('Bearer ')) {
+    capturedTokens['accessToken'] = auth.substring(7);
+  }
+
+  // 3. Extract from response URL query params
+  try {
+    const u = new URL(data.url);
+    const at = u.searchParams.get('access_token');
+    const code = u.searchParams.get('code');
+    const ticket = u.searchParams.get('ticket');
+    if (at) capturedTokens['accessToken'] = at;
+    if (code) capturedTokens['authCode'] = code;
+    if (ticket) capturedTokens['ssoTicket'] = ticket;
+  } catch(e) {}
+}
+
+function extractTokensFromBody(body, url) {
+  if (!body || typeof body !== 'object') return;
+  const tokenFields = ['token', 'access_token', 'accessToken', 'refresh_token', 'refreshToken', 'id_token', 'idToken'];
+  tokenFields.forEach(f => {
+    if (body[f] && typeof body[f] === 'string' && body[f].length > 10) {
+      capturedTokens[f] = body[f];
+      // Parse JWT exp if present
+      if (f.includes('access') || f === 'token' || f === 'id_token') {
+        try {
+          const parts = body[f].split('.');
+          if (parts.length === 3) {
+            const payload = JSON.parse(atob(parts[1]));
+            if (payload.exp) capturedTokens['expiresAt'] = payload.exp * 1000;
+          }
+        } catch(e) {}
+      }
+    }
+  });
+}
+
+// ========== Phase 4: 加密请求解密沙箱 ==========
+let sandboxIframe = null;
+let sandboxCallbacks = {};
+
+function initSandbox() {
+  if (sandboxIframe) return;
+  sandboxIframe = document.createElement('iframe');
+  sandboxIframe.src = chrome.runtime.getURL('sandbox.html');
+  sandboxIframe.style.display = 'none';
+  sandboxIframe.sandbox = 'allow-scripts';
+  document.body.appendChild(sandboxIframe);
+  window.addEventListener('message', (e) => {
+    if (e.source !== sandboxIframe?.contentWindow) return;
+    const { id, result, error } = e.data;
+    if (sandboxCallbacks[id]) {
+      if (error) sandboxCallbacks[id].reject(error);
+      else sandboxCallbacks[id].resolve(result);
+      delete sandboxCallbacks[id];
+    }
+  });
+}
+
+function decryptInSandbox(code, data) {
+  return new Promise((resolve, reject) => {
+    initSandbox();
+    const id = 'dec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+    sandboxCallbacks[id] = { resolve, reject };
+    sandboxIframe.contentWindow.postMessage({ id, code, data }, '*');
+    setTimeout(() => {
+      if (sandboxCallbacks[id]) {
+        sandboxCallbacks[id].reject('Sandbox timeout');
+        delete sandboxCallbacks[id];
+      }
+    }, 5000);
+  });
+}
 
 // ========== 工具函数 ==========
 function shouldCapture(url) {
@@ -397,7 +520,36 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     sendResponse({ ok: true });
   } else if (msg.type === 'MACRO_REPLAY_DONE') {
     chrome.storage.local.set({ macroReplayResult: msg.result });
+  } else if (msg.type === 'GET_AUTH_CONTEXT') {
+    sendResponse({ tokens: capturedTokens });
+  } else if (msg.type === 'DECRYPT_DATA') {
+    const decryptCode = msg.code || '';
+    const encryptedData = msg.data || '';
+    decryptInSandbox(decryptCode, encryptedData).then(result => {
+      sendResponse({ ok: true, result });
+    }).catch(err => {
+      sendResponse({ ok: false, error: String(err) });
+    });
+    return true;
+  } else if (msg.type === 'SAVE_ENCRYPT_CONFIG') {
+    chrome.storage.local.set({ encryptConfig: msg.config || {} });
+    sendResponse({ ok: true });
+  } else if (msg.type === 'GET_ENCRYPT_CONFIG') {
+    chrome.storage.local.get(['encryptConfig'], (r) => {
+      sendResponse({ config: r.encryptConfig || {} });
+    });
+    return true;
   }
+  } catch(e) {}
+  try {
+    if (msg.type === 'HIDE_SIDE_PANEL') {
+      chrome.sidePanel.setOptions({ enabled: false }).then(() => {
+        sendResponse({ ok: true });
+      }).catch((e) => {
+        sendResponse({ ok: false, error: e.message });
+      });
+      return true;
+    }
   } catch(e) {}
   return true;
 });

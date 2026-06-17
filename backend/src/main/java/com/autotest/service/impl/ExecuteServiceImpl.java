@@ -9,12 +9,14 @@ import com.autotest.mapper.TestChainMapper;
 import com.autotest.mapper.TestExecuteMainMapper;
 import com.autotest.mapper.TestNodeConfigMapper;
 import com.autotest.mapper.TestNodeExecuteLogMapper;
+import com.autotest.model.entity.TestAccount;
 import com.autotest.model.entity.TestChain;
 import com.autotest.model.entity.TestExecuteMain;
 import com.autotest.model.entity.TestNodeConfig;
 import com.autotest.model.entity.TestNodeExecuteLog;
 import com.autotest.model.vo.ExecuteMainVO;
 import com.autotest.model.vo.NodeExecuteLogVO;
+import com.autotest.service.AccountService;
 import com.autotest.service.ExecuteService;
 import com.autotest.util.CodeGenerator;
 import com.autotest.util.PlaceholderUtil;
@@ -61,12 +63,25 @@ public class ExecuteServiceImpl implements ExecuteService {
     private WebSocketPushService pushService;
 
     @Autowired
+    private AccountService accountService;
+
+    @Autowired
     private javax.sql.DataSource dataSource;
 
     private final ConcurrentHashMap<String, ExecutionContext> contextMap = new ConcurrentHashMap<>();
 
     @Override
     public String runChain(String chainCode) {
+        return runChain(chainCode, null, false);
+    }
+
+    /**
+     * 按TraceId分组回放链路
+     * @param chainCode 链路编码
+     * @param traceId 指定的TraceId分组（为null则全部回放）
+     * @param parallel 是否并发回放多个TraceGroup
+     */
+    public String runChain(String chainCode, String traceId, boolean parallel) {
         TestChain chain = chainMapper.selectByChainCode(chainCode);
         if (chain == null) {
             throw new BusinessException(404, "链路不存在");
@@ -91,20 +106,30 @@ public class ExecuteServiceImpl implements ExecuteService {
         mainLog.setSkipCount(0);
         executeMainMapper.insert(mainLog);
 
-        // Execute asynchronously
-        executeChainAsync(executionId, chainCode, chain.getExecuteMode());
+        // Execute asynchronously with TraceId grouping
+        executeChainByTraceIdAsync(executionId, chainCode, chain.getExecuteMode(), traceId, parallel);
 
         return executionId;
     }
 
     @Async("executeThreadPool")
     public void executeChainAsync(String executionId, String chainCode, int executeMode) {
+        executeChainByTraceIdAsync(executionId, chainCode, executeMode, null, false);
+    }
+
+    /**
+     * 按TraceId分组异步回放链路
+     */
+    @Async("executeThreadPool")
+    public void executeChainByTraceIdAsync(String executionId, String chainCode, int executeMode,
+                                           String traceId, boolean parallel) {
         ExecutionContext context = new ExecutionContext();
         context.setExecutionId(executionId);
         context.setChainCode(chainCode);
         context.setStartTime(new Date());
         contextMap.put(executionId, context);
 
+        TestChain chain = chainMapper.selectByChainCode(chainCode);
         List<TestNodeConfig> nodes = nodeConfigMapper.selectByChainCode(chainCode);
         nodes.sort(Comparator.comparing(TestNodeConfig::getSortNo));
 
@@ -114,120 +139,272 @@ public class ExecuteServiceImpl implements ExecuteService {
         String errorMessage = null;
 
         try {
-            if (executeMode == 2) {
-                // Parallel group mode
-                Map<String, List<TestNodeConfig>> groupMap = nodes.stream()
-                        .filter(n -> n.getParallelGroup() != null && !n.getParallelGroup().isEmpty())
-                        .collect(Collectors.groupingBy(TestNodeConfig::getParallelGroup));
-
-                List<TestNodeConfig> serialNodes = nodes.stream()
-                        .filter(n -> n.getParallelGroup() == null || n.getParallelGroup().isEmpty())
-                        .collect(Collectors.toList());
-
-                // Execute serial nodes first
-                for (TestNodeConfig node : serialNodes) {
-                    if (context.isStopped()) {
-                        skipCount++;
-                        recordSkippedLog(context, node);
-                        continue;
+            // Phase 2: Account acquisition and token injection
+            String acquiredAccountCode = null;
+            if (chain.getAccountCode() != null && !chain.getAccountCode().isEmpty()) {
+                try {
+                    TestAccount account = accountService.acquireAccount(chain.getAccountCode());
+                    acquiredAccountCode = account.getAccountCode();
+                    String token = obtainTokenForAccount(account);
+                    if (token != null) {
+                        context.setVariable("__ACCOUNT_TOKEN__", token);
                     }
-                    NodeResult result = executeNode(context, node);
-                    if (result.success) {
-                        successCount++;
-                    } else {
-                        failCount++;
-                        context.setStopped(true);
-                        errorMessage = result.errorMessage;
-                    }
-                    if (!context.isStopped() && node.getDelaySeconds() != null && node.getDelaySeconds() > 0) {
-                        try { Thread.sleep(node.getDelaySeconds() * 1000L); } catch (InterruptedException ignored) {}
-                    }
+                    log.info("[Execute] 获取测试账号成功: {}", account.getAccountCode());
+                } catch (Exception e) {
+                    log.warn("[Execute] 获取测试账号失败: {}, 继续执行", chain.getAccountCode(), e);
                 }
+            }
 
-                // Execute groups in order
-                List<Map.Entry<String, List<TestNodeConfig>>> sortedGroups = groupMap.entrySet().stream()
-                        .sorted(Comparator.comparing(e -> e.getValue().stream()
-                                .mapToInt(TestNodeConfig::getSortNo).min().orElse(0)))
-                        .collect(Collectors.toList());
+            // Group nodes by bizOperTraceId
+            Map<String, List<TestNodeConfig>> traceGroups = nodes.stream()
+                    .filter(n -> n.getBizOperTraceId() != null && !n.getBizOperTraceId().isEmpty())
+                    .collect(Collectors.groupingBy(
+                        TestNodeConfig::getBizOperTraceId,
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                    ));
 
-                for (Map.Entry<String, List<TestNodeConfig>> groupEntry : sortedGroups) {
-                    if (context.isStopped()) {
-                        skipCount += groupEntry.getValue().size();
-                        for (TestNodeConfig node : groupEntry.getValue()) {
-                            recordSkippedLog(context, node);
-                        }
-                        continue;
-                    }
+            // Ungrouped nodes
+            List<TestNodeConfig> ungroupedNodes = nodes.stream()
+                    .filter(n -> n.getBizOperTraceId() == null || n.getBizOperTraceId().isEmpty())
+                    .collect(Collectors.toList());
 
-                    // Execute nodes in group in parallel
-                    List<Future<NodeResult>> futures = new ArrayList<>();
-                    ExecutorService groupExecutor = Executors.newFixedThreadPool(groupEntry.getValue().size());
-                    for (TestNodeConfig node : groupEntry.getValue()) {
-                        futures.add(groupExecutor.submit(() -> executeNode(context, node)));
-                    }
+            // If specific traceId requested, filter to that group only
+            if (traceId != null && !traceId.isEmpty()) {
+                Map<String, List<TestNodeConfig>> filtered = new LinkedHashMap<>();
+                if (traceGroups.containsKey(traceId)) {
+                    filtered.put(traceId, traceGroups.get(traceId));
+                }
+                traceGroups = filtered;
+                ungroupedNodes = new ArrayList<>();
+            }
 
-                    boolean groupFailed = false;
-                    for (Future<NodeResult> future : futures) {
-                        try {
-                            NodeResult result = future.get(120, TimeUnit.SECONDS);
-                            if (result.success) {
-                                successCount++;
-                            } else {
-                                failCount++;
-                                groupFailed = true;
-                                errorMessage = result.errorMessage;
+            if (traceGroups.isEmpty()) {
+                // No trace groups - execute in original mode
+                if (parallel) {
+                    // Parallel execution of all groups
+                    List<Future<Map<String, Object>>> futures = new ArrayList<>();
+                    ExecutorService groupExecutor = Executors.newFixedThreadPool(
+                            Math.max(1, traceGroups.size() + (ungroupedNodes.isEmpty() ? 0 : 1)));
+
+                    for (Map.Entry<String, List<TestNodeConfig>> entry : traceGroups.entrySet()) {
+                        String tid = entry.getKey();
+                        List<TestNodeConfig> groupNodes = entry.getValue();
+                        futures.add(groupExecutor.submit(() -> {
+                            ExecutionContext groupContext = new ExecutionContext();
+                            groupContext.setExecutionId(executionId + "_" + tid);
+                            groupContext.setChainCode(chainCode);
+                            groupContext.setStartTime(new Date());
+
+                            Map<String, Object> groupResult = new HashMap<>();
+                            groupResult.put("traceId", tid);
+                            groupResult.put("success", 0);
+                            groupResult.put("fail", 0);
+
+                            for (TestNodeConfig node : groupNodes) {
+                                NodeResult result = executeNode(groupContext, node);
+                                if (result.success) {
+                                    groupResult.put("success", (int) groupResult.get("success") + 1);
+                                } else {
+                                    groupResult.put("fail", (int) groupResult.get("fail") + 1);
+                                }
                             }
+                            return groupResult;
+                        }));
+                    }
+
+                    for (Future<Map<String, Object>> future : futures) {
+                        try {
+                            Map<String, Object> result = future.get(300, TimeUnit.SECONDS);
+                            successCount += (int) result.get("success");
+                            failCount += (int) result.get("fail");
                         } catch (Exception e) {
                             failCount++;
-                            groupFailed = true;
                             errorMessage = e.getMessage();
                         }
                     }
                     groupExecutor.shutdown();
+                } else {
+                    // Serial execution - process each trace group in order
+                    for (Map.Entry<String, List<TestNodeConfig>> entry : traceGroups.entrySet()) {
+                        String tid = entry.getKey();
+                        List<TestNodeConfig> groupNodes = entry.getValue();
 
-                    if (groupFailed) {
-                        context.setStopped(true);
+                        if (context.isStopped()) {
+                            skipCount += groupNodes.size();
+                            for (TestNodeConfig node : groupNodes) {
+                                recordSkippedLog(context, node);
+                            }
+                            continue;
+                        }
+
+                        for (TestNodeConfig node : groupNodes) {
+                            if (context.isStopped()) {
+                                skipCount++;
+                                recordSkippedLog(context, node);
+                                continue;
+                            }
+
+                            NodeResult result = executeNode(context, node);
+                            if (result.success) {
+                                successCount++;
+                            } else {
+                                failCount++;
+                                context.setStopped(true);
+                                errorMessage = result.errorMessage;
+                            }
+
+                            if (!context.isStopped() && node.getDelaySeconds() != null && node.getDelaySeconds() > 0) {
+                                try { Thread.sleep(node.getDelaySeconds() * 1000L); } catch (InterruptedException ignored) {}
+                            }
+                        }
                     }
-                    if (!context.isStopped()) {
-                        int maxDelay = groupEntry.getValue().stream()
-                                .mapToInt(n -> n.getDelaySeconds() != null ? n.getDelaySeconds() : 0)
-                                .max().orElse(0);
-                        if (maxDelay > 0) {
-                            try { Thread.sleep(maxDelay * 1000L); } catch (InterruptedException ignored) {}
+                }
+
+                // Execute ungrouped nodes
+                if (!ungroupedNodes.isEmpty() && !context.isStopped()) {
+                    for (TestNodeConfig node : ungroupedNodes) {
+                        if (context.isStopped()) {
+                            skipCount++;
+                            recordSkippedLog(context, node);
+                            continue;
+                        }
+                        NodeResult result = executeNode(context, node);
+                        if (result.success) {
+                            successCount++;
+                        } else {
+                            failCount++;
+                            context.setStopped(true);
+                            errorMessage = result.errorMessage;
+                        }
+                        if (!context.isStopped() && node.getDelaySeconds() != null && node.getDelaySeconds() > 0) {
+                            try { Thread.sleep(node.getDelaySeconds() * 1000L); } catch (InterruptedException ignored) {}
                         }
                     }
                 }
             } else {
-                // Serial mode
-                for (TestNodeConfig node : nodes) {
-                    if (context.isStopped()) {
-                        skipCount++;
-                        recordSkippedLog(context, node);
-                        continue;
-                    }
-                    NodeResult result = executeNode(context, node);
-                    if (result.success) {
-                        successCount++;
-                    } else {
-                        failCount++;
-                        context.setStopped(true);
-                        errorMessage = result.errorMessage;
-                        // Mark remaining nodes as skipped
-                        int nodeIndex = nodes.indexOf(node);
-                        skipCount += nodes.size() - nodeIndex - 1;
-                        for (int i = nodeIndex + 1; i < nodes.size(); i++) {
-                            recordSkippedLog(context, nodes.get(i));
+                // Has trace groups - use original executeMode logic
+                if (executeMode == 2) {
+                    // Parallel group mode
+                    Map<String, List<TestNodeConfig>> groupMap = nodes.stream()
+                            .filter(n -> n.getParallelGroup() != null && !n.getParallelGroup().isEmpty())
+                            .collect(Collectors.groupingBy(TestNodeConfig::getParallelGroup));
+
+                    List<TestNodeConfig> serialNodes = nodes.stream()
+                            .filter(n -> n.getParallelGroup() == null || n.getParallelGroup().isEmpty())
+                            .collect(Collectors.toList());
+
+                    for (TestNodeConfig node : serialNodes) {
+                        if (context.isStopped()) {
+                            skipCount++;
+                            recordSkippedLog(context, node);
+                            continue;
                         }
-                        break;
+                        NodeResult result = executeNode(context, node);
+                        if (result.success) {
+                            successCount++;
+                        } else {
+                            failCount++;
+                            context.setStopped(true);
+                            errorMessage = result.errorMessage;
+                        }
+                        if (!context.isStopped() && node.getDelaySeconds() != null && node.getDelaySeconds() > 0) {
+                            try { Thread.sleep(node.getDelaySeconds() * 1000L); } catch (InterruptedException ignored) {}
+                        }
                     }
-                    if (node.getDelaySeconds() != null && node.getDelaySeconds() > 0) {
-                        try { Thread.sleep(node.getDelaySeconds() * 1000L); } catch (InterruptedException ignored) {}
+
+                    List<Map.Entry<String, List<TestNodeConfig>>> sortedGroups = groupMap.entrySet().stream()
+                            .sorted(Comparator.comparing(e -> e.getValue().stream()
+                                    .mapToInt(TestNodeConfig::getSortNo).min().orElse(0)))
+                            .collect(Collectors.toList());
+
+                    for (Map.Entry<String, List<TestNodeConfig>> groupEntry : sortedGroups) {
+                        if (context.isStopped()) {
+                            skipCount += groupEntry.getValue().size();
+                            for (TestNodeConfig node : groupEntry.getValue()) {
+                                recordSkippedLog(context, node);
+                            }
+                            continue;
+                        }
+
+                        List<Future<NodeResult>> futures = new ArrayList<>();
+                        ExecutorService groupExecutor = Executors.newFixedThreadPool(groupEntry.getValue().size());
+                        for (TestNodeConfig node : groupEntry.getValue()) {
+                            futures.add(groupExecutor.submit(() -> executeNode(context, node)));
+                        }
+
+                        boolean groupFailed = false;
+                        for (Future<NodeResult> future : futures) {
+                            try {
+                                NodeResult result = future.get(120, TimeUnit.SECONDS);
+                                if (result.success) {
+                                    successCount++;
+                                } else {
+                                    failCount++;
+                                    groupFailed = true;
+                                    errorMessage = result.errorMessage;
+                                }
+                            } catch (Exception e) {
+                                failCount++;
+                                groupFailed = true;
+                                errorMessage = e.getMessage();
+                            }
+                        }
+                        groupExecutor.shutdown();
+
+                        if (groupFailed) {
+                            context.setStopped(true);
+                        }
+                        if (!context.isStopped()) {
+                            int maxDelay = groupEntry.getValue().stream()
+                                    .mapToInt(n -> n.getDelaySeconds() != null ? n.getDelaySeconds() : 0)
+                                    .max().orElse(0);
+                            if (maxDelay > 0) {
+                                try { Thread.sleep(maxDelay * 1000L); } catch (InterruptedException ignored) {}
+                            }
+                        }
+                    }
+                } else {
+                    // Serial mode
+                    for (TestNodeConfig node : nodes) {
+                        if (context.isStopped()) {
+                            skipCount++;
+                            recordSkippedLog(context, node);
+                            continue;
+                        }
+                        NodeResult result = executeNode(context, node);
+                        if (result.success) {
+                            successCount++;
+                        } else {
+                            failCount++;
+                            context.setStopped(true);
+                            errorMessage = result.errorMessage;
+                            int nodeIndex = nodes.indexOf(node);
+                            skipCount += nodes.size() - nodeIndex - 1;
+                            for (int i = nodeIndex + 1; i < nodes.size(); i++) {
+                                recordSkippedLog(context, nodes.get(i));
+                            }
+                            break;
+                        }
+                        if (node.getDelaySeconds() != null && node.getDelaySeconds() > 0) {
+                            try { Thread.sleep(node.getDelaySeconds() * 1000L); } catch (InterruptedException ignored) {}
+                        }
                     }
                 }
             }
         } catch (Exception e) {
             log.error("Chain execution error: executionId={}", executionId, e);
             errorMessage = e.getMessage();
+        } finally {
+            // Phase 2: Release account lock
+            if (chain.getAccountCode() != null && !chain.getAccountCode().isEmpty()) {
+                try {
+                    accountService.releaseAccount(chain.getAccountCode());
+                    log.info("[Execute] 释放测试账号: {}", chain.getAccountCode());
+                } catch (Exception e) {
+                    log.warn("[Execute] 释放测试账号失败: {}", chain.getAccountCode(), e);
+                }
+            }
         }
 
         // Finalize
@@ -235,7 +412,6 @@ public class ExecuteServiceImpl implements ExecuteService {
         long totalCostMs = context.getEndTime().getTime() - context.getStartTime().getTime();
         String finalStatus = failCount > 0 ? "FAILED" : "SUCCESS";
 
-        // Update main log
         TestExecuteMain updateLog = new TestExecuteMain();
         updateLog.setExecutionId(executionId);
         updateLog.setStatus(finalStatus);
@@ -249,7 +425,6 @@ public class ExecuteServiceImpl implements ExecuteService {
         }
         executeMainMapper.update(updateLog);
 
-        // Batch insert node logs
         List<TestNodeExecuteLog> nodeLogs = context.getNodeLogs();
         if (!nodeLogs.isEmpty()) {
             try {
@@ -264,8 +439,6 @@ public class ExecuteServiceImpl implements ExecuteService {
             }
         }
 
-        // Push chain status
-        TestChain chain = chainMapper.selectByChainCode(chainCode);
         pushService.pushChainStatus(executionId, chainCode, finalStatus, totalCostMs,
                 nodes.size(), successCount, failCount, skipCount, errorMessage);
 
@@ -285,6 +458,8 @@ public class ExecuteServiceImpl implements ExecuteService {
         logEntry.setRequestUrl(config.getRequestUrl());
         logEntry.setRequestMethod(config.getRequestMethod());
         logEntry.setStartTime(new Date());
+        logEntry.setBizOperTraceId(config.getBizOperTraceId());
+        logEntry.setSortNo(config.getSortNo());
 
         long startTime = System.currentTimeMillis();
 
@@ -293,6 +468,22 @@ public class ExecuteServiceImpl implements ExecuteService {
             String url = PlaceholderUtil.replace(config.getRequestUrl(), context.getVariables());
             String headers = PlaceholderUtil.replace(config.getRequestHeaders(), context.getVariables());
             String body = PlaceholderUtil.replace(config.getBodyData(), context.getVariables());
+
+            // Phase 2: Auto-inject account token if bound
+            if (context.getVariable("__ACCOUNT_TOKEN__") != null) {
+                String token = String.valueOf(context.getVariable("__ACCOUNT_TOKEN__"));
+                if (headers == null || headers.isEmpty() || !headers.contains("Authorization")) {
+                    if (headers == null || headers.isEmpty()) {
+                        headers = "{\"Authorization\":\"Bearer " + token + "\"}";
+                    } else {
+                        try {
+                            JSONObject h = JSON.parseObject(headers);
+                            h.put("Authorization", "Bearer " + token);
+                            headers = h.toJSONString();
+                        } catch (Exception ignored) {}
+                    }
+                }
+            }
 
             logEntry.setRequestUrl(url);
             logEntry.setRequestHeaders(headers);
@@ -609,6 +800,19 @@ public class ExecuteServiceImpl implements ExecuteService {
         return records.stream().map(this::buildExecuteMainVO).collect(Collectors.toList());
     }
 
+    @Override
+    public int countExecuteRecords(String chainCode, String status, String startTime, String endTime) {
+        Date start = null, end = null;
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        try {
+            if (startTime != null && !startTime.isEmpty()) start = sdf.parse(startTime);
+            if (endTime != null && !endTime.isEmpty()) end = sdf.parse(endTime);
+        } catch (Exception e) {
+            // Ignore parse errors
+        }
+        return executeMainMapper.countList(chainCode, status, start, end);
+    }
+
     private ExecuteMainVO buildExecuteMainVO(TestExecuteMain main) {
         ExecuteMainVO vo = new ExecuteMainVO();
         vo.setExecutionId(main.getExecutionId());
@@ -649,6 +853,82 @@ public class ExecuteServiceImpl implements ExecuteService {
         vo.setStartTime(log.getStartTime());
         vo.setEndTime(log.getEndTime());
         return vo;
+    }
+
+    /**
+     * Phase 2: 根据账号认证类型获取token
+     */
+    private String obtainTokenForAccount(TestAccount account) {
+        if (account == null || account.getAuthConfig() == null) {
+            return null;
+        }
+        try {
+            JSONObject config = JSON.parseObject(account.getAuthConfig());
+            String authType = account.getAuthType();
+
+            if ("TOKEN".equals(authType)) {
+                return config.getString("token");
+            }
+
+            if ("PASSWORD".equals(authType)) {
+                String loginUrl = config.getString("loginUrl");
+                if (loginUrl == null || loginUrl.isEmpty()) return null;
+
+                JSONObject loginBody = new JSONObject();
+                String usernameField = config.getString("usernameField");
+                String passwordField = config.getString("passwordField");
+                if (usernameField == null) usernameField = "username";
+                if (passwordField == null) passwordField = "password";
+                loginBody.put(usernameField, account.getUsername());
+                loginBody.put(passwordField, account.getPassword());
+
+                RequestConfig requestConfig = RequestConfig.custom()
+                        .setConnectTimeout(10000).setSocketTimeout(30000).build();
+                try (CloseableHttpClient client = HttpClients.custom()
+                        .setDefaultRequestConfig(requestConfig).build()) {
+                    HttpPost post = new HttpPost(loginUrl);
+                    post.setHeader("Content-Type", "application/json");
+                    post.setEntity(new StringEntity(loginBody.toJSONString(), "UTF-8"));
+                    try (CloseableHttpResponse response = client.execute(post)) {
+                        String respBody = EntityUtils.toString(response.getEntity(), "UTF-8");
+                        JSONObject respJson = JSON.parseObject(respBody);
+                        String tokenField = config.getString("tokenField");
+                        if (tokenField == null) tokenField = "token";
+                        return respJson.getString(tokenField);
+                    }
+                }
+            }
+
+            if ("SSO".equals(authType)) {
+                String tokenUrl = config.getString("tokenUrl");
+                if (tokenUrl == null || tokenUrl.isEmpty()) return null;
+
+                String clientId = config.getString("clientId");
+                String clientSecret = config.getString("clientSecret");
+                String grantType = config.getString("grantType");
+                if (grantType == null) grantType = "client_credentials";
+
+                RequestConfig requestConfig = RequestConfig.custom()
+                        .setConnectTimeout(10000).setSocketTimeout(30000).build();
+                try (CloseableHttpClient client = HttpClients.custom()
+                        .setDefaultRequestConfig(requestConfig).build()) {
+                    HttpPost post = new HttpPost(tokenUrl);
+                    post.setHeader("Content-Type", "application/x-www-form-urlencoded");
+                    String formBody = "grant_type=" + grantType
+                            + "&client_id=" + clientId
+                            + "&client_secret=" + clientSecret;
+                    post.setEntity(new StringEntity(formBody, "UTF-8"));
+                    try (CloseableHttpResponse response = client.execute(post)) {
+                        String respBody = EntityUtils.toString(response.getEntity(), "UTF-8");
+                        JSONObject respJson = JSON.parseObject(respBody);
+                        return respJson.getString("access_token");
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[Execute] 获取账号token失败: accountCode={}", account.getAccountCode(), e);
+        }
+        return null;
     }
 
     private java.io.File findUploadedFile(String fileId) {

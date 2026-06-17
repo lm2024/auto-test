@@ -56,7 +56,12 @@ CREATE TABLE IF NOT EXISTS dict_category (
     INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='分类字典表';
 
--- 5. 初始化分类字典数据
+-- 5. test_node_execute_log 表新增字段（用于TraceId分组展示）
+ALTER TABLE test_node_execute_log
+    ADD COLUMN biz_oper_trace_id VARCHAR(64) DEFAULT NULL COMMENT '操作级TraceId' AFTER create_time,
+    ADD COLUMN sort_no INT DEFAULT NULL COMMENT '节点排序号' AFTER biz_oper_trace_id;
+
+-- 6. 初始化分类字典数据
 INSERT INTO dict_category (category_type, category_code, category_name, sort_order) VALUES
     ('system', 'user_mgmt', '用户管理', 1),
     ('system', 'order_system', '订单系统', 2),

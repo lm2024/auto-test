@@ -6,6 +6,7 @@
   var currentBizTrace = null;
   var lastTriggerEvent = 'auto';
   var lastTriggerDom = '';
+  var encryptConfig = null; // Phase 4: encryption config
 
   // 监听 recording 状态变更和 Trace 更新
   window.addEventListener('message', function(event) {
@@ -20,6 +21,10 @@
     }
     if (event.data && event.data.type === 'AUTOTEST_BIZ_TRACE_UPDATE') {
       currentBizTrace = event.data.trace;
+    }
+    // Phase 4: Listen for encryption config
+    if (event.data && event.data.type === 'AUTOTEST_ENCRYPT_CONFIG') {
+      encryptConfig = event.data.config;
     }
   });
 
@@ -87,6 +92,28 @@
     d.targetDom = lastTriggerDom;
     d.pageUrl = window.location.href;
     d.ignore = false;
+    // Phase 4: Attempt decryption if configured
+    if (encryptConfig && encryptConfig.enabled) {
+      try {
+        if (encryptConfig.decryptRequestCode && d.body && typeof d.body === 'string') {
+          var reqFn = new Function('data', 'return (' + encryptConfig.decryptRequestCode + ')(data);');
+          var decrypted = reqFn(d.body);
+          if (decrypted !== undefined && decrypted !== null) {
+            d.decryptedBody = typeof decrypted === 'string' ? decrypted : JSON.stringify(decrypted);
+          }
+        }
+        if (encryptConfig.decryptResponseCode && d.response) {
+          var respStr = typeof d.response === 'string' ? d.response : JSON.stringify(d.response);
+          var respFn = new Function('data', 'return (' + encryptConfig.decryptResponseCode + ')(data);');
+          var decResp = respFn(respStr);
+          if (decResp !== undefined && decResp !== null) {
+            d.decryptedResponse = typeof decResp === 'string' ? decResp : JSON.stringify(decResp);
+          }
+        }
+      } catch(e) {
+        console.log('[AutoTest][inject] Decryption error:', e.message);
+      }
+    }
     // 始终保存请求（由 background.js 决定是否过滤）
     window.postMessage({ type: 'AUTOTEST_API_REQUEST', data: d }, '*');
   }

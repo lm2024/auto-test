@@ -9,7 +9,15 @@
       </span>
     </div>
 
-    <div class="nodes-area">
+    <div class="view-toggle">
+      <el-button-group>
+        <el-button :type="viewMode === 'flat' ? 'primary' : ''" @click="viewMode = 'flat'" size="small">平铺视图</el-button>
+        <el-button :type="viewMode === 'trace' ? 'primary' : ''" @click="viewMode = 'trace'" size="small">分组视图</el-button>
+      </el-button-group>
+    </div>
+
+    <!-- 平铺视图 -->
+    <div class="nodes-area" v-if="viewMode === 'flat'">
       <div v-for="log in nodeLogs" :key="log.nodeCode" class="node-log-card" :class="'status-' + log.status.toLowerCase()">
         <div class="log-header">
           <span class="log-name">{{ log.nodeName || log.nodeCode }}</span>
@@ -24,6 +32,36 @@
         <div class="log-actions">
           <el-button size="small" @click="showDetail(log)">查看详情</el-button>
           <el-button size="small" type="warning" v-if="log.status === 'FAILED'" @click="analyzeFailure(log)">AI分析失败原因</el-button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 分组视图 -->
+    <div class="trace-groups-area" v-if="viewMode === 'trace'">
+      <div v-for="(group, gIdx) in traceLogGroups" :key="gIdx" class="trace-group-card">
+        <div class="trace-group-header">
+          <div class="trace-group-info">
+            <el-tag size="small" type="primary" effect="dark">TraceId</el-tag>
+            <span class="trace-group-id">{{ group.traceId }}</span>
+          </div>
+          <div class="trace-group-meta">
+            <el-tag size="small" :type="groupStatusType(group)">{{ groupStatusText(group) }}</el-tag>
+            <span class="trace-group-cost">{{ groupCost(group) }}ms</span>
+            <span class="trace-group-count">{{ group.logs.length }} 个节点</span>
+          </div>
+        </div>
+        <div class="trace-group-nodes">
+          <div v-for="log in group.logs" :key="log.nodeCode" class="trace-node-card" :class="'status-' + log.status.toLowerCase()">
+            <div class="trace-node-index">{{ log.sortNo || '-' }}</div>
+            <div class="trace-node-info">
+              <div class="trace-node-name">{{ log.nodeName || log.nodeCode }}</div>
+              <div class="trace-node-url">{{ log.requestMethod }} {{ log.requestUrl }}</div>
+            </div>
+            <div class="trace-node-right">
+              <el-tag size="small" :type="statusType(log.status)">{{ statusText(log.status) }}</el-tag>
+              <span class="trace-node-cost">{{ log.costMs }}ms</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -117,7 +155,44 @@ const currentLog = ref(null)
 const aiVisible = ref(false)
 const aiResult = ref(null)
 const aiLoading = ref(false)
+const viewMode = ref('flat')
 let ws = null
+
+import { computed } from 'vue'
+
+const traceLogGroups = computed(() => {
+  const grouped = {}
+  const order = []
+  nodeLogs.value.forEach(log => {
+    const traceId = log.bizOperTraceId || '__ungrouped__'
+    if (!grouped[traceId]) {
+      grouped[traceId] = { traceId, logs: [] }
+      order.push(traceId)
+    }
+    grouped[traceId].logs.push(log)
+  })
+  return order.map(id => grouped[id])
+})
+
+const groupStatusType = (group) => {
+  const hasFailed = group.logs.some(l => l.status === 'FAILED')
+  const allSuccess = group.logs.every(l => l.status === 'SUCCESS')
+  if (hasFailed) return 'danger'
+  if (allSuccess) return 'success'
+  return 'warning'
+}
+
+const groupStatusText = (group) => {
+  const hasFailed = group.logs.some(l => l.status === 'FAILED')
+  const allSuccess = group.logs.every(l => l.status === 'SUCCESS')
+  if (hasFailed) return '失败'
+  if (allSuccess) return '成功'
+  return '部分成功'
+}
+
+const groupCost = (group) => {
+  return group.logs.reduce((sum, l) => sum + (l.costMs || 0), 0)
+}
 
 const loadData = async () => {
   const res = await api.get('/execute/status', { params: { executionId } })
@@ -498,5 +573,155 @@ onUnmounted(() => { if (ws) ws.close() })
   font-weight: 400;
   font-size: 12px;
   color: #9ca3af;
+}
+
+/* ── View Toggle ── */
+.view-toggle {
+  display: flex;
+  justify-content: flex-start;
+  padding: 0 4px;
+}
+
+/* ── Trace Groups Area ── */
+.trace-groups-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.trace-group-card {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(99, 102, 241, 0.1);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.trace-group-header {
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.06), rgba(129, 140, 248, 0.03));
+  border-bottom: 1px solid rgba(99, 102, 241, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.trace-group-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trace-group-id {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e1b4b;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+.trace-group-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.trace-group-cost {
+  font-weight: 500;
+  color: #4338ca;
+}
+
+.trace-group-count {
+  color: #9ca3af;
+}
+
+.trace-group-nodes {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.trace-node-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid rgba(99, 102, 241, 0.06);
+  border-radius: 8px;
+  background: #fff;
+  transition: all 0.2s;
+}
+
+.trace-node-card:hover {
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+.trace-node-card.status-success {
+  border-left: 3px solid #10b981;
+}
+
+.trace-node-card.status-failed {
+  border-left: 3px solid #ef4444;
+}
+
+.trace-node-card.status-running {
+  border-left: 3px solid #6366f1;
+}
+
+.trace-node-card.status-skipped {
+  border-left: 3px solid #9ca3af;
+}
+
+.trace-node-index {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6366f1;
+  flex-shrink: 0;
+}
+
+.trace-node-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.trace-node-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1e1b4b;
+}
+
+.trace-node-url {
+  font-size: 11px;
+  color: #9ca3af;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trace-node-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.trace-node-cost {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
 }
 </style>

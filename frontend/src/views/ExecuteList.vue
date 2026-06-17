@@ -40,12 +40,26 @@
             <span class="skip-count">{{ row.skipCount || 0 }}跳过</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="100">
-          <template #default="{ row }">
-            <el-button size="small" @click="$router.push('/execute/detail/' + row.executionId)">详情</el-button>
+        <el-table-column label="操作" width="120" fixed="right" align="center" class-name="action-column">
+          <template #default="{ row, $index }">
+            <div class="action-btns" :style="{ background: $index % 2 === 1 ? '#fafafe' : '#ffffff' }">
+              <el-button size="small" @click="$router.push('/execute/detail/' + row.executionId)">详情</el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
+
+      <div class="pagination-bar">
+        <el-pagination
+          v-model:current-page="pageNo"
+          v-model:page-size="pageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="total"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="loadRecords"
+          @current-change="loadRecords"
+        />
+      </div>
     </el-card>
   </div>
 </template>
@@ -57,15 +71,19 @@ import api from '../api'
 const records = ref([])
 const filter = ref({ chainCode: '', status: '' })
 const dateRange = ref(null)
+const pageNo = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
 
 const loadRecords = async () => {
-  const params = { ...filter.value, pageNo: 1, pageSize: 50 }
+  const params = { ...filter.value, pageNo: pageNo.value, pageSize: pageSize.value }
   if (dateRange.value) {
     params.startTime = dateRange.value[0]
     params.endTime = dateRange.value[1]
   }
   const res = await api.get('/execute/list', { params })
   records.value = res.data?.list || []
+  total.value = res.data?.total || 0
 }
 
 const formatTime = (t) => t ? new Date(t).toLocaleString() : '-'
@@ -146,10 +164,58 @@ onMounted(loadRecords)
   font-weight: 600;
   font-size: 13px;
   border-bottom: 1px solid rgba(99, 102, 241, 0.1) !important;
+  padding: 7px 0 !important;
 }
 
 :deep(.el-table td) {
   border-bottom: 1px solid rgba(99, 102, 241, 0.06);
+  padding: 5px 0 !important;
+}
+
+/* ── Fixed Column ── */
+:deep(.el-table .el-table__fixed-right) {
+  z-index: 10 !important;
+  box-shadow: -4px 0 12px rgba(99, 102, 241, 0.1) !important;
+}
+
+:deep(.el-table .el-table__fixed-right::before) {
+  display: none !important;
+}
+
+:deep(.el-table .el-table__fixed-right-patch) {
+  background: #fff !important;
+}
+
+:deep(.el-table .action-column) {
+  background: #fff !important;
+  padding: 8px 0 !important;
+}
+
+:deep(.el-table td.action-column) {
+  background: #fff !important;
+  padding: 8px 0 !important;
+  height: auto !important;
+}
+
+/* ── Action Buttons ── */
+.action-btns {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex-wrap: nowrap;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  width: 100%;
+}
+
+.action-btns :deep(.el-button) {
+  margin: 0;
+  padding: 7px 11px;
+  font-size: 12px;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 :deep(.el-table--striped .el-table__body tr.el-table__row--striped) {
@@ -158,6 +224,24 @@ onMounted(loadRecords)
 
 :deep(.el-table tbody tr:hover > td) {
   background: rgba(99, 102, 241, 0.05) !important;
+}
+
+/* ── Pagination ── */
+.pagination-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px 0 0;
+}
+
+:deep(.el-pagination .el-pager li.is-active) {
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+  color: #fff;
+  border-radius: 8px;
+}
+
+:deep(.el-pagination .el-pager li) {
+  border-radius: 8px;
+  min-width: 32px;
 }
 
 /* ── Status Tags ── */

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#7C3AED"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#000" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+  <rect width="48" height="48" rx="10" fill="url(#bg)" filter="url(#shadow)"/>
+  <!-- Network nodes -->
+  <circle cx="14" cy="24" r="4" fill="#fff" opacity="0.95"/>
+  <circle cx="34" cy="14" r="4" fill="#fff" opacity="0.95"/>
+  <circle cx="34" cy="34" r="4" fill="#fff" opacity="0.95"/>
+  <!-- Connection lines -->
+  <line x1="18" y1="23" x2="30" y2="15" stroke="#fff" stroke-width="2" opacity="0.6" stroke-linecap="round"/>
+  <line x1="18" y1="25" x2="30" y2="33" stroke="#fff" stroke-width="2" opacity="0.6" stroke-linecap="round"/>
+  <line x1="34" y1="18" x2="34" y2="30" stroke="#fff" stroke-width="2" opacity="0.6" stroke-linecap="round"/>
+  <!-- Center capture dot -->
+  <circle cx="24" cy="24" r="3" fill="#fff"/>
+  <circle cx="24" cy="24" r="1.5" fill="#2563EB"/>
+  <!-- Recording indicator -->
+  <circle cx="40" cy="8" r="5" fill="#EF4444"/>
+  <circle cx="40" cy="8" r="2.5" fill="#FCA5A5" opacity="0.6"/>
+</svg>
