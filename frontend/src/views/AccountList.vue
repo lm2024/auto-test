@@ -25,7 +25,7 @@
         <el-table-column prop="systemName" label="所属系统" width="120" />
         <el-table-column prop="username" label="用户名" width="120" />
         <el-table-column label="密码" width="120">
-          <template #default="{ row }">
+          <template #default>
             <span style="color:#999">••••••</span>
           </template>
         </el-table-column>
@@ -49,18 +49,18 @@
 
       <div class="pagination-bar">
         <el-pagination
-          v-model:current-page="pageNo"
-          v-model:page-size="pageSize"
+          :current-page="pageNo"
+          :page-size="pageSize"
           :page-sizes="[10, 20, 50, 100]"
           :total="total"
           layout="total, sizes, prev, pager, next, jumper"
-          @size-change="loadAccounts"
-          @current-change="loadAccounts"
+          @size-change="onPageSizeChange"
+          @current-change="onPageChange"
         />
       </div>
     </el-card>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
+    <el-dialog :visible.sync="dialogVisible" :title="dialogTitle" width="500px">
       <el-form :model="form" label-width="100px">
         <el-form-item label="账号编码">
           <el-input v-model="form.accountCode" :disabled="isEdit" />
@@ -96,78 +96,83 @@
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+<script>
+import { Message, MessageBox } from 'element-ui'
 import api from '../api'
 
-const accounts = ref([])
-const filter = ref({ systemName: '', status: null })
-const pageNo = ref(1)
-const pageSize = ref(10)
-const total = ref(0)
-const dialogVisible = ref(false)
-const dialogTitle = ref('新增账号')
-const isEdit = ref(false)
-const form = ref({
-  accountCode: '', accountName: '', systemName: '', username: '', password: '', authType: 'PASSWORD', authConfig: ''
-})
-
-const loadAccounts = async () => {
-  const params = { ...filter.value, pageNo: pageNo.value, pageSize: pageSize.value }
-  const res = await api.get('/account/list', { params })
-  accounts.value = res.data?.list || []
-  total.value = res.data?.total || 0
-}
-
-const resetFilter = () => {
-  filter.value = { systemName: '', status: null }
-  pageNo.value = 1
-  loadAccounts()
-}
-
-const showCreateDialog = () => {
-  dialogTitle.value = '新增账号'
-  isEdit.value = false
-  form.value = { accountCode: '', accountName: '', systemName: '', username: '', password: '', authType: 'PASSWORD', authConfig: '' }
-  dialogVisible.value = true
-}
-
-const editAccount = (row) => {
-  dialogTitle.value = '编辑账号'
-  isEdit.value = true
-  form.value = { ...row, password: '' }
-  dialogVisible.value = true
-}
-
-const submitForm = async () => {
-  if (!form.value.accountCode || !form.value.accountName || !form.value.username) {
-    ElMessage.warning('请填写必填字段')
-    return
-  }
-  if (isEdit.value) {
-    await api.put('/account/update?id=' + form.value.id, form.value)
-    ElMessage.success('编辑成功')
-  } else {
-    if (!form.value.password) {
-      ElMessage.warning('请输入密码')
-      return
+export default {
+  name: 'AccountList',
+  data() {
+    return {
+      accounts: [],
+      filter: { systemName: '', status: null },
+      pageNo: 1,
+      pageSize: 10,
+      total: 0,
+      dialogVisible: false,
+      dialogTitle: '新增账号',
+      isEdit: false,
+      form: {
+        accountCode: '', accountName: '', systemName: '', username: '', password: '', authType: 'PASSWORD', authConfig: ''
+      }
     }
-    await api.post('/account/create', form.value)
-    ElMessage.success('创建成功')
+  },
+  mounted() {
+    this.loadAccounts()
+  },
+  methods: {
+    async loadAccounts() {
+      const params = { ...this.filter, pageNo: this.pageNo, pageSize: this.pageSize }
+      const res = await api.get('/account/list', { params })
+      this.accounts = (res.data && res.data.list) || []
+      this.total = (res.data && res.data.total) || 0
+    },
+    onPageSizeChange(val) { this.pageSize = val; this.loadAccounts() },
+    onPageChange(val) { this.pageNo = val; this.loadAccounts() },
+    resetFilter() {
+      this.filter = { systemName: '', status: null }
+      this.pageNo = 1
+      this.loadAccounts()
+    },
+    showCreateDialog() {
+      this.dialogTitle = '新增账号'
+      this.isEdit = false
+      this.form = { accountCode: '', accountName: '', systemName: '', username: '', password: '', authType: 'PASSWORD', authConfig: '' }
+      this.dialogVisible = true
+    },
+    editAccount(row) {
+      this.dialogTitle = '编辑账号'
+      this.isEdit = true
+      this.form = { ...row, password: '' }
+      this.dialogVisible = true
+    },
+    async submitForm() {
+      if (!this.form.accountCode || !this.form.accountName || !this.form.username) {
+        Message.warning('请填写必填字段')
+        return
+      }
+      if (this.isEdit) {
+        await api.put('/account/update?id=' + this.form.id, this.form)
+        Message.success('编辑成功')
+      } else {
+        if (!this.form.password) {
+          Message.warning('请输入密码')
+          return
+        }
+        await api.post('/account/create', this.form)
+        Message.success('创建成功')
+      }
+      this.dialogVisible = false
+      this.loadAccounts()
+    },
+    async deleteAccount(id) {
+      await MessageBox.confirm('确定删除该账号？', '提示', { type: 'warning' })
+      await api.delete('/account/delete', { params: { id } })
+      Message.success('删除成功')
+      this.loadAccounts()
+    }
   }
-  dialogVisible.value = false
-  loadAccounts()
 }
-
-const deleteAccount = async (id) => {
-  await ElMessageBox.confirm('确定删除该账号？', '提示', { type: 'warning' })
-  await api.delete('/account/delete', { params: { id } })
-  ElMessage.success('删除成功')
-  loadAccounts()
-}
-
-onMounted(loadAccounts)
 </script>
 
 <style scoped>
@@ -193,34 +198,34 @@ onMounted(loadAccounts)
 }
 
 /* ── Table ── */
-:deep(.el-table th) {
+::v-deep .el-table th {
   padding: 7px 0 !important;
 }
 
-:deep(.el-table td) {
+::v-deep .el-table td {
   padding: 5px 0 !important;
 }
 
 /* ── Fixed Column ── */
-:deep(.el-table .el-table__fixed-right) {
+::v-deep .el-table .el-table__fixed-right {
   z-index: 10 !important;
   box-shadow: -4px 0 12px rgba(99, 102, 241, 0.1) !important;
 }
 
-:deep(.el-table .el-table__fixed-right::before) {
+::v-deep .el-table .el-table__fixed-right::before {
   display: none !important;
 }
 
-:deep(.el-table .el-table__fixed-right-patch) {
+::v-deep .el-table .el-table__fixed-body-wrapper {
   background: #fff !important;
 }
 
-:deep(.el-table .action-column) {
+::v-deep .el-table .action-column {
   background: #fff !important;
   padding: 8px 0 !important;
 }
 
-:deep(.el-table td.action-column) {
+::v-deep .el-table td.action-column {
   background: #fff !important;
   padding: 8px 0 !important;
   height: auto !important;
@@ -238,7 +243,7 @@ onMounted(loadAccounts)
   width: 100%;
 }
 
-.action-btns :deep(.el-button) {
+.action-btns ::v-deep .el-button {
   margin: 0;
   padding: 7px 11px;
   font-size: 12px;
@@ -247,12 +252,12 @@ onMounted(loadAccounts)
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.action-btns :deep(.el-button:hover) {
+.action-btns ::v-deep .el-button:hover {
   transform: translateY(-2px) scale(1.02);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.action-btns :deep(.el-button:active) {
+.action-btns ::v-deep .el-button:active {
   transform: translateY(0) scale(0.98);
 }
 </style>

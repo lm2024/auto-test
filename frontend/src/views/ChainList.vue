@@ -85,18 +85,18 @@
 
       <div class="pagination-bar">
         <el-pagination
-          v-model:current-page="pageNo"
-          v-model:page-size="pageSize"
+          :current-page="pageNo"
+          :page-size="pageSize"
           :page-sizes="[10, 20, 50, 100]"
           :total="total"
           layout="total, sizes, prev, pager, next, jumper"
-          @size-change="loadChains"
-          @current-change="loadChains"
+          @size-change="onPageSizeChange"
+          @current-change="onPageChange"
         />
       </div>
     </el-card>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
+    <el-dialog :visible.sync="dialogVisible" :title="dialogTitle" width="500px">
       <el-form :model="form" label-width="100px">
         <el-form-item label="链路名称">
           <el-input v-model="form.chainName" />
@@ -136,144 +136,140 @@
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+<script>
+import { Message, MessageBox } from 'element-ui'
 import api from '../api'
 
-const chains = ref([])
-const filter = ref({ chainName: '', executeMode: null, systemCategory: '', funcCategory: '', priority: null })
-const pageNo = ref(1)
-const pageSize = ref(10)
-const total = ref(0)
-const dialogVisible = ref(false)
-const dialogTitle = ref('新增链路')
-const form = ref({ chainName: '', executeMode: 1, description: '', systemCategory: '', funcCategory: '', priority: 2, isEdit: false })
-const selectedRows = ref([])
-const tableRef = ref(null)
-const systemCategories = ref([])
-const funcCategories = ref([])
-
-const loadCategories = async () => {
-  try {
-    const sysRes = await api.get('/dict/category/list', { params: { type: 'system' } })
-    systemCategories.value = sysRes.data || []
-    const funcRes = await api.get('/dict/category/list', { params: { type: 'func' } })
-    funcCategories.value = funcRes.data || []
-  } catch(e) { /* ignore */ }
-}
-
-const getCategoryName = (type, code) => {
-  if (!code) return ''
-  const list = type === 'system' ? systemCategories.value : funcCategories.value
-  const item = list.find(c => c.categoryCode === code)
-  return item ? item.categoryName : code
-}
-
-const loadChains = async () => {
-  const params = { ...filter.value, pageNo: pageNo.value, pageSize: pageSize.value }
-  if (!params.systemCategory) delete params.systemCategory
-  if (!params.funcCategory) delete params.funcCategory
-  if (params.priority === null || params.priority === undefined || params.priority === '') delete params.priority
-  const res = await api.get('/chain/list', { params })
-  chains.value = res.data?.list || []
-  total.value = res.data?.total || 0
-}
-
-const resetFilter = () => {
-  filter.value = { chainName: '', executeMode: null, systemCategory: '', funcCategory: '', priority: null }
-  pageNo.value = 1
-  loadChains()
-}
-
-const formatTime = (t) => {
-  if (!t) return '-'
-  return new Date(t).toLocaleString()
-}
-
-const showCreateDialog = () => {
-  dialogTitle.value = '新增链路'
-  form.value = { chainName: '', executeMode: 1, description: '', systemCategory: '', funcCategory: '', priority: 2, isEdit: false }
-  dialogVisible.value = true
-}
-
-const editChain = (row) => {
-  dialogTitle.value = '编辑链路'
-  form.value = { ...row, isEdit: true }
-  dialogVisible.value = true
-}
-
-const submitForm = async () => {
-  if (!form.value.chainName) {
-    ElMessage.warning('请输入链路名称')
-    return
+export default {
+  name: 'ChainList',
+  data() {
+    return {
+      chains: [],
+      filter: { chainName: '', executeMode: null, systemCategory: '', funcCategory: '', priority: null },
+      pageNo: 1,
+      pageSize: 10,
+      total: 0,
+      dialogVisible: false,
+      dialogTitle: '新增链路',
+      form: { chainName: '', executeMode: 1, description: '', systemCategory: '', funcCategory: '', priority: 2, isEdit: false },
+      selectedRows: [],
+      systemCategories: [],
+      funcCategories: []
+    }
+  },
+  mounted() {
+    this.loadCategories()
+    this.loadChains()
+  },
+  methods: {
+    async loadCategories() {
+      try {
+        const sysRes = await api.get('/dict/category/list', { params: { type: 'system' } })
+        this.systemCategories = sysRes.data || []
+        const funcRes = await api.get('/dict/category/list', { params: { type: 'func' } })
+        this.funcCategories = funcRes.data || []
+      } catch(e) { /* ignore */ }
+    },
+    getCategoryName(type, code) {
+      if (!code) return ''
+      const list = type === 'system' ? this.systemCategories : this.funcCategories
+      const item = list.find(c => c.categoryCode === code)
+      return item ? item.categoryName : code
+    },
+    async loadChains() {
+      const params = { ...this.filter, pageNo: this.pageNo, pageSize: this.pageSize }
+      if (!params.systemCategory) delete params.systemCategory
+      if (!params.funcCategory) delete params.funcCategory
+      if (params.priority === null || params.priority === undefined || params.priority === '') delete params.priority
+      const res = await api.get('/chain/list', { params })
+      this.chains = (res.data && res.data.list) || []
+      this.total = (res.data && res.data.total) || 0
+    },
+    onPageSizeChange(val) { this.pageSize = val; this.loadChains() },
+    onPageChange(val) { this.pageNo = val; this.loadChains() },
+    resetFilter() {
+      this.filter = { chainName: '', executeMode: null, systemCategory: '', funcCategory: '', priority: null }
+      this.pageNo = 1
+      this.loadChains()
+    },
+    formatTime(t) {
+      if (!t) return '-'
+      return new Date(t).toLocaleString()
+    },
+    showCreateDialog() {
+      this.dialogTitle = '新增链路'
+      this.form = { chainName: '', executeMode: 1, description: '', systemCategory: '', funcCategory: '', priority: 2, isEdit: false }
+      this.dialogVisible = true
+    },
+    editChain(row) {
+      this.dialogTitle = '编辑链路'
+      this.form = { ...row, isEdit: true }
+      this.dialogVisible = true
+    },
+    async submitForm() {
+      if (!this.form.chainName) {
+        Message.warning('请输入链路名称')
+        return
+      }
+      if (this.form.isEdit) {
+        await api.post('/chain/edit', this.form)
+        Message.success('编辑成功')
+      } else {
+        await api.post('/chain/create', this.form)
+        Message.success('创建成功')
+      }
+      this.dialogVisible = false
+      this.loadChains()
+    },
+    async copyChain(chainCode) {
+      await api.post('/chain/copy', { chainCode })
+      Message.success('复制成功')
+      this.loadChains()
+    },
+    async deleteChain(chainCode) {
+      await MessageBox.confirm('确定删除该链路？关联节点将同步删除。', '提示', { type: 'warning' })
+      await api.post('/chain/delete', null, { params: { chainCode } })
+      Message.success('删除成功')
+      this.loadChains()
+    },
+    async executeChain(chainCode) {
+      const res = await api.post('/execute/run', { chainCode })
+      Message.success('执行已启动，执行ID: ' + res.data.executionId)
+    },
+    handleSelectionChange(rows) {
+      this.selectedRows = rows
+    },
+    clearSelection() {
+      if (this.$refs.tableRef) { this.$refs.tableRef.clearSelection() }
+    },
+    async batchDelete() {
+      if (!this.selectedRows.length) return
+      await MessageBox.confirm(`确定删除选中的 ${this.selectedRows.length} 条链路？关联节点将同步删除。`, '批量删除', { type: 'warning' })
+      const chainCodes = this.selectedRows.map(r => r.chainCode)
+      const res = await api.post('/chain/batchDelete', { chainCodes })
+      Message.success(`删除完成: 成功${res.data.successCount}条，失败${res.data.failCount}条`)
+      this.clearSelection()
+      this.loadChains()
+    },
+    async batchExecute() {
+      if (!this.selectedRows.length) return
+      const chainCodes = this.selectedRows.map(r => r.chainCode)
+      const res = await api.post('/execute/batchRun', { chainCodes })
+      const results = res.data || []
+      const started = results.filter(r => r.status === 'started').length
+      const failed = results.filter(r => r.status === 'failed').length
+      Message.success(`执行启动: ${started}条成功，${failed}条失败`)
+      this.clearSelection()
+    }
   }
-  if (form.value.isEdit) {
-    await api.post('/chain/edit', form.value)
-    ElMessage.success('编辑成功')
-  } else {
-    await api.post('/chain/create', form.value)
-    ElMessage.success('创建成功')
-  }
-  dialogVisible.value = false
-  loadChains()
 }
-
-const copyChain = async (chainCode) => {
-  await api.post('/chain/copy', { chainCode })
-  ElMessage.success('复制成功')
-  loadChains()
-}
-
-const deleteChain = async (chainCode) => {
-  await ElMessageBox.confirm('确定删除该链路？关联节点将同步删除。', '提示', { type: 'warning' })
-  await api.post('/chain/delete', null, { params: { chainCode } })
-  ElMessage.success('删除成功')
-  loadChains()
-}
-
-const executeChain = async (chainCode) => {
-  const res = await api.post('/execute/run', { chainCode })
-  ElMessage.success('执行已启动，执行ID: ' + res.data.executionId)
-}
-
-const handleSelectionChange = (rows) => {
-  selectedRows.value = rows
-}
-
-const clearSelection = () => {
-  tableRef.value?.clearSelection()
-}
-
-const batchDelete = async () => {
-  if (!selectedRows.value.length) return
-  await ElMessageBox.confirm(`确定删除选中的 ${selectedRows.value.length} 条链路？关联节点将同步删除。`, '批量删除', { type: 'warning' })
-  const chainCodes = selectedRows.value.map(r => r.chainCode)
-  const res = await api.post('/chain/batchDelete', { chainCodes })
-  ElMessage.success(`删除完成: 成功${res.data.successCount}条，失败${res.data.failCount}条`)
-  clearSelection()
-  loadChains()
-}
-
-const batchExecute = async () => {
-  if (!selectedRows.value.length) return
-  const chainCodes = selectedRows.value.map(r => r.chainCode)
-  const res = await api.post('/execute/batchRun', { chainCodes })
-  const results = res.data || []
-  const started = results.filter(r => r.status === 'started').length
-  const failed = results.filter(r => r.status === 'failed').length
-  ElMessage.success(`执行启动: ${started}条成功，${failed}条失败`)
-  clearSelection()
-}
-
-onMounted(() => { loadCategories(); loadChains() })
 </script>
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
 /* ── Card Wrapper ── */
-:deep(.el-card) {
+::v-deep .el-card {
   border-radius: 16px;
   overflow: visible;
   box-shadow:
@@ -282,7 +278,7 @@ onMounted(() => { loadCategories(); loadChains() })
   border: 1px solid rgba(99, 102, 241, 0.08);
 }
 
-:deep(.el-card__header) {
+::v-deep .el-card__header {
   padding: 20px 24px;
   border-bottom: 1px solid rgba(99, 102, 241, 0.08);
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.03), rgba(129, 140, 248, 0.02));
@@ -306,7 +302,7 @@ onMounted(() => { loadCategories(); loadChains() })
 }
 
 /* ── Primary Button ── */
-:deep(.el-button--primary) {
+::v-deep .el-button--primary {
   background: linear-gradient(135deg, #6366f1, #818cf8);
   border: none;
   border-radius: 10px;
@@ -317,7 +313,7 @@ onMounted(() => { loadCategories(); loadChains() })
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-:deep(.el-button--primary:hover) {
+::v-deep .el-button--primary:hover {
   box-shadow: 0 4px 16px rgba(99, 102, 241, 0.45);
   transform: translateY(-1px);
 }
@@ -331,24 +327,19 @@ onMounted(() => { loadCategories(); loadChains() })
   flex-wrap: wrap;
 }
 
-.filter-bar :deep(.el-input__wrapper) {
+.filter-bar ::v-deep .el-input__inner {
   border-radius: 10px;
   background: #fff;
   border: 1px solid #d0d5dd;
-  box-shadow: none;
 }
 
-.filter-bar :deep(.el-select .el-input__wrapper) {
-  border-radius: 10px;
-}
-
-.filter-bar :deep(.el-button) {
+.filter-bar ::v-deep .el-button {
   border-radius: 10px;
   font-weight: 500;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.filter-bar :deep(.el-button:hover) {
+.filter-bar ::v-deep .el-button:hover {
   transform: translateY(-1px);
 }
 
@@ -378,13 +369,13 @@ onMounted(() => { loadCategories(); loadChains() })
 }
 
 /* ── Table ── */
-:deep(.el-table) {
+::v-deep .el-table {
   border-radius: 0 0 12px 12px;
   overflow: visible;
   font-size: 13px;
 }
 
-:deep(.el-table th) {
+::v-deep .el-table th {
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.06), rgba(129, 140, 248, 0.04)) !important;
   color: #4338ca !important;
   font-weight: 600;
@@ -392,57 +383,55 @@ onMounted(() => { loadCategories(); loadChains() })
   border-bottom: 1px solid rgba(99, 102, 241, 0.1) !important;
 }
 
-:deep(.el-table td) {
+::v-deep .el-table td {
   border-bottom: 1px solid rgba(99, 102, 241, 0.06);
   padding: 5px 0 !important;
 }
 
-:deep(.el-table th) {
+::v-deep .el-table th {
   padding: 7px 0 !important;
 }
 
-:deep(.el-table--striped .el-table__body tr.el-table__row--striped) {
+::v-deep .el-table--striped .el-table__body tr.el-table__row--striped {
   background: rgba(99, 102, 241, 0.02);
 }
 
-:deep(.el-table tbody tr:hover > td) {
+::v-deep .el-table tbody tr:hover > td {
   background: rgba(99, 102, 241, 0.05) !important;
 }
 
 /* ── Fixed Column - Action Column ── */
-:deep(.el-table .el-table__fixed-right) {
+::v-deep .el-table .el-table__fixed-right {
   z-index: 10 !important;
   box-shadow: -4px 0 12px rgba(99, 102, 241, 0.1) !important;
 }
 
-:deep(.el-table .el-table__fixed-right::before) {
+::v-deep .el-table .el-table__fixed-right::before {
   display: none !important;
 }
 
-:deep(.el-table .el-table__fixed-right-patch) {
+::v-deep .el-table .el-table__fixed-body-wrapper {
   background: #fff !important;
 }
 
-/* Action column cells - force white background */
-:deep(.el-table .action-column) {
+::v-deep .el-table .action-column {
   background: #fff !important;
   padding: 8px 0 !important;
 }
 
-:deep(.el-table td.action-column) {
+::v-deep .el-table td.action-column {
   background: #fff !important;
   padding: 8px 0 !important;
   height: auto !important;
 }
 
-:deep(.el-table .el-table__fixed-right-wrapper .el-table__header th:last-child),
-:deep(.el-table .el-table__fixed-right-wrapper .el-table__header th.action-column) {
+::v-deep .el-table .el-table__fixed-right-wrapper .el-table__header th:last-child,
+::v-deep .el-table .el-table__fixed-right-wrapper .el-table__header th.action-column {
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(129, 140, 248, 0.06)) !important;
   color: #4338ca !important;
 }
 
-/* Action column container */
-:deep(.el-table .el-table__fixed-right-wrapper) {
+::v-deep .el-table .el-table__fixed-right-wrapper {
   background: transparent !important;
 }
 
@@ -458,7 +447,7 @@ onMounted(() => { loadCategories(); loadChains() })
   width: 100%;
 }
 
-.action-btns :deep(.el-button) {
+.action-btns ::v-deep .el-button {
   margin: 0;
   padding: 7px 11px;
   font-size: 12px;
@@ -469,7 +458,7 @@ onMounted(() => { loadCategories(); loadChains() })
   overflow: visible;
 }
 
-.action-btns :deep(.el-button::after) {
+.action-btns ::v-deep .el-button::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -478,76 +467,76 @@ onMounted(() => { loadCategories(); loadChains() })
   transition: opacity 0.3s;
 }
 
-.action-btns :deep(.el-button:hover::after) {
+.action-btns ::v-deep .el-button:hover::after {
   opacity: 1;
 }
 
-.action-btns :deep(.el-button:hover) {
+.action-btns ::v-deep .el-button:hover {
   transform: translateY(-2px) scale(1.02);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.action-btns :deep(.el-button:active) {
+.action-btns ::v-deep .el-button:active {
   transform: translateY(0) scale(0.98);
 }
 
-.action-btns :deep(.el-button--primary) {
+.action-btns ::v-deep .el-button--primary {
   background: linear-gradient(135deg, #6366f1, #818cf8);
   border: none;
   color: #fff;
 }
 
-.action-btns :deep(.el-button--primary:hover) {
+.action-btns ::v-deep .el-button--primary:hover {
   background: linear-gradient(135deg, #4f46e5, #6366f1);
   box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
 }
 
-.action-btns :deep(.el-button--success) {
+.action-btns ::v-deep .el-button--success {
   background: linear-gradient(135deg, #10b981, #34d399);
   border: none;
   color: #fff;
 }
 
-.action-btns :deep(.el-button--success:hover) {
+.action-btns ::v-deep .el-button--success:hover {
   background: linear-gradient(135deg, #059669, #10b981);
   box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
 }
 
-.action-btns :deep(.el-button--danger) {
+.action-btns ::v-deep .el-button--danger {
   background: linear-gradient(135deg, #ef4444, #f87171);
   border: none;
   color: #fff;
 }
 
-.action-btns :deep(.el-button--danger:hover) {
+.action-btns ::v-deep .el-button--danger:hover {
   background: linear-gradient(135deg, #dc2626, #ef4444);
   box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
 }
 
-.action-btns :deep(.el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--danger)) {
+.action-btns ::v-deep .el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--danger) {
   background: #fff;
   border: 1px solid #e2e8f0;
   color: #475569;
 }
 
-.action-btns :deep(.el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--danger):hover) {
+.action-btns ::v-deep .el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--danger):hover {
   border-color: #6366f1;
   color: #6366f1;
   background: rgba(99, 102, 241, 0.05);
 }
 
 /* ── Table Row Animation ── */
-:deep(.el-table tbody tr) {
+::v-deep .el-table tbody tr {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-:deep(.el-table tbody tr:hover) {
+::v-deep .el-table tbody tr:hover {
   transform: scale(1.002);
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
 }
 
 /* ── Tags ── */
-:deep(.el-tag) {
+::v-deep .el-tag {
   border-radius: 8px;
   font-weight: 500;
   padding: 2px 10px;
@@ -555,45 +544,45 @@ onMounted(() => { loadCategories(); loadChains() })
 }
 
 /* ── Dialog ── */
-:deep(.el-dialog) {
+::v-deep .el-dialog {
   border-radius: 16px;
   overflow: hidden;
 }
 
-:deep(.el-dialog__header) {
+::v-deep .el-dialog__header {
   padding: 20px 24px;
   border-bottom: 1px solid rgba(99, 102, 241, 0.08);
 }
 
-:deep(.el-dialog__body) {
+::v-deep .el-dialog__body {
   padding: 24px;
 }
 
-:deep(.el-dialog__footer) {
+::v-deep .el-dialog__footer {
   padding: 16px 24px;
   border-top: 1px solid rgba(99, 102, 241, 0.08);
 }
 
-:deep(.el-form-item__label) {
+::v-deep .el-form-item__label {
   font-weight: 500;
   color: #4338ca;
 }
 
-:deep(.el-input__wrapper),
-:deep(.el-textarea__inner) {
+::v-deep .el-input__inner,
+::v-deep .el-textarea__inner {
   border-radius: 10px;
   background: #fff;
   border: 1px solid #d0d5dd;
   box-shadow: none;
 }
 
-:deep(.el-input__wrapper:hover),
-:deep(.el-textarea__inner:hover) {
+::v-deep .el-input__inner:hover,
+::v-deep .el-textarea__inner:hover {
   border-color: #a5b4fc;
 }
 
-:deep(.el-input__wrapper.is-focus),
-:deep(.el-textarea__inner:focus) {
+::v-deep .el-input__inner:focus,
+::v-deep .el-textarea__inner:focus {
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
   border-color: #6366f1;
 }
@@ -605,18 +594,13 @@ onMounted(() => { loadCategories(); loadChains() })
   padding: 16px 0 0;
 }
 
-:deep(.el-pagination) {
-  --el-pagination-button-bg-color: #fff;
-  --el-pagination-hover-color: #6366f1;
-}
-
-:deep(.el-pagination .el-pager li.is-active) {
+::v-deep .el-pagination .el-pager li.active {
   background: linear-gradient(135deg, #6366f1, #818cf8);
   color: #fff;
   border-radius: 8px;
 }
 
-:deep(.el-pagination .el-pager li) {
+::v-deep .el-pagination .el-pager li {
   border-radius: 8px;
   min-width: 32px;
 }

@@ -36,64 +36,66 @@
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+<script>
+import { Message } from 'element-ui'
 import api from '../api/index.js'
 
-const API = '/config'
-
-const loading = ref(false)
-const saving = ref(false)
-
-const config = ref({
-  aiBaseUrl: 'http://localhost:11434/v1',
-  aiApiKey: '',
-  aiModel: 'qwen-max',
-  aiTimeout: 120,
-  idGenerateMode: 'AUTO_INCREMENT',
-  idStep: 1
-})
-
-onMounted(() => {
-  loadConfig()
-})
-
-const loadConfig = async () => {
-  loading.value = true
-  try {
-    const res = await api.get(`${API}/all`)
-    const map = res.data || {}
-    if (map['ai.baseUrl']) config.value.aiBaseUrl = map['ai.baseUrl']
-    if (map['ai.apiKey']) config.value.aiApiKey = map['ai.apiKey']
-    if (map['ai.model']) config.value.aiModel = map['ai.model']
-    if (map['ai.timeout']) config.value.aiTimeout = parseInt(map['ai.timeout']) || 120
-    if (map['idGenerate.mode']) config.value.idGenerateMode = map['idGenerate.mode']
-    if (map['idGenerate.step']) config.value.idStep = parseInt(map['idGenerate.step']) || 1
-  } catch (e) {
-    console.warn('Failed to load config from backend, using defaults', e)
-  } finally {
-    loading.value = false
-  }
-}
-
-const saveConfig = async () => {
-  saving.value = true
-  try {
-    const params = {
-      'ai.baseUrl': config.value.aiBaseUrl || '',
-      'ai.apiKey': config.value.aiApiKey || '',
-      'ai.model': config.value.aiModel || '',
-      'ai.timeout': String(config.value.aiTimeout || 120),
-      'idGenerate.mode': config.value.idGenerateMode || 'AUTO_INCREMENT',
-      'idGenerate.step': String(config.value.idStep || 1)
+export default {
+  name: 'SystemConfig',
+  data() {
+    return {
+      loading: false,
+      saving: false,
+      config: {
+        aiBaseUrl: 'http://localhost:11434/v1',
+        aiApiKey: '',
+        aiModel: 'qwen-max',
+        aiTimeout: 120,
+        idGenerateMode: 'AUTO_INCREMENT',
+        idStep: 1
+      }
     }
-    await api.post(`${API}/save`, params)
-    ElMessage.success('配置已保存')
-  } catch (e) {
-    ElMessage.error('保存失败: ' + (e.response?.data?.message || e.message))
-  } finally {
-    saving.value = false
+  },
+  mounted() {
+    this.loadConfig()
+  },
+  methods: {
+    async loadConfig() {
+      this.loading = true
+      try {
+        const res = await api.get('/config/all')
+        const map = res.data || {}
+        if (map['ai.baseUrl']) this.config.aiBaseUrl = map['ai.baseUrl']
+        if (map['ai.apiKey']) this.config.aiApiKey = map['ai.apiKey']
+        if (map['ai.model']) this.config.aiModel = map['ai.model']
+        if (map['ai.timeout']) this.config.aiTimeout = parseInt(map['ai.timeout']) || 120
+        if (map['idGenerate.mode']) this.config.idGenerateMode = map['idGenerate.mode']
+        if (map['idGenerate.step']) this.config.idStep = parseInt(map['idGenerate.step']) || 1
+      } catch (e) {
+        console.warn('Failed to load config from backend, using defaults', e)
+      } finally {
+        this.loading = false
+      }
+    },
+    async saveConfig() {
+      this.saving = true
+      try {
+        const params = {
+          'ai.baseUrl': this.config.aiBaseUrl || '',
+          'ai.apiKey': this.config.aiApiKey || '',
+          'ai.model': this.config.aiModel || '',
+          'ai.timeout': String(this.config.aiTimeout || 120),
+          'idGenerate.mode': this.config.idGenerateMode || 'AUTO_INCREMENT',
+          'idGenerate.step': String(this.config.idStep || 1)
+        }
+        await api.post('/config/save', params)
+        Message.success('配置已保存')
+      } catch (e) {
+        Message.error('保存失败: ' + (e.response && e.response.data && e.response.data.message || e.message))
+      } finally {
+        this.saving = false
+      }
+    }
   }
 }
 </script>
@@ -102,7 +104,7 @@ const saveConfig = async () => {
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
 /* ── Card ── */
-:deep(.el-card) {
+::v-deep .el-card {
   border-radius: 16px;
   box-shadow:
     0 4px 24px rgba(99, 102, 241, 0.08),
@@ -110,25 +112,20 @@ const saveConfig = async () => {
   border: 1px solid rgba(99, 102, 241, 0.08);
 }
 
-:deep(.el-card__header) {
+::v-deep .el-card__header {
   padding: 20px 28px;
   border-bottom: 1px solid rgba(99, 102, 241, 0.08);
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.04), rgba(129, 140, 248, 0.02));
 }
 
-:deep(.el-card__header .el-card__body > p) {
+::v-deep .el-card__header span {
   font-size: 18px;
   font-weight: 700;
   color: #1e1b4b;
-  margin: 0;
 }
 
 /* ── Form ── */
-:deep(.el-form) {
-  max-width: 680px;
-}
-
-:deep(.el-divider__text) {
+::v-deep .el-divider__text {
   font-weight: 600;
   font-size: 15px;
   color: #4338ca;
@@ -137,15 +134,13 @@ const saveConfig = async () => {
   gap: 8px;
 }
 
-:deep(.el-form-item__label) {
+::v-deep .el-form-item__label {
   font-weight: 500;
   color: #4338ca;
   font-size: 14px;
 }
 
-:deep(.el-input__wrapper),
-:deep(.el-select .el-input__wrapper),
-:deep(.el-input-number) {
+::v-deep .el-input__inner {
   border-radius: 10px;
   background: #fff;
   border: 1px solid #d0d5dd;
@@ -153,19 +148,18 @@ const saveConfig = async () => {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-:deep(.el-input__wrapper:hover),
-:deep(.el-select .el-input__wrapper:hover) {
+::v-deep .el-input__inner:hover {
   border-color: #a5b4fc;
   box-shadow: none;
 }
 
-:deep(.el-input__wrapper.is-focus) {
+::v-deep .el-input__inner:focus {
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
   border-color: #6366f1;
 }
 
 /* ── Buttons ── */
-:deep(.el-button--primary) {
+::v-deep .el-button--primary {
   background: linear-gradient(135deg, #6366f1, #818cf8);
   border: none;
   border-radius: 10px;
@@ -176,7 +170,7 @@ const saveConfig = async () => {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-:deep(.el-button--primary:hover) {
+::v-deep .el-button--primary:hover {
   box-shadow: 0 4px 16px rgba(99, 102, 241, 0.45);
   transform: translateY(-1px);
 }

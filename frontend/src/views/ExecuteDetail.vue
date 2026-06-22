@@ -66,195 +66,201 @@
       </div>
     </div>
 
-    <el-dialog v-model="detailVisible" title="节点详情" width="700px">
+    <el-dialog :visible.sync="detailVisible" title="节点详情" width="700px">
       <template v-if="currentLog">
-        <el-descriptions :column="2" border size="small">
-          <el-descriptions-item label="节点编码">{{ currentLog.nodeCode }}</el-descriptions-item>
-          <el-descriptions-item label="状态">{{ statusText(currentLog.status) }}</el-descriptions-item>
-          <el-descriptions-item label="请求方法">{{ currentLog.requestMethod }}</el-descriptions-item>
-          <el-descriptions-item label="响应码">{{ currentLog.responseCode }}</el-descriptions-item>
-          <el-descriptions-item label="耗时">{{ currentLog.costMs }}ms</el-descriptions-item>
-        </el-descriptions>
+        <table class="detail-table" border="1" cellpadding="8" cellspacing="0">
+          <tr v-for="item in currentLogDesc" :key="item.label">
+            <td class="detail-label">{{ item.label }}</td>
+            <td class="detail-value">{{ item.value }}</td>
+          </tr>
+        </table>
 
         <div class="section-title">请求头</div>
-        <el-input :model-value="formatJson(currentLog.requestHeaders)" type="textarea" :rows="3" readonly />
+        <el-input :value="formatJson(currentLog.requestHeaders)" type="textarea" :rows="3" readonly />
         <el-button size="small" @click="copyText(currentLog.requestHeaders)">复制</el-button>
 
         <div class="section-title">请求体</div>
-        <el-input :model-value="formatJson(currentLog.requestBody)" type="textarea" :rows="5" readonly />
+        <el-input :value="formatJson(currentLog.requestBody)" type="textarea" :rows="5" readonly />
         <el-button size="small" @click="copyText(currentLog.requestBody)">复制</el-button>
 
         <div class="section-title">响应体</div>
-        <el-input :model-value="formatJson(currentLog.responseBody)" type="textarea" :rows="5" readonly />
+        <el-input :value="formatJson(currentLog.responseBody)" type="textarea" :rows="5" readonly />
         <el-button size="small" @click="copyText(currentLog.responseBody)">复制</el-button>
 
         <div v-if="currentLog.errorMessage" class="section-title" style="color:#f56c6c">错误信息</div>
-        <el-input v-if="currentLog.errorMessage" :model-value="currentLog.errorMessage" type="textarea" :rows="3" readonly />
+        <el-input v-if="currentLog.errorMessage" :value="currentLog.errorMessage" type="textarea" :rows="3" readonly />
       </template>
     </el-dialog>
 
-    <el-dialog v-model="aiVisible" title="AI分析结果" width="650px" :close-on-click-modal="false">
+    <el-dialog :visible.sync="aiVisible" title="AI分析结果" width="650px" :close-on-click-modal="false">
       <div v-if="aiLoading" class="ai-loading">
-        <el-icon class="loading-icon"><Loading /></el-icon>
+        <i class="el-icon-loading loading-icon"></i>
         <span>正在分析失败原因...</span>
       </div>
       <div v-else-if="aiResult">
         <div class="source-badge" :class="aiResult.source === 'AI智能分析' ? 'source-ai' : 'source-rule'">
-          <el-icon v-if="aiResult.source === 'AI智能分析'"><MagicStick /></el-icon>
-          <el-icon v-else><Monitor /></el-icon>
+          <i v-if="aiResult.source === 'AI智能分析'" class="el-icon-magic-stick"></i>
+          <i v-else class="el-icon-monitor"></i>
           <span>{{ aiResult.source || '规则分析' }}</span>
           <span v-if="aiResult.source !== 'AI智能分析'" class="source-hint">（AI模型未配置，基于规则自动分析）</span>
         </div>
         <div class="analysis-section">
           <div class="analysis-label">
-            <el-icon class="label-icon error"><WarningFilled /></el-icon>
+            <i class="el-icon-warning label-icon error"></i>
             根因定位
           </div>
           <div class="analysis-content">{{ aiResult.rootCause }}</div>
         </div>
         <div class="analysis-section">
           <div class="analysis-label">
-            <el-icon class="label-icon info"><InfoFilled /></el-icon>
+            <i class="el-icon-info label-icon info"></i>
             排查步骤
           </div>
           <div class="analysis-content">{{ aiResult.troubleshootingSteps }}</div>
         </div>
         <div class="analysis-section">
           <div class="analysis-label">
-            <el-icon class="label-icon success"><CircleCheckFilled /></el-icon>
+            <i class="el-icon-success label-icon success"></i>
             修复方案
           </div>
           <div class="analysis-content">{{ aiResult.fixSuggestion }}</div>
         </div>
         <div class="analysis-footer">
-          <el-button size="small" @click="copyText(JSON.stringify(aiResult, null, 2))" :icon="DocumentCopy">复制全部</el-button>
+          <el-button size="small" @click="copyText(JSON.stringify(aiResult, null, 2))" icon="el-icon-document-copy">复制全部</el-button>
         </div>
       </div>
       <div v-else class="ai-empty">
-        <el-icon><WarningFilled /></el-icon>
+        <i class="el-icon-warning"></i>
         <span>分析失败，请稍后重试</span>
       </div>
     </el-dialog>
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { Loading, WarningFilled, InfoFilled, CircleCheckFilled, DocumentCopy, MagicStick, Monitor } from '@element-plus/icons-vue'
+<script>
+import { Message } from 'element-ui'
 import api from '../api'
 
-const route = useRoute()
-const executionId = route.params.executionId
-
-const mainInfo = ref(null)
-const nodeLogs = ref([])
-const detailVisible = ref(false)
-const currentLog = ref(null)
-const aiVisible = ref(false)
-const aiResult = ref(null)
-const aiLoading = ref(false)
-const viewMode = ref('flat')
-let ws = null
-
-import { computed } from 'vue'
-
-const traceLogGroups = computed(() => {
-  const grouped = {}
-  const order = []
-  nodeLogs.value.forEach(log => {
-    const traceId = log.bizOperTraceId || '__ungrouped__'
-    if (!grouped[traceId]) {
-      grouped[traceId] = { traceId, logs: [] }
-      order.push(traceId)
+export default {
+  name: 'ExecuteDetail',
+  data() {
+    return {
+      executionId: '',
+      mainInfo: null,
+      nodeLogs: [],
+      detailVisible: false,
+      currentLog: null,
+      aiVisible: false,
+      aiResult: null,
+      aiLoading: false,
+      viewMode: 'flat',
+      ws: null
     }
-    grouped[traceId].logs.push(log)
-  })
-  return order.map(id => grouped[id])
-})
-
-const groupStatusType = (group) => {
-  const hasFailed = group.logs.some(l => l.status === 'FAILED')
-  const allSuccess = group.logs.every(l => l.status === 'SUCCESS')
-  if (hasFailed) return 'danger'
-  if (allSuccess) return 'success'
-  return 'warning'
-}
-
-const groupStatusText = (group) => {
-  const hasFailed = group.logs.some(l => l.status === 'FAILED')
-  const allSuccess = group.logs.every(l => l.status === 'SUCCESS')
-  if (hasFailed) return '失败'
-  if (allSuccess) return '成功'
-  return '部分成功'
-}
-
-const groupCost = (group) => {
-  return group.logs.reduce((sum, l) => sum + (l.costMs || 0), 0)
-}
-
-const loadData = async () => {
-  const res = await api.get('/execute/status', { params: { executionId } })
-  mainInfo.value = res.data
-  const logRes = await api.get('/execute/nodeLogs', { params: { executionId } })
-  nodeLogs.value = logRes.data || []
-}
-
-const connectWs = () => {
-  const wsUrl = `ws://${location.host}/ws/execute/${executionId}`
-  ws = new WebSocket(wsUrl)
-  ws.onmessage = (event) => {
-    const msg = JSON.parse(event.data)
-    if (msg.type === 'NODE_STATUS') {
-      const node = nodeLogs.value.find(n => n.nodeCode === msg.nodeCode)
-      if (node) {
-        node.status = msg.status
-        node.costMs = msg.costMs
+  },
+  computed: {
+    currentLogDesc() {
+      if (!this.currentLog) return []
+      return [
+        { label: '节点编码', value: this.currentLog.nodeCode },
+        { label: '状态', value: this.statusText(this.currentLog.status) },
+        { label: '请求方法', value: this.currentLog.requestMethod },
+        { label: '响应码', value: this.currentLog.responseCode },
+        { label: '耗时', value: this.currentLog.costMs + 'ms' }
+      ]
+    },
+    traceLogGroups() {
+      const grouped = {}
+      const order = []
+      this.nodeLogs.forEach(log => {
+        const traceId = log.bizOperTraceId || '__ungrouped__'
+        if (!grouped[traceId]) {
+          grouped[traceId] = { traceId, logs: [] }
+          order.push(traceId)
+        }
+        grouped[traceId].logs.push(log)
+      })
+      return order.map(id => grouped[id])
+    }
+  },
+  mounted() {
+    this.executionId = this.$route.params.executionId
+    this.loadData()
+    this.connectWs()
+  },
+  beforeDestroy() {
+    if (this.ws) this.ws.close()
+  },
+  methods: {
+    async loadData() {
+      const res = await api.get('/execute/status', { params: { executionId: this.executionId } })
+      this.mainInfo = res.data
+      const logRes = await api.get('/execute/nodeLogs', { params: { executionId: this.executionId } })
+      this.nodeLogs = logRes.data || []
+    },
+    connectWs() {
+      const wsUrl = 'ws://' + location.host + '/ws/execute/' + this.executionId
+      this.ws = new WebSocket(wsUrl)
+      this.ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data)
+        if (msg.type === 'NODE_STATUS') {
+          const node = this.nodeLogs.find(n => n.nodeCode === msg.nodeCode)
+          if (node) {
+            node.status = msg.status
+            node.costMs = msg.costMs
+          }
+        } else if (msg.type === 'CHAIN_STATUS') {
+          this.loadData()
+        }
       }
-    } else if (msg.type === 'CHAIN_STATUS') {
-      loadData()
+      this.ws.onclose = () => { const self = this; setTimeout(() => self.connectWs(), 3000) }
+      this.ws.onerror = () => { if (this.ws) this.ws.close() }
+    },
+    showDetail(log) {
+      this.currentLog = log
+      this.detailVisible = true
+    },
+    async analyzeFailure(log) {
+      this.aiResult = null
+      this.aiLoading = true
+      this.aiVisible = true
+      try {
+        const res = await api.post('/ai/failure/analyze', { executionId: this.executionId, nodeCode: log.nodeCode })
+        this.aiResult = res.data
+      } catch (e) {
+        Message.error('分析失败: ' + (e.response && e.response.data && e.response.data.message || e.message))
+      } finally {
+        this.aiLoading = false
+      }
+    },
+    formatJson(str) {
+      if (!str) return ''
+      try { return JSON.stringify(JSON.parse(str), null, 2) } catch { return str }
+    },
+    copyText(text) { navigator.clipboard.writeText(text); Message.success('已复制') },
+    statusType(s) { return { RUNNING: 'warning', SUCCESS: 'success', FAILED: 'danger', SKIPPED: 'info' }[s] || 'info' },
+    statusText(s) { return { RUNNING: '运行中', SUCCESS: '成功', FAILED: '失败', SKIPPED: '跳过', PENDING: '待执行' }[s] || s },
+    groupStatusType(group) {
+      const hasFailed = group.logs.some(l => l.status === 'FAILED')
+      const allSuccess = group.logs.every(l => l.status === 'SUCCESS')
+      if (hasFailed) return 'danger'
+      if (allSuccess) return 'success'
+      return 'warning'
+    },
+    groupStatusText(group) {
+      const hasFailed = group.logs.some(l => l.status === 'FAILED')
+      const allSuccess = group.logs.every(l => l.status === 'SUCCESS')
+      if (hasFailed) return '失败'
+      if (allSuccess) return '成功'
+      return '部分成功'
+    },
+    groupCost(group) {
+      return group.logs.reduce((sum, l) => sum + (l.costMs || 0), 0)
     }
   }
-  ws.onclose = () => setTimeout(connectWs, 3000)
-  ws.onerror = () => ws.close()
 }
-
-const showDetail = (log) => {
-  currentLog.value = log
-  detailVisible.value = true
-}
-
-const analyzeFailure = async (log) => {
-  aiResult.value = null
-  aiLoading.value = true
-  aiVisible.value = true
-  try {
-    const res = await api.post('/ai/failure/analyze', { executionId, nodeCode: log.nodeCode })
-    aiResult.value = res.data
-  } catch (e) {
-    ElMessage.error('分析失败: ' + (e.response?.data?.message || e.message))
-  } finally {
-    aiLoading.value = false
-  }
-}
-
-const formatJson = (str) => {
-  if (!str) return ''
-  try { return JSON.stringify(JSON.parse(str), null, 2) } catch { return str }
-}
-
-const copyText = (text) => { navigator.clipboard.writeText(text); ElMessage.success('已复制') }
-const statusType = (s) => ({ RUNNING: 'warning', SUCCESS: 'success', FAILED: 'danger', SKIPPED: 'info' }[s] || 'info')
-const statusText = (s) => ({ RUNNING: '运行中', SUCCESS: '成功', FAILED: '失败', SKIPPED: '跳过', PENDING: '待执行' }[s] || s)
-
-onMounted(() => { loadData(); connectWs() })
-onUnmounted(() => { if (ws) ws.close() })
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
-
 /* ── Layout ── */
 .execute-detail {
   height: calc(100vh - 80px);
@@ -283,18 +289,6 @@ onUnmounted(() => { if (ws) ws.close() })
   color: #6b7280;
   font-weight: 500;
   white-space: nowrap;
-}
-
-.toolbar :deep(.el-button) {
-  border-radius: 10px;
-  font-weight: 500;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.toolbar :deep(.el-button--primary) {
-  background: linear-gradient(135deg, #6366f1, #818cf8);
-  border: none;
-  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25);
 }
 
 /* ── Nodes Area ── */
@@ -400,18 +394,27 @@ onUnmounted(() => { if (ws) ws.close() })
   gap: 8px;
 }
 
-.log-actions :deep(.el-button) {
-  border-radius: 8px;
-  font-weight: 500;
-  transition: all 0.2s ease;
+/* ── Detail Table ── */
+.detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  border: 1px solid rgba(99, 102, 241, 0.1);
 }
 
-/* ── Tags ── */
-:deep(.el-tag) {
-  border-radius: 8px;
+.detail-label {
+  background: rgba(99, 102, 241, 0.04);
   font-weight: 500;
-  padding: 2px 10px;
-  font-size: 12px;
+  color: #4338ca;
+  font-size: 13px;
+  width: 120px;
+}
+
+.detail-value {
+  font-size: 13px;
+  color: #374151;
 }
 
 /* ── Section Title ── */
@@ -423,49 +426,6 @@ onUnmounted(() => { if (ws) ws.close() })
   display: flex;
   align-items: center;
   gap: 6px;
-}
-
-.section-title[style*="color"] {
-  color: #ef4444;
-}
-
-/* ── Dialog ── */
-:deep(.el-dialog) {
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-:deep(.el-dialog__header) {
-  padding: 18px 24px;
-  border-bottom: 1px solid rgba(99, 102, 241, 0.08);
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.03), transparent);
-}
-
-:deep(.el-dialog__body) {
-  padding: 24px;
-}
-
-:deep(.el-descriptions) {
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-:deep(.el-descriptions__label) {
-  background: rgba(99, 102, 241, 0.04);
-  font-weight: 500;
-  color: #4338ca;
-}
-
-/* ── JSON Textarea ── */
-:deep(.el-textarea) {
-  border-radius: 10px;
-}
-
-:deep(.el-textarea textarea) {
-  border-radius: 10px;
-  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
-  font-size: 12px;
-  line-height: 1.6;
 }
 
 /* ── AI Loading ── */
@@ -723,5 +683,55 @@ onUnmounted(() => { if (ws) ws.close() })
   font-size: 12px;
   color: #6b7280;
   font-weight: 500;
+}
+</style>
+
+<style>
+/* ── Global overrides for Element UI ── */
+.execute-detail .toolbar .el-button {
+  border-radius: 10px;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.execute-detail .toolbar .el-button--primary {
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+  border: none;
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25);
+}
+
+.execute-detail .log-actions .el-button {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.execute-detail .el-tag {
+  border-radius: 8px;
+  font-weight: 500;
+  padding: 2px 10px;
+  font-size: 12px;
+}
+
+.execute-detail .el-dialog {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.execute-detail .el-dialog__header {
+  padding: 18px 24px;
+  border-bottom: 1px solid rgba(99, 102, 241, 0.08);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.03), transparent);
+}
+
+.execute-detail .el-dialog__body {
+  padding: 24px;
+}
+
+.execute-detail .el-textarea textarea {
+  border-radius: 10px;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 12px;
+  line-height: 1.6;
 }
 </style>

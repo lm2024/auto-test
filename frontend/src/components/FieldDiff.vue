@@ -1,7 +1,7 @@
 <template>
   <div class="field-diff">
     <div v-if="!changes || changes.length === 0" class="no-changes">
-      <el-icon><Check /></el-icon>
+      <i class="el-icon-check"></i>
       无字段变化
     </div>
     <div v-for="change in changes" :key="change.field" class="diff-item">
@@ -20,23 +20,25 @@
   </div>
 </template>
 
-<script setup>
-import { Check } from '@element-plus/icons-vue'
-
-const props = defineProps({
-  changes: { type: Array, default: () => [] }
-})
-
-function formatValue(val) {
-  if (val === null || val === undefined) return '(空)'
-  if (typeof val === 'string') {
-    try {
-      return JSON.stringify(JSON.parse(val), null, 2)
-    } catch (e) {
-      return val
+<script>
+export default {
+  name: 'FieldDiff',
+  props: {
+    changes: { type: Array, default: () => [] }
+  },
+  methods: {
+    formatValue(val) {
+      if (val === null || val === undefined) return '(空)'
+      if (typeof val === 'string') {
+        try {
+          return JSON.stringify(JSON.parse(val), null, 2)
+        } catch (e) {
+          return val
+        }
+      }
+      return JSON.stringify(val, null, 2)
     }
   }
-  return JSON.stringify(val, null, 2)
 }
 </script>
 

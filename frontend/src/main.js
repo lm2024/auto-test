@@ -1,10 +1,14 @@
-import { createApp } from 'vue'
-import ElementPlus from 'element-plus'
-import 'element-plus/dist/index.css'
+import Vue from 'vue'
+import VueCompositionAPI from '@vue/composition-api'
+import ElementUI from 'element-ui'
+import 'element-ui/lib/theme-chalk/index.css'
 import App from './App.vue'
 import router from './router'
 
-const app = createApp(App)
-app.use(ElementPlus, { size: 'default' })
-app.use(router)
-app.mount('#app')
+Vue.use(VueCompositionAPI)
+Vue.use(ElementUI, { size: 'default' })
+
+new Vue({
+  router,
+  render: h => h(App)
+}).$mount('#app')

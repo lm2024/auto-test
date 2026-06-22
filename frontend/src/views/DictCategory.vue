@@ -38,18 +38,18 @@
 
       <div class="pagination-bar">
         <el-pagination
-          v-model:current-page="pageNo"
-          v-model:page-size="pageSize"
+          :current-page="pageNo"
+          :page-size="pageSize"
           :page-sizes="[10, 20, 50, 100]"
           :total="total"
           layout="total, sizes, prev, pager, next, jumper"
-          @size-change="loadCategories"
-          @current-change="loadCategories"
+          @size-change="onPageSizeChange"
+          @current-change="onPageChange"
         />
       </div>
     </el-card>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
+    <el-dialog :visible.sync="dialogVisible" :title="dialogTitle" width="500px">
       <el-form :model="form" label-width="100px">
         <el-form-item label="分类类型">
           <el-select v-model="form.categoryType" :disabled="isEdit">
@@ -75,76 +75,81 @@
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+<script>
+import { Message, MessageBox } from 'element-ui'
 import api from '../api'
 
-const categories = ref([])
-const filter = ref({ categoryType: '' })
-const pageNo = ref(1)
-const pageSize = ref(10)
-const total = ref(0)
-const dialogVisible = ref(false)
-const dialogTitle = ref('新增分类')
-const isEdit = ref(false)
-const editId = ref(null)
-const form = ref({ categoryType: 'system', categoryCode: '', categoryName: '', sortOrder: 0 })
-
-const loadCategories = async () => {
-  const params = { pageNo: pageNo.value, pageSize: pageSize.value }
-  if (filter.value.categoryType) params.type = filter.value.categoryType
-  const res = await api.get('/dict/category/list', { params })
-  categories.value = res.data?.list || []
-  total.value = res.data?.total || 0
-}
-
-const resetFilter = () => {
-  filter.value = { categoryType: '' }
-  pageNo.value = 1
-  loadCategories()
-}
-
-const showCreateDialog = () => {
-  dialogTitle.value = '新增分类'
-  isEdit.value = false
-  editId.value = null
-  form.value = { categoryType: 'system', categoryCode: '', categoryName: '', sortOrder: 0 }
-  dialogVisible.value = true
-}
-
-const editCategory = (row) => {
-  dialogTitle.value = '编辑分类'
-  isEdit.value = true
-  editId.value = row.id
-  form.value = { categoryType: row.categoryType, categoryCode: row.categoryCode, categoryName: row.categoryName, sortOrder: row.sortOrder }
-  dialogVisible.value = true
-}
-
-const submitForm = async () => {
-  if (!form.value.categoryCode || !form.value.categoryName) {
-    ElMessage.warning('请填写必填字段')
-    return
+export default {
+  name: 'DictCategory',
+  data() {
+    return {
+      categories: [],
+      filter: { categoryType: '' },
+      pageNo: 1,
+      pageSize: 10,
+      total: 0,
+      dialogVisible: false,
+      dialogTitle: '新增分类',
+      isEdit: false,
+      editId: null,
+      form: { categoryType: 'system', categoryCode: '', categoryName: '', sortOrder: 0 }
+    }
+  },
+  mounted() {
+    this.loadCategories()
+  },
+  methods: {
+    async loadCategories() {
+      const params = { pageNo: this.pageNo, pageSize: this.pageSize }
+      if (this.filter.categoryType) params.type = this.filter.categoryType
+      const res = await api.get('/dict/category/list', { params })
+      this.categories = (res.data && res.data.list) || []
+      this.total = (res.data && res.data.total) || 0
+    },
+    onPageSizeChange(val) { this.pageSize = val; this.loadCategories() },
+    onPageChange(val) { this.pageNo = val; this.loadCategories() },
+    resetFilter() {
+      this.filter = { categoryType: '' }
+      this.pageNo = 1
+      this.loadCategories()
+    },
+    showCreateDialog() {
+      this.dialogTitle = '新增分类'
+      this.isEdit = false
+      this.editId = null
+      this.form = { categoryType: 'system', categoryCode: '', categoryName: '', sortOrder: 0 }
+      this.dialogVisible = true
+    },
+    editCategory(row) {
+      this.dialogTitle = '编辑分类'
+      this.isEdit = true
+      this.editId = row.id
+      this.form = { categoryType: row.categoryType, categoryCode: row.categoryCode, categoryName: row.categoryName, sortOrder: row.sortOrder }
+      this.dialogVisible = true
+    },
+    async submitForm() {
+      if (!this.form.categoryCode || !this.form.categoryName) {
+        Message.warning('请填写必填字段')
+        return
+      }
+      if (this.isEdit) {
+        await api.put('/dict/category/update?id=' + this.editId, this.form)
+        Message.success('编辑成功')
+      } else {
+        await api.post('/dict/category/create', this.form)
+        Message.success('创建成功')
+      }
+      this.dialogVisible = false
+      this.loadCategories()
+    },
+    async deleteCategory(id) {
+      await MessageBox.confirm('确定删除该分类？', '提示', { type: 'warning' })
+      await api.delete('/dict/category/delete', { params: { id } })
+      Message.success('删除成功')
+      this.loadCategories()
+    }
   }
-  if (isEdit.value) {
-    await api.put('/dict/category/update?id=' + editId.value, form.value)
-    ElMessage.success('编辑成功')
-  } else {
-    await api.post('/dict/category/create', form.value)
-    ElMessage.success('创建成功')
-  }
-  dialogVisible.value = false
-  loadCategories()
 }
-
-const deleteCategory = async (id) => {
-  await ElMessageBox.confirm('确定删除该分类？', '提示', { type: 'warning' })
-  await api.delete('/dict/category/delete', { params: { id } })
-  ElMessage.success('删除成功')
-  loadCategories()
-}
-
-onMounted(loadCategories)
 </script>
 
 <style scoped>

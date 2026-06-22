@@ -6,37 +6,34 @@
         <span v-else>AT</span>
       </div>
       <el-menu
-        :default-active="route.path"
+        :default-active="activeMenu"
         :collapse="isCollapsed"
         :collapse-transition="false"
         router
       >
         <el-menu-item index="/chain/list">
-          <el-icon><List /></el-icon>
+          <i class="el-icon-menu"></i>
           <template #title>测试链路管理</template>
         </el-menu-item>
         <el-menu-item index="/execute/list">
-          <el-icon><Document /></el-icon>
+          <i class="el-icon-document"></i>
           <template #title>执行记录查询</template>
         </el-menu-item>
         <el-menu-item index="/account/list">
-          <el-icon><User /></el-icon>
+          <i class="el-icon-user"></i>
           <template #title>测试账号管理</template>
         </el-menu-item>
         <el-menu-item index="/dict/category">
-          <el-icon><Collection /></el-icon>
+          <i class="el-icon-collection-tag"></i>
           <template #title>分类字典管理</template>
         </el-menu-item>
         <el-menu-item index="/system/config">
-          <el-icon><Setting /></el-icon>
+          <i class="el-icon-setting"></i>
           <template #title>系统设置</template>
         </el-menu-item>
       </el-menu>
       <div class="collapse-btn" @click="toggleCollapse">
-        <el-icon :size="18">
-          <Fold v-if="!isCollapsed" />
-          <Expand v-else />
-        </el-icon>
+        <i :class="isCollapsed ? 'el-icon-d-arrow-right' : 'el-icon-d-arrow-left'" style="font-size:18px"></i>
       </div>
     </el-aside>
     <div
@@ -50,58 +47,58 @@
   </el-container>
 </template>
 
-<script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
-import { List, Document, Setting, User, Collection, Fold, Expand } from '@element-plus/icons-vue'
+<script>
+export default {
+  name: 'App',
+  data() {
+    return {
+      activeMenu: '/chain/list',
+      isCollapsed: localStorage.getItem('menuCollapsed') === 'true',
+      asideWidth: parseInt(localStorage.getItem('menuWidth') || '240'),
+      isResizing: false
+    }
+  },
+  mounted() {
+    if (this.isCollapsed) {
+      this.asideWidth = 64
+    }
+  },
+  methods: {
+    toggleCollapse() {
+      this.isCollapsed = !this.isCollapsed
+      localStorage.setItem('menuCollapsed', this.isCollapsed)
+      if (this.isCollapsed) {
+        this.asideWidth = 64
+      } else {
+        this.asideWidth = parseInt(localStorage.getItem('menuWidth') || '240')
+      }
+    },
+    startResize(e) {
+      this.isResizing = true
+      const startX = e.clientX
+      const startWidth = this.asideWidth
 
-const route = useRoute()
-const asideRef = ref(null)
+      const onMouseMove = (e) => {
+        if (!this.isResizing) return
+        const diff = e.clientX - startX
+        let newWidth = startWidth + diff
+        if (newWidth < 64) newWidth = 64
+        if (newWidth > 400) newWidth = 400
+        this.asideWidth = newWidth
+      }
 
-const isCollapsed = ref(localStorage.getItem('menuCollapsed') === 'true')
-const asideWidth = ref(parseInt(localStorage.getItem('menuWidth') || '240'))
-const isResizing = ref(false)
+      const onMouseUp = () => {
+        this.isResizing = false
+        localStorage.setItem('menuWidth', this.asideWidth)
+        document.removeEventListener('mousemove', onMouseMove)
+        document.removeEventListener('mouseup', onMouseUp)
+      }
 
-const toggleCollapse = () => {
-  isCollapsed.value = !isCollapsed.value
-  localStorage.setItem('menuCollapsed', isCollapsed.value)
-  if (isCollapsed.value) {
-    asideWidth.value = 64
-  } else {
-    asideWidth.value = parseInt(localStorage.getItem('menuWidth') || '240')
+      document.addEventListener('mousemove', onMouseMove)
+      document.addEventListener('mouseup', onMouseUp)
+    }
   }
 }
-
-const startResize = (e) => {
-  isResizing.value = true
-  const startX = e.clientX
-  const startWidth = asideWidth.value
-
-  const onMouseMove = (e) => {
-    if (!isResizing.value) return
-    const diff = e.clientX - startX
-    let newWidth = startWidth + diff
-    if (newWidth < 64) newWidth = 64
-    if (newWidth > 400) newWidth = 400
-    asideWidth.value = newWidth
-  }
-
-  const onMouseUp = () => {
-    isResizing.value = false
-    localStorage.setItem('menuWidth', asideWidth.value)
-    document.removeEventListener('mousemove', onMouseMove)
-    document.removeEventListener('mouseup', onMouseUp)
-  }
-
-  document.addEventListener('mousemove', onMouseMove)
-  document.addEventListener('mouseup', onMouseUp)
-}
-
-onMounted(() => {
-  if (isCollapsed.value) {
-    asideWidth.value = 64
-  }
-})
 </script>
 
 <style>
@@ -292,17 +289,17 @@ html, body, #app {
   background: rgba(99, 102, 241, 0.5);
 }
 
-/* ── Element Plus Overrides ── */
-:deep(.el-menu--collapse) {
+/* ── Element UI Overrides ── */
+.el-menu--collapse {
   width: 64px;
 }
-:deep(.el-menu--collapse .el-menu-item) {
+.el-menu--collapse .el-menu-item {
   padding: 0;
   margin: 4px 6px;
   height: 48px;
   border-radius: 12px;
 }
-:deep(.el-menu--collapse .el-menu-item span) {
+.el-menu--collapse .el-menu-item span {
   display: none;
 }
 </style>

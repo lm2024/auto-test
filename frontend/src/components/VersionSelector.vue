@@ -10,108 +10,107 @@
           :value="v.version"
         />
       </el-select>
-      <el-button v-if="versions.length > 5" size="small" text @click="loadAllVersions">
+      <el-button v-if="versions.length > 5" size="small" type="text" @click="loadAllVersions">
         查看全部 ({{ totalVersions }})
       </el-button>
     </div>
     <div class="version-bar-right" v-if="diffSummary">
       <span class="diff-badge added">
-        <el-icon><Plus /></el-icon>
+        <i class="el-icon-plus"></i>
         新增 {{ diffSummary.added }}
       </span>
       <span class="diff-badge removed">
-        <el-icon><Minus /></el-icon>
+        <i class="el-icon-minus"></i>
         删除 {{ diffSummary.removed }}
       </span>
       <span class="diff-badge modified">
-        <el-icon><Edit /></el-icon>
+        <i class="el-icon-edit"></i>
         修改 {{ diffSummary.modified }}
       </span>
       <span class="diff-badge unchanged">
-        <el-icon><Check /></el-icon>
+        <i class="el-icon-check"></i>
         未变 {{ diffSummary.unchanged }}
       </span>
     </div>
   </div>
 </template>
 
-<script setup>
-import { ref, watch, onMounted } from 'vue'
-import { Plus, Minus, Edit, Check } from '@element-plus/icons-vue'
+<script>
 import axios from 'axios'
 
-const props = defineProps({
-  chainCode: { type: String, required: true },
-  currentVersion: { type: Number, default: 0 }
-})
-
-const emit = defineEmits(['version-change', 'diff-loaded'])
-
-const versions = ref([])
-const totalVersions = ref(0)
-const selectedVersion = ref(props.currentVersion || 0)
-const diffSummary = ref(null)
-
-const currentVersion = ref(props.currentVersion || 0)
-
-function formatTime(time) {
-  if (!time) return ''
-  const d = new Date(time)
-  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-}
-
-async function loadVersions(all = false) {
-  try {
-    const params = { chainCode: props.chainCode, all: all ? 'true' : 'false' }
-    const { data } = await axios.get('/api/chain/versions', { params })
-    if (data.code === 200) {
-      versions.value = data.data.list || []
-      totalVersions.value = data.data.total || 0
-      if (versions.value.length > 0 && !currentVersion.value) {
-        currentVersion.value = versions.value[0].version
-        onVersionChange(currentVersion.value)
+export default {
+  name: 'VersionSelector',
+  props: {
+    chainCode: { type: String, required: true },
+    currentVersion: { type: Number, default: 0 }
+  },
+  data() {
+    return {
+      versions: [],
+      totalVersions: 0,
+      diffSummary: null,
+      currentVersion: 0
+    }
+  },
+  watch: {
+    'currentVersion': {
+      handler(v) {
+        if (v) {
+          this.currentVersion = v
+        }
+      },
+      immediate: false
+    }
+  },
+  mounted() {
+    this.loadVersions()
+  },
+  methods: {
+    formatTime(time) {
+      if (!time) return ''
+      const d = new Date(time)
+      return d.toLocaleDateString() + ' ' + d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+    },
+    async loadVersions(all) {
+      try {
+        const params = { chainCode: this.chainCode, all: all ? 'true' : 'false' }
+        const { data } = await axios.get('/api/chain/versions', { params })
+        if (data.code === 200) {
+          this.versions = data.data.list || []
+          this.totalVersions = data.data.total || 0
+          if (this.versions.length > 0 && !this.currentVersion) {
+            this.currentVersion = this.versions[0].version
+            this.onVersionChange(this.currentVersion)
+          }
+        }
+      } catch (e) {
+        console.error('加载版本列表失败:', e)
+      }
+    },
+    loadAllVersions() {
+      this.loadVersions(true)
+    },
+    async onVersionChange(version) {
+      this.$emit('version-change', version)
+      if (version <= 1) {
+        this.diffSummary = null
+        this.$emit('diff-loaded', null)
+        return
+      }
+      try {
+        const { data } = await axios.get('/api/chain/version/diff', {
+          params: { chainCode: this.chainCode, version }
+        })
+        if (data.code === 200) {
+          this.diffSummary = data.data.summary
+          this.$emit('diff-loaded', data.data)
+        }
+      } catch (e) {
+        console.error('加载Diff失败:', e)
       }
     }
-  } catch (e) {
-    console.error('加载版本列表失败:', e)
   }
 }
-
-function loadAllVersions() {
-  loadVersions(true)
-}
-
-async function onVersionChange(version) {
-  emit('version-change', version)
-  if (version <= 1) {
-    diffSummary.value = null
-    emit('diff-loaded', null)
-    return
-  }
-  try {
-    const { data } = await axios.get('/api/chain/version/diff', {
-      params: { chainCode: props.chainCode, version }
-    })
-    if (data.code === 200) {
-      diffSummary.value = data.data.summary
-      emit('diff-loaded', data.data)
-    }
-  } catch (e) {
-    console.error('加载Diff失败:', e)
-  }
-}
-
-watch(() => props.currentVersion, (v) => {
-  if (v) {
-    currentVersion.value = v
-  }
-})
-
-onMounted(() => {
-  loadVersions()
-})
-
-defineExpose({ loadVersions, currentVersion })
 </script>
 
 <style scoped>

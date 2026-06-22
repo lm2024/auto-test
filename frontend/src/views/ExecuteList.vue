@@ -51,53 +51,62 @@
 
       <div class="pagination-bar">
         <el-pagination
-          v-model:current-page="pageNo"
-          v-model:page-size="pageSize"
+          :current-page="pageNo"
+          :page-size="pageSize"
           :page-sizes="[10, 20, 50, 100]"
           :total="total"
           layout="total, sizes, prev, pager, next, jumper"
-          @size-change="loadRecords"
-          @current-change="loadRecords"
+          @size-change="onPageSizeChange"
+          @current-change="onPageChange"
         />
       </div>
     </el-card>
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue'
+<script>
 import api from '../api'
 
-const records = ref([])
-const filter = ref({ chainCode: '', status: '' })
-const dateRange = ref(null)
-const pageNo = ref(1)
-const pageSize = ref(10)
-const total = ref(0)
-
-const loadRecords = async () => {
-  const params = { ...filter.value, pageNo: pageNo.value, pageSize: pageSize.value }
-  if (dateRange.value) {
-    params.startTime = dateRange.value[0]
-    params.endTime = dateRange.value[1]
+export default {
+  name: 'ExecuteList',
+  data() {
+    return {
+      records: [],
+      filter: { chainCode: '', status: '' },
+      dateRange: null,
+      pageNo: 1,
+      pageSize: 10,
+      total: 0
+    }
+  },
+  mounted() {
+    this.loadRecords()
+  },
+  methods: {
+    async loadRecords() {
+      const params = { ...this.filter, pageNo: this.pageNo, pageSize: this.pageSize }
+      if (this.dateRange) {
+        params.startTime = this.dateRange[0]
+        params.endTime = this.dateRange[1]
+      }
+      const res = await api.get('/execute/list', { params })
+      this.records = (res.data && res.data.list) || []
+      this.total = (res.data && res.data.total) || 0
+    },
+    onPageSizeChange(val) { this.pageSize = val; this.loadRecords() },
+    onPageChange(val) { this.pageNo = val; this.loadRecords() },
+    formatTime(t) { return t ? new Date(t).toLocaleString() : '-' },
+    statusType(s) { return { RUNNING: 'warning', SUCCESS: 'success', FAILED: 'danger' }[s] || 'info' },
+    statusText(s) { return { RUNNING: '运行中', SUCCESS: '成功', FAILED: '失败' }[s] || s }
   }
-  const res = await api.get('/execute/list', { params })
-  records.value = res.data?.list || []
-  total.value = res.data?.total || 0
 }
-
-const formatTime = (t) => t ? new Date(t).toLocaleString() : '-'
-const statusType = (s) => ({ RUNNING: 'warning', SUCCESS: 'success', FAILED: 'danger' }[s] || 'info')
-const statusText = (s) => ({ RUNNING: '运行中', SUCCESS: '成功', FAILED: '失败' }[s] || s)
-
-onMounted(loadRecords)
 </script>
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
 /* ── Card ── */
-:deep(.el-card) {
+::v-deep .el-card {
   border-radius: 16px;
   box-shadow:
     0 4px 24px rgba(99, 102, 241, 0.08),
@@ -105,7 +114,7 @@ onMounted(loadRecords)
   border: 1px solid rgba(99, 102, 241, 0.08);
 }
 
-:deep(.el-card__header) {
+::v-deep .el-card__header {
   padding: 20px 24px;
   border-bottom: 1px solid rgba(99, 102, 241, 0.08);
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.04), rgba(129, 140, 248, 0.02));
@@ -126,39 +135,37 @@ onMounted(loadRecords)
   flex-wrap: wrap;
 }
 
-.filter-bar :deep(.el-input__wrapper),
-.filter-bar :deep(.el-select .el-input__wrapper),
-.filter-bar :deep(.el-date-editor) {
+.filter-bar ::v-deep .el-input__inner {
   border-radius: 10px;
   background: #fff;
   border: 1px solid #d0d5dd;
   box-shadow: none;
 }
 
-.filter-bar :deep(.el-button) {
+.filter-bar ::v-deep .el-button {
   border-radius: 10px;
   font-weight: 500;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.filter-bar :deep(.el-button--primary) {
+.filter-bar ::v-deep .el-button--primary {
   background: linear-gradient(135deg, #6366f1, #818cf8);
   border: none;
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
 }
 
-.filter-bar :deep(.el-button:hover) {
+.filter-bar ::v-deep .el-button:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
 }
 
 /* ── Table ── */
-:deep(.el-table) {
+::v-deep .el-table {
   border-radius: 0 0 12px 12px;
   font-size: 13px;
 }
 
-:deep(.el-table th) {
+::v-deep .el-table th {
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.06), rgba(129, 140, 248, 0.04)) !important;
   color: #4338ca !important;
   font-weight: 600;
@@ -167,31 +174,31 @@ onMounted(loadRecords)
   padding: 7px 0 !important;
 }
 
-:deep(.el-table td) {
+::v-deep .el-table td {
   border-bottom: 1px solid rgba(99, 102, 241, 0.06);
   padding: 5px 0 !important;
 }
 
 /* ── Fixed Column ── */
-:deep(.el-table .el-table__fixed-right) {
+::v-deep .el-table .el-table__fixed-right {
   z-index: 10 !important;
   box-shadow: -4px 0 12px rgba(99, 102, 241, 0.1) !important;
 }
 
-:deep(.el-table .el-table__fixed-right::before) {
+::v-deep .el-table .el-table__fixed-right::before {
   display: none !important;
 }
 
-:deep(.el-table .el-table__fixed-right-patch) {
+::v-deep .el-table .el-table__fixed-body-wrapper {
   background: #fff !important;
 }
 
-:deep(.el-table .action-column) {
+::v-deep .el-table .action-column {
   background: #fff !important;
   padding: 8px 0 !important;
 }
 
-:deep(.el-table td.action-column) {
+::v-deep .el-table td.action-column {
   background: #fff !important;
   padding: 8px 0 !important;
   height: auto !important;
@@ -209,7 +216,7 @@ onMounted(loadRecords)
   width: 100%;
 }
 
-.action-btns :deep(.el-button) {
+.action-btns ::v-deep .el-button {
   margin: 0;
   padding: 7px 11px;
   font-size: 12px;
@@ -218,11 +225,11 @@ onMounted(loadRecords)
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-:deep(.el-table--striped .el-table__body tr.el-table__row--striped) {
+::v-deep .el-table--striped .el-table__body tr.el-table__row--striped {
   background: rgba(99, 102, 241, 0.02);
 }
 
-:deep(.el-table tbody tr:hover > td) {
+::v-deep .el-table tbody tr:hover > td {
   background: rgba(99, 102, 241, 0.05) !important;
 }
 
@@ -233,19 +240,19 @@ onMounted(loadRecords)
   padding: 16px 0 0;
 }
 
-:deep(.el-pagination .el-pager li.is-active) {
+::v-deep .el-pagination .el-pager li.active {
   background: linear-gradient(135deg, #6366f1, #818cf8);
   color: #fff;
   border-radius: 8px;
 }
 
-:deep(.el-pagination .el-pager li) {
+::v-deep .el-pagination .el-pager li {
   border-radius: 8px;
   min-width: 32px;
 }
 
 /* ── Status Tags ── */
-:deep(.el-tag) {
+::v-deep .el-tag {
   border-radius: 8px;
   font-weight: 500;
   padding: 2px 10px;
@@ -253,7 +260,7 @@ onMounted(loadRecords)
 }
 
 /* ── Node Stats ── */
-:deep(.el-table td .success-count) { color: #10b981; font-weight: 600; }
-:deep(.el-table td .fail-count) { color: #ef4444; font-weight: 600; }
-:deep(.el-table td .skip-count) { color: #6b7280; font-weight: 500; }
+::v-deep .el-table td .success-count { color: #10b981; font-weight: 600; }
+::v-deep .el-table td .fail-count { color: #ef4444; font-weight: 600; }
+::v-deep .el-table td .skip-count { color: #6b7280; font-weight: 500; }
 </style>

@@ -2,7 +2,7 @@
   <div class="chain-edit">
     <div class="toolbar">
       <div class="toolbar-left">
-        <el-button @click="$router.back()" :icon="ArrowLeft">返回</el-button>
+        <el-button @click="$router.back()" icon="el-icon-back">返回</el-button>
         <el-divider direction="vertical" />
         <span class="chain-title">链路编排</span>
         <el-divider direction="vertical" />
@@ -19,19 +19,19 @@
       <div class="toolbar-right">
         <el-button-group>
           <el-button :type="viewMode === 'list' ? 'primary' : ''" @click="viewMode = 'list'" size="small">
-            <el-icon><List /></el-icon> 列表视图
+            <i class="el-icon-menu"></i> 列表视图
           </el-button>
           <el-button :type="viewMode === 'trace' ? 'primary' : ''" @click="viewMode = 'trace'; loadTraceGroups()" size="small">
-            <el-icon><Connection /></el-icon> 分组视图
+            <i class="el-icon-connection"></i> 分组视图
           </el-button>
         </el-button-group>
-        <el-button @click="undo" :disabled="!canUndo" :icon="RefreshLeft">撤销</el-button>
-        <el-button @click="redo" :disabled="!canRedo" :icon="RefreshRight">重做</el-button>
-        <el-button @click="autoLayout" :icon="Grid">自动布局</el-button>
+        <el-button @click="undo" :disabled="!canUndo" icon="el-icon-refresh-left">撤销</el-button>
+        <el-button @click="redo" :disabled="!canRedo" icon="el-icon-refresh-right">重做</el-button>
+        <el-button @click="autoLayout" icon="el-icon-menu">自动布局</el-button>
         <el-divider direction="vertical" />
-        <el-button type="warning" @click="generateTestData" :loading="aiLoading" :icon="MagicStick">AI生成测试数据</el-button>
-        <el-button type="success" @click="executeChain" :disabled="nodes.length === 0" :icon="CaretRight">执行</el-button>
-        <el-button type="primary" @click="saveAll" :icon="Check">保存</el-button>
+        <el-button type="warning" @click="generateTestData" :loading="aiLoading" icon="el-icon-magic-stick">AI生成测试数据</el-button>
+        <el-button type="success" @click="executeChain" :disabled="nodes.length === 0" icon="el-icon-caret-right">执行</el-button>
+        <el-button type="primary" @click="saveAll" icon="el-icon-check">保存</el-button>
       </div>
     </div>
 
@@ -39,37 +39,37 @@
       <div class="left-panel" :style="{ width: leftPanelWidth + 'px' }">
         <div class="panel-section">
           <div class="panel-title">
-            <el-icon><Box /></el-icon>
+            <i class="el-icon-box"></i>
             <span>节点库</span>
           </div>
           <div class="node-item" draggable @dragstart="onDragStart">
-            <el-icon class="node-icon http"><Connection /></el-icon>
+            <i class="el-icon-connection node-icon http"></i>
             <div class="node-item-info">
               <span class="node-item-name">HTTP请求</span>
               <span class="node-item-desc">发送HTTP请求</span>
             </div>
           </div>
-          <el-button type="primary" plain @click="openImportDialog" style="width:100%;margin-top:12px" :icon="Upload">
+          <el-button type="primary" plain @click="openImportDialog" style="width:100%;margin-top:12px" icon="el-icon-upload">
             批量导入
           </el-button>
         </div>
 
         <div class="panel-section" style="margin-top:16px">
           <div class="panel-title">
-            <el-icon><List /></el-icon>
+            <i class="el-icon-menu"></i>
             <span>节点列表</span>
             <el-tag size="small" type="info" style="margin-left:auto">{{ nodes.length }}</el-tag>
           </div>
           <div class="node-list">
             <div v-for="(node, index) in sortedNodes" :key="node.nodeCode"
                  class="node-list-item"
-                 :class="{ active: selectedNode?.nodeCode === node.nodeCode, ['change-' + (nodeChangeMap[node.nodeCode] || '')]: nodeChangeMap[node.nodeCode] }"
+                 :class="{ active: selectedNode && selectedNode.nodeCode === node.nodeCode, ['change-' + (nodeChangeMap[node.nodeCode] || '')]: nodeChangeMap[node.nodeCode] }"
                  draggable="true"
                  @dragstart="onListDragStart($event, node.nodeCode)"
                  @dragover.prevent
                  @drop="onListDrop($event, node.nodeCode)"
                  @click="selectNode(node)">
-              <el-icon class="list-drag-handle"><Rank /></el-icon>
+              <i class="el-icon-rank list-drag-handle"></i>
               <el-tag size="small" :type="methodType(node.requestMethod)" class="method-tag">{{ node.requestMethod }}</el-tag>
               <span class="node-list-name">{{ node.nodeName || node.nodeCode }}</span>
             </div>
@@ -88,7 +88,7 @@
       <!-- TraceId分组视图 -->
       <div class="center-panel trace-group-view" v-if="viewMode === 'trace'" ref="traceCanvasRef" @dragover.prevent>
         <div v-if="traceGroups.length === 0" class="empty-canvas">
-          <el-icon class="empty-icon"><Connection /></el-icon>
+          <i class="el-icon-connection empty-icon"></i>
           <div class="empty-title">暂无分组数据</div>
           <div class="empty-desc">链路节点未携带 bizOperTraceId 信息</div>
         </div>
@@ -106,7 +106,7 @@
           </div>
           <div class="trace-group-nodes">
             <div v-for="(node, nIdx) in group.nodes" :key="node.nodeCode" class="trace-node-card"
-                 :class="{ selected: selectedNode?.nodeCode === node.nodeCode, ignored: node.isIgnored }"
+                 :class="{ selected: selectedNode && selectedNode.nodeCode === node.nodeCode, ignored: node.isIgnored }"
                  @click="selectNode(node)">
               <div class="trace-node-index">{{ nIdx + 1 }}</div>
               <div class="trace-node-info">
@@ -127,13 +127,13 @@
 
       <div class="center-panel" v-if="viewMode === 'list'" ref="canvasRef" @dragover.prevent>
         <div v-if="nodes.length === 0" class="empty-canvas" @drop="onDrop" @dragover.prevent>
-          <el-icon class="empty-icon"><Connection /></el-icon>
+          <i class="el-icon-connection empty-icon"></i>
           <div class="empty-title">拖拽节点到此处</div>
           <div class="empty-desc">或点击左侧「批量导入」添加接口</div>
         </div>
         <template v-for="(node, index) in sortedNodes" :key="node.nodeCode">
           <div class="node-card"
-               :class="{ selected: selectedNode?.nodeCode === node.nodeCode, ['status-' + (nodeStatusMap[node.nodeCode] || '').toLowerCase()]: true, 'drag-over': dragOverIndex === index, ['change-' + (nodeChangeMap[node.nodeCode] || '')]: true }"
+              :class="{ selected: selectedNode && selectedNode.nodeCode === node.nodeCode, ['status-' + (nodeStatusMap[node.nodeCode] || '').toLowerCase()]: true, 'drag-over': dragOverIndex === index, ['change-' + (nodeChangeMap[node.nodeCode] || '')]: true }"
                draggable="true"
                @dragstart="onNodeDragStart($event, index)"
                @dragend="onNodeDragEnd"
@@ -143,7 +143,7 @@
                @click="selectNode(node)">
             <div class="node-card-header">
               <div class="node-card-left">
-                <el-icon class="drag-handle"><Rank /></el-icon>
+                <i class="el-icon-rank drag-handle"></i>
                 <div class="node-index">{{ index + 1 }}</div>
                 <div class="node-card-info">
                   <div class="node-card-name">{{ node.nodeName || node.nodeCode }}</div>
@@ -161,21 +161,21 @@
               </div>
             </div>
             <div v-if="node.bodyType === 'file'" class="node-card-file">
-              <el-icon><Document /></el-icon>
+              <i class="el-icon-document"></i>
               <span>文件上传</span>
             </div>
             <div v-if="node.bodyData" class="node-card-data">
-              <el-icon><Document /></el-icon>
+              <i class="el-icon-document"></i>
               <span>已填充测试数据</span>
             </div>
           </div>
           <div v-if="index < sortedNodes.length - 1" class="connection-arrow">
             <div class="arrow-line"></div>
-            <el-icon class="arrow-icon"><Bottom /></el-icon>
+            <i class="el-icon-bottom arrow-icon"></i>
           </div>
         </template>
         <div v-if="nodes.length > 0" class="add-node-area" @drop.stop="onDrop" @dragover.prevent>
-          <el-button type="primary" plain @click="addNode" :icon="Plus">新增节点</el-button>
+          <el-button type="primary" plain @click="addNode" icon="el-icon-plus">新增节点</el-button>
         </div>
       </div>
 
@@ -186,10 +186,10 @@
         <div class="right-panel" :style="{ width: rightPanelWidth + 'px' }" v-if="selectedNode">
           <div class="panel-header">
             <div class="panel-title-row">
-              <el-icon class="config-icon"><Setting /></el-icon>
+              <i class="el-icon-setting config-icon"></i>
               <span>属性配置</span>
             </div>
-            <el-button text @click="selectedNode = null" :icon="Close" />
+            <el-button type="text" @click="selectedNode = null" icon="el-icon-close" />
           </div>
 
           <el-tabs v-model="activeTab" class="config-tabs">
@@ -234,7 +234,7 @@
                 <div class="config-label">
                   请求体类型
                   <el-tooltip content="JSON: 发送JSON数据 | 文件: 上传文件(Multipart)" placement="top">
-                    <el-icon class="help-icon"><QuestionFilled /></el-icon>
+                    <i class="el-icon-question help-icon"></i>
                   </el-tooltip>
                 </div>
                 <el-radio-group v-model="selectedNode.bodyType" size="small">
@@ -250,8 +250,8 @@
                   <el-input v-model="selectedNode.requestHeaders" type="textarea" :rows="3"
                     placeholder='{"Content-Type":"application/json"}' />
                   <div class="config-actions">
-                    <el-button size="small" text @click="formatJson('requestHeaders')">格式化</el-button>
-                    <el-button size="small" text @click="copyText(selectedNode.requestHeaders)">复制</el-button>
+                    <el-button size="small" type="text" @click="formatJson('requestHeaders')">格式化</el-button>
+                    <el-button size="small" type="text" @click="copyText(selectedNode.requestHeaders)">复制</el-button>
                   </div>
                 </div>
                 <div class="config-section">
@@ -259,8 +259,8 @@
                   <el-input v-model="selectedNode.bodyData" type="textarea" :rows="8"
                     placeholder='{"key":"value"}' class="code-editor" />
                   <div class="config-actions">
-                    <el-button size="small" text @click="formatJson('bodyData')">格式化</el-button>
-                    <el-button size="small" text @click="copyText(selectedNode.bodyData)">复制</el-button>
+                    <el-button size="small" type="text" @click="formatJson('bodyData')">格式化</el-button>
+                    <el-button size="small" type="text" @click="copyText(selectedNode.bodyData)">复制</el-button>
                   </div>
                 </div>
               </template>
@@ -281,23 +281,23 @@
                       accept=".xlsx,.xls,.csv,.json,.txt,.xml,.pdf,.doc,.docx,.zip,.rar"
                       :limit="1"
                     >
-                      <el-icon class="upload-icon"><UploadFilled /></el-icon>
+                      <i class="el-icon-upload upload-icon"></i>
                       <div class="upload-text">拖拽文件到此处，或<em>点击上传</em></div>
                       <div class="upload-tip">支持 Excel、CSV、JSON、XML 等文件，最大 50MB</div>
                     </el-upload>
                   </div>
                   <div class="file-info" v-else>
                     <div class="file-card">
-                      <el-icon class="file-icon"><Document /></el-icon>
+                      <i class="el-icon-document file-icon"></i>
                       <div class="file-detail">
                         <div class="file-name">{{ selectedNode._uploadedFile.fileName }}</div>
                         <div class="file-size">{{ formatFileSize(selectedNode._uploadedFile.size) }}</div>
                       </div>
-                      <el-button type="danger" text @click="removeUploadedFile" :icon="Delete">移除</el-button>
+                      <el-button type="danger" type="text" @click="removeUploadedFile" icon="el-icon-delete">移除</el-button>
                     </div>
                   </div>
                   <div class="config-hint-box">
-                    <el-icon><InfoFilled /></el-icon>
+                    <i class="el-icon-info"></i>
                     <span>文件将作为 Multipart 请求体发送，文件ID会保存到节点配置中</span>
                   </div>
                 </div>
@@ -314,7 +314,7 @@
                   <el-input v-model="selectedNode.requestHeaders" type="textarea" :rows="3"
                     placeholder='{"Content-Type":"application/x-www-form-urlencoded"}' />
                   <div class="config-actions">
-                    <el-button size="small" text @click="formatJson('requestHeaders')">格式化</el-button>
+                    <el-button size="small" type="text" @click="formatJson('requestHeaders')">格式化</el-button>
                   </div>
                 </div>
                 <div class="config-section">
@@ -329,13 +329,13 @@
               <div class="config-section">
                 <div class="config-label">从响应中提取变量</div>
                 <div class="config-hint-box" style="margin-bottom:14px">
-                  <el-icon><InfoFilled /></el-icon>
+                  <i class="el-icon-info"></i>
                   <span>提取响应数据保存为变量，供后续节点使用（如：提取 token、用户ID 等）</span>
                 </div>
                 <div v-for="(rule, idx) in extractRuleList" :key="idx" class="rule-row">
                   <div class="rule-row-header">
                     <span class="rule-index">#{{ idx + 1 }}</span>
-                    <el-button text type="danger" size="small" @click="removeExtractRule(idx)" :icon="Delete" />
+                    <el-button type="text" type="danger" size="small" @click="removeExtractRule(idx)" icon="el-icon-delete" />
                   </div>
                   <div class="rule-fields">
                     <div class="rule-field">
@@ -357,7 +357,7 @@
                     </div>
                   </div>
                 </div>
-                <el-button type="primary" plain size="small" @click="addExtractRule" :icon="Plus" style="width:100%;margin-top:8px">
+                <el-button type="primary" plain size="small" @click="addExtractRule" icon="el-icon-plus" style="width:100%;margin-top:8px">
                   添加提取规则
                 </el-button>
               </div>
@@ -367,13 +367,13 @@
               <div class="config-section">
                 <div class="config-label">验证响应结果</div>
                 <div class="config-hint-box" style="margin-bottom:14px">
-                  <el-icon><InfoFilled /></el-icon>
+                  <i class="el-icon-info"></i>
                   <span>设置验证条件，执行后自动检查是否符合预期</span>
                 </div>
 
                 <div class="assert-group">
                   <div class="assert-group-title">
-                    <el-icon><Monitor /></el-icon>
+                    <i class="el-icon-monitor"></i>
                     <span>状态码检查</span>
                   </div>
                   <div class="rule-fields">
@@ -400,13 +400,13 @@
 
                 <div class="assert-group">
                   <div class="assert-group-title">
-                    <el-icon><DataLine /></el-icon>
+                    <i class="el-icon-data-line"></i>
                     <span>响应体字段检查</span>
                   </div>
                   <div v-for="(rule, idx) in assertBodyRules" :key="idx" class="rule-row">
                     <div class="rule-row-header">
                       <span class="rule-index">#{{ idx + 1 }}</span>
-                      <el-button text type="danger" size="small" @click="removeAssertBodyRule(idx)" :icon="Delete" />
+                      <el-button type="text" type="danger" size="small" @click="removeAssertBodyRule(idx)" icon="el-icon-delete" />
                     </div>
                     <div class="rule-fields">
                       <div class="rule-field">
@@ -436,7 +436,7 @@
                       <el-tag size="small" type="info" @click="rule.path='$.data.list.length'">$.data.list.length 列表长度</el-tag>
                     </div>
                   </div>
-                  <el-button type="primary" plain size="small" @click="addAssertBodyRule" :icon="Plus" style="width:100%;margin-top:8px">
+                  <el-button type="primary" plain size="small" @click="addAssertBodyRule" icon="el-icon-plus" style="width:100%;margin-top:8px">
                     添加字段检查
                   </el-button>
                 </div>
@@ -462,18 +462,18 @@
           </el-tabs>
 
           <div class="panel-footer">
-            <el-button @click="moveNodeUp" :disabled="isFirstNode" :icon="Top" size="small">上移</el-button>
-            <el-button @click="moveNodeDown" :disabled="isLastNode" :icon="Bottom" size="small">下移</el-button>
+            <el-button @click="moveNodeUp" :disabled="isFirstNode" icon="el-icon-top" size="small">上移</el-button>
+            <el-button @click="moveNodeDown" :disabled="isLastNode" icon="el-icon-bottom" size="small">下移</el-button>
             <el-divider direction="vertical" />
-            <el-button type="primary" @click="saveNode" :icon="Check" style="flex:1">保存节点</el-button>
-            <el-button type="danger" @click="deleteNode" :icon="Delete" style="flex:1">删除节点</el-button>
+            <el-button type="primary" @click="saveNode" icon="el-icon-check" style="flex:1">保存节点</el-button>
+            <el-button type="danger" @click="deleteNode" icon="el-icon-delete" style="flex:1">删除节点</el-button>
           </div>
         </div>
       </transition>
 
       <div class="right-panel empty-right" v-if="!selectedNode">
         <div class="empty-config">
-          <el-icon class="empty-config-icon"><Setting /></el-icon>
+          <i class="el-icon-setting empty-config-icon"></i>
           <div class="empty-config-title">选择节点配置</div>
           <div class="empty-config-desc">点击左侧节点列表或画布中的节点</div>
         </div>
@@ -481,7 +481,7 @@
     </div>
 
     <!-- 批量导入对话框 -->
-    <el-dialog v-model="importDialogVisible" title="批量导入接口" width="750px" :close-on-click-modal="false" class="import-dialog">
+    <el-dialog :visible.sync="importDialogVisible" title="批量导入接口" width="750px" :close-on-click-modal="false" class="import-dialog">
       <el-tabs v-model="importTab">
         <el-tab-pane label="Swagger/OpenAPI" name="swagger">
           <el-form label-width="100px">
@@ -513,7 +513,7 @@
             accept=".json"
             :limit="1"
           >
-            <el-icon style="font-size:40px;color:#909399"><UploadFilled /></el-icon>
+            <i class="el-icon-upload" style="font-size:40px;color:#909399"></i>
             <div>拖拽JSON文件到此处，或<em>点击上传</em></div>
             <template #tip>
               <div style="color:#909399;font-size:12px">支持格式：Postman Collection、Insomnia Export、自定义JSON</div>
@@ -561,761 +561,694 @@ curl -X POST https://api.example.com/users \
   </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import {
-  ArrowLeft, RefreshLeft, RefreshRight, Grid, MagicStick, CaretRight, Check,
-  Connection, Box, Upload, List, Document, Setting, Close, Delete, Plus,
-  UploadFilled, InfoFilled, Bottom, QuestionFilled, Rank, Top, Monitor, DataLine
-} from '@element-plus/icons-vue'
+<script>
+import { useRoute, useRouter } from '../router/compat'
+import { Message } from 'element-ui'
 import api from '../api'
 import FieldDiff from '../components/FieldDiff.vue'
 import AiAnalysis from '../components/AiAnalysis.vue'
 import VersionHistory from '../components/VersionHistory.vue'
 
-const route = useRoute()
-const router = useRouter()
-const chainCode = route.params.chainCode
-
-const nodes = ref([])
-const selectedNode = ref(null)
-const activeTab = ref('basic')
-const aiLoading = ref(false)
-const canUndo = ref(false)
-const canRedo = ref(false)
-
-// Panel resize
-const leftPanelWidth = ref(260)
-const rightPanelWidth = ref(440)
-let isResizingLeft = false
-let isResizingRight = false
-let startX = 0
-let startWidth = 0
-
-const startResizeLeft = (e) => {
-  isResizingLeft = true
-  startX = e.clientX
-  startWidth = leftPanelWidth.value
-  document.addEventListener('mousemove', onResizeLeft)
-  document.addEventListener('mouseup', stopResizeLeft)
-  document.body.style.cursor = 'col-resize'
-  document.body.style.userSelect = 'none'
-}
-
-const onResizeLeft = (e) => {
-  if (!isResizingLeft) return
-  const diff = e.clientX - startX
-  const newWidth = Math.min(Math.max(startWidth + diff, 200), 400)
-  leftPanelWidth.value = newWidth
-}
-
-const stopResizeLeft = () => {
-  isResizingLeft = false
-  document.removeEventListener('mousemove', onResizeLeft)
-  document.removeEventListener('mouseup', stopResizeLeft)
-  document.body.style.cursor = ''
-  document.body.style.userSelect = ''
-}
-
-const startResizeRight = (e) => {
-  isResizingRight = true
-  startX = e.clientX
-  startWidth = rightPanelWidth.value
-  document.addEventListener('mousemove', onResizeRight)
-  document.addEventListener('mouseup', stopResizeRight)
-  document.body.style.cursor = 'col-resize'
-  document.body.style.userSelect = 'none'
-}
-
-const onResizeRight = (e) => {
-  if (!isResizingRight) return
-  const diff = startX - e.clientX
-  const newWidth = Math.min(Math.max(startWidth + diff, 300), 600)
-  rightPanelWidth.value = newWidth
-}
-
-const stopResizeRight = () => {
-  isResizingRight = false
-  document.removeEventListener('mousemove', onResizeRight)
-  document.removeEventListener('mouseup', stopResizeRight)
-  document.body.style.cursor = ''
-  document.body.style.userSelect = ''
-}
-const nodeStatusMap = ref({})
-const dragIndex = ref(null)
-const dragOverIndex = ref(null)
-const viewMode = ref('list')
-const traceGroups = ref([])
-
-const importDialogVisible = ref(false)
-const importTab = ref('swagger')
-const importLoading = ref(false)
-const swaggerUrl = ref('')
-const swaggerResult = ref([])
-const jsonPreview = ref([])
-const curlCommand = ref('')
-const pasteJson = ref('')
-const jsonUploadRef = ref(null)
-const fileUploadRef = ref(null)
-
-const extractRuleList = ref([])
-const assertStatusMode = ref('eq')
-const assertStatusCode = ref('')
-const assertBodyRules = ref([])
-
-// Version management
-const versions = ref([])
-const currentVersion = ref(0)
-const diffSummary = ref(null)
-const diffData = ref(null)
-
-const sortedNodes = computed(() => {
-  return [...nodes.value].sort((a, b) => (a.sortNo || 0) - (b.sortNo || 0))
-})
-
-const selectedNodeIndex = computed(() => {
-  if (!selectedNode.value) return -1
-  return sortedNodes.value.findIndex(n => n.nodeCode === selectedNode.value.nodeCode)
-})
-
-// Node change map for diff highlighting
-const nodeChangeMap = computed(() => {
-  if (!diffData.value || !diffData.value.nodes) return {}
-  const map = {}
-  diffData.value.nodes.forEach(n => {
-    if (n.changeType && n.changeType !== 'UNCHANGED') {
-      map[n.nodeCode] = n.changeType.toLowerCase()
+export default {
+  name: 'ChainEdit',
+  components: { FieldDiff, AiAnalysis, VersionHistory },
+  data() {
+    return {
+      chainCode: '',
+      nodes: [],
+      selectedNode: null,
+      activeTab: 'basic',
+      aiLoading: false,
+      canUndo: false,
+      canRedo: false,
+      // Panel resize
+      leftPanelWidth: 260,
+      rightPanelWidth: 440,
+      isResizingLeft: false,
+      isResizingRight: false,
+      resizeStartX: 0,
+      resizeStartWidth: 0,
+      nodeStatusMap: {},
+      dragIndex: null,
+      dragOverIndex: null,
+      viewMode: 'list',
+      traceGroups: [],
+      importDialogVisible: false,
+      importTab: 'swagger',
+      importLoading: false,
+      swaggerUrl: '',
+      swaggerResult: [],
+      jsonPreview: [],
+      curlCommand: '',
+      pasteJson: '',
+      jsonUploadRef: null,
+      fileUploadRef: null,
+      extractRuleList: [],
+      assertStatusMode: 'eq',
+      assertStatusCode: '',
+      assertBodyRules: [],
+      // Version management
+      versions: [],
+      currentVersion: 0,
+      diffSummary: null,
+      diffData: null
     }
-  })
-  return map
-})
-
-const isFirstNode = computed(() => selectedNodeIndex.value <= 0)
-const isLastNode = computed(() => selectedNodeIndex.value >= sortedNodes.value.length - 1)
-
-const moveNodeUp = () => {
-  const idx = selectedNodeIndex.value
-  if (idx <= 0) return
-  const sorted = sortedNodes.value
-  const cur = sorted[idx]
-  const prev = sorted[idx - 1]
-  const tmpSort = cur.sortNo
-  cur.sortNo = prev.sortNo
-  prev.sortNo = tmpSort
-  const ci = nodes.value.findIndex(n => n.nodeCode === cur.nodeCode)
-  const pi = nodes.value.findIndex(n => n.nodeCode === prev.nodeCode)
-  if (ci !== -1) nodes.value[ci] = { ...cur }
-  if (pi !== -1) nodes.value[pi] = { ...prev }
-  saveAll()
-}
-
-const moveNodeDown = () => {
-  const idx = selectedNodeIndex.value
-  if (idx < 0 || idx >= sortedNodes.value.length - 1) return
-  const sorted = sortedNodes.value
-  const cur = sorted[idx]
-  const next = sorted[idx + 1]
-  const tmpSort = cur.sortNo
-  cur.sortNo = next.sortNo
-  next.sortNo = tmpSort
-  const ci = nodes.value.findIndex(n => n.nodeCode === cur.nodeCode)
-  const ni = nodes.value.findIndex(n => n.nodeCode === next.nodeCode)
-  if (ci !== -1) nodes.value[ci] = { ...cur }
-  if (ni !== -1) nodes.value[ni] = { ...next }
-  saveAll()
-}
-
-const onNodeDragStart = (e, index) => {
-  dragIndex.value = index
-  e.dataTransfer.effectAllowed = 'move'
-  e.dataTransfer.setData('text/plain', index)
-  e.target.style.opacity = '0.4'
-}
-
-const onNodeDragEnd = (e) => {
-  e.target.style.opacity = '1'
-  dragIndex.value = null
-  dragOverIndex.value = null
-}
-
-const onNodeDragOver = (e, index) => {
-  e.preventDefault()
-  e.dataTransfer.dropEffect = 'move'
-  dragOverIndex.value = index
-}
-
-const onNodeDragLeave = () => {
-  dragOverIndex.value = null
-}
-
-const onNodeDrop = (e, dropIndex) => {
-  e.preventDefault()
-  dragOverIndex.value = null
-  const fromIndex = dragIndex.value
-  if (fromIndex === null || fromIndex === dropIndex) return
-
-  const sorted = sortedNodes.value
-  const fromNode = sorted[fromIndex]
-  const toNode = sorted[dropIndex]
-  if (!fromNode || !toNode) return
-
-  const fromSortNo = fromNode.sortNo || 0
-  const toSortNo = toNode.sortNo || 0
-
-  fromNode.sortNo = toSortNo
-  toNode.sortNo = fromSortNo
-
-  const fromIdx = nodes.value.findIndex(n => n.nodeCode === fromNode.nodeCode)
-  const toIdx = nodes.value.findIndex(n => n.nodeCode === toNode.nodeCode)
-  if (fromIdx !== -1) nodes.value[fromIdx] = { ...fromNode }
-  if (toIdx !== -1) nodes.value[toIdx] = { ...toNode }
-
-  saveAll()
-  dragIndex.value = null
-}
-
-const onListDragStart = (e, nodeCode) => {
-  e.dataTransfer.effectAllowed = 'move'
-  e.dataTransfer.setData('text/plain', nodeCode)
-}
-
-const onListDrop = (e, targetCode) => {
-  e.preventDefault()
-  const sourceCode = e.dataTransfer.getData('text/plain')
-  if (!sourceCode || sourceCode === targetCode) return
-
-  const sorted = sortedNodes.value
-  const sourceIdx = sorted.findIndex(n => n.nodeCode === sourceCode)
-  const targetIdx = sorted.findIndex(n => n.nodeCode === targetCode)
-  if (sourceIdx === -1 || targetIdx === -1) return
-
-  const newSortNo = sorted[targetIdx].sortNo || 0
-  const sourceNode = nodes.value.find(n => n.nodeCode === sourceCode)
-  if (sourceNode) {
-    sourceNode.sortNo = newSortNo
-    const idx = nodes.value.findIndex(n => n.nodeCode === sourceCode)
-    nodes.value[idx] = { ...sourceNode }
-    saveAll()
-  }
-}
-
-const loadNodes = async () => {
-  const res = await api.get('/node/list', { params: { chainCode } })
-  nodes.value = res.data || []
-}
-
-const loadTraceGroups = async () => {
-  if (!chainCode) return
-  try {
-    const res = await api.get('/chain/trace-groups', { params: { chainCode } })
-    traceGroups.value = res.data || []
-  } catch (e) {
-    console.error('加载Trace分组失败:', e)
-  }
-}
-
-const runTraceGroup = async (traceId) => {
-  try {
-    const res = await api.post('/chain/runByTrace', null, {
-      params: { chainCode, traceId, parallel: false }
-    })
-    const executionId = res.data.executionId
-    ElMessage.success('分组执行已启动')
-    router.push('/execute/detail/' + executionId)
-  } catch (e) {
-    ElMessage.error('执行失败: ' + (e.message || '未知错误'))
-  }
-}
-
-const selectNode = (node) => {
-  const n = { ...node }
-  if (n.bodyType === 'file' && n.bodyData && n.bodyData.startsWith('FILE_')) {
-    n._uploadedFile = { fileId: n.bodyData, fileName: '已上传文件' }
-  }
-  selectedNode.value = n
-  parseExtractRules()
-  parseAssertRules()
-}
-
-const parseExtractRules = () => {
-  try {
-    const raw = selectedNode.value?.extractRules
-    if (!raw) { extractRuleList.value = []; return }
-    const obj = JSON.parse(raw)
-    const rules = obj.rules || []
-    extractRuleList.value = rules.map(r => ({ varName: r.varName || '', jsonPath: r.jsonPath || '' }))
-  } catch { extractRuleList.value = [] }
-}
-
-const parseAssertRules = () => {
-  try {
-    const raw = selectedNode.value?.assertRules
-    if (!raw) { assertStatusCode.value = ''; assertStatusMode.value = 'eq'; assertBodyRules.value = []; return }
-    const obj = JSON.parse(raw)
-    if (obj.statusCode !== undefined && obj.statusCode !== null && obj.statusCode !== '') {
-      assertStatusCode.value = String(obj.statusCode)
-      assertStatusMode.value = 'eq'
-    } else {
-      assertStatusCode.value = ''
-      assertStatusMode.value = 'eq'
+  },
+  computed: {
+    sortedNodes() {
+      return [...this.nodes].sort((a, b) => (a.sortNo || 0) - (b.sortNo || 0))
+    },
+    selectedNodeIndex() {
+      if (!this.selectedNode) return -1
+      return this.sortedNodes.findIndex(n => n.nodeCode === this.selectedNode.nodeCode)
+    },
+    nodeChangeMap() {
+      if (!this.diffData || !this.diffData.nodes) return {}
+      const map = {}
+      this.diffData.nodes.forEach(n => {
+        if (n.changeType && n.changeType !== 'UNCHANGED') {
+          map[n.nodeCode] = n.changeType.toLowerCase()
+        }
+      })
+      return map
+    },
+    isFirstNode() {
+      return this.selectedNodeIndex <= 0
+    },
+    isLastNode() {
+      return this.selectedNodeIndex >= this.sortedNodes.length - 1
     }
-    const bodyRules = obj.body || {}
-    assertBodyRules.value = Object.entries(bodyRules).map(([path, expected]) => ({
-      path, operator: 'eq', expected: String(expected)
-    }))
-  } catch { assertStatusCode.value = ''; assertBodyRules.value = [] }
-}
-
-const syncExtractRules = () => {
-  if (!selectedNode.value) return
-  const rules = extractRuleList.value.filter(r => r.varName && r.jsonPath)
-  selectedNode.value.extractRules = rules.length > 0 ? JSON.stringify({ rules }) : ''
-}
-
-const syncAssertRules = () => {
-  if (!selectedNode.value) return
-  const obj = {}
-  if (assertStatusCode.value !== '' && assertStatusCode.value !== null) {
-    obj.statusCode = parseInt(assertStatusCode.value) || assertStatusCode.value
-  }
-  const bodyRules = {}
-  assertBodyRules.value.forEach(r => {
-    if (r.path) {
-      if (r.operator === 'notNull') {
-        bodyRules[r.path] = '__NOT_NULL__'
+  },
+  mounted() {
+    const route = useRoute()
+    this.chainCode = route.params.chainCode
+    this.loadNodes()
+    this.loadVersions()
+  },
+  methods: {
+    startResizeLeft(e) {
+      this.isResizingLeft = true
+      this.resizeStartX = e.clientX
+      this.resizeStartWidth = this.leftPanelWidth
+      document.addEventListener('mousemove', this._onResizeLeft)
+      document.addEventListener('mouseup', this._stopResizeLeft)
+      document.body.style.cursor = 'col-resize'
+      document.body.style.userSelect = 'none'
+    },
+    _onResizeLeft(e) {
+      if (!this.isResizingLeft) return
+      const diff = e.clientX - this.resizeStartX
+      this.leftPanelWidth = Math.min(Math.max(this.resizeStartWidth + diff, 200), 400)
+    },
+    _stopResizeLeft() {
+      this.isResizingLeft = false
+      document.removeEventListener('mousemove', this._onResizeLeft)
+      document.removeEventListener('mouseup', this._stopResizeLeft)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    },
+    startResizeRight(e) {
+      this.isResizingRight = true
+      this.resizeStartX = e.clientX
+      this.resizeStartWidth = this.rightPanelWidth
+      document.addEventListener('mousemove', this._onResizeRight)
+      document.addEventListener('mouseup', this._stopResizeRight)
+      document.body.style.cursor = 'col-resize'
+      document.body.style.userSelect = 'none'
+    },
+    _onResizeRight(e) {
+      if (!this.isResizingRight) return
+      const diff = this.resizeStartX - e.clientX
+      this.rightPanelWidth = Math.min(Math.max(this.resizeStartWidth + diff, 300), 600)
+    },
+    _stopResizeRight() {
+      this.isResizingRight = false
+      document.removeEventListener('mousemove', this._onResizeRight)
+      document.removeEventListener('mouseup', this._stopResizeRight)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    },
+    moveNodeUp() {
+      const idx = this.selectedNodeIndex
+      if (idx <= 0) return
+      const sorted = this.sortedNodes
+      const cur = sorted[idx]
+      const prev = sorted[idx - 1]
+      const tmpSort = cur.sortNo
+      cur.sortNo = prev.sortNo
+      prev.sortNo = tmpSort
+      const ci = this.nodes.findIndex(n => n.nodeCode === cur.nodeCode)
+      const pi = this.nodes.findIndex(n => n.nodeCode === prev.nodeCode)
+      if (ci !== -1) this.nodes[ci] = { ...cur }
+      if (pi !== -1) this.nodes[pi] = { ...prev }
+      this.saveAll()
+    },
+    moveNodeDown() {
+      const idx = this.selectedNodeIndex
+      if (idx < 0 || idx >= this.sortedNodes.length - 1) return
+      const sorted = this.sortedNodes
+      const cur = sorted[idx]
+      const next = sorted[idx + 1]
+      const tmpSort = cur.sortNo
+      cur.sortNo = next.sortNo
+      next.sortNo = tmpSort
+      const ci = this.nodes.findIndex(n => n.nodeCode === cur.nodeCode)
+      const ni = this.nodes.findIndex(n => n.nodeCode === next.nodeCode)
+      if (ci !== -1) this.nodes[ci] = { ...cur }
+      if (ni !== -1) this.nodes[ni] = { ...next }
+      this.saveAll()
+    },
+    onNodeDragStart(e, index) {
+      this.dragIndex = index
+      e.dataTransfer.effectAllowed = 'move'
+      e.dataTransfer.setData('text/plain', index)
+      e.target.style.opacity = '0.4'
+    },
+    onNodeDragEnd(e) {
+      e.target.style.opacity = '1'
+      this.dragIndex = null
+      this.dragOverIndex = null
+    },
+    onNodeDragOver(e, index) {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'move'
+      this.dragOverIndex = index
+    },
+    onNodeDragLeave() {
+      this.dragOverIndex = null
+    },
+    onNodeDrop(e, dropIndex) {
+      e.preventDefault()
+      this.dragOverIndex = null
+      const fromIndex = this.dragIndex
+      if (fromIndex === null || fromIndex === dropIndex) return
+      const sorted = this.sortedNodes
+      const fromNode = sorted[fromIndex]
+      const toNode = sorted[dropIndex]
+      if (!fromNode || !toNode) return
+      const fromSortNo = fromNode.sortNo || 0
+      const toSortNo = toNode.sortNo || 0
+      fromNode.sortNo = toSortNo
+      toNode.sortNo = fromSortNo
+      const fromIdx = this.nodes.findIndex(n => n.nodeCode === fromNode.nodeCode)
+      const toIdx = this.nodes.findIndex(n => n.nodeCode === toNode.nodeCode)
+      if (fromIdx !== -1) this.nodes[fromIdx] = { ...fromNode }
+      if (toIdx !== -1) this.nodes[toIdx] = { ...toNode }
+      this.saveAll()
+      this.dragIndex = null
+    },
+    onListDragStart(e, nodeCode) {
+      e.dataTransfer.effectAllowed = 'move'
+      e.dataTransfer.setData('text/plain', nodeCode)
+    },
+    onListDrop(e, targetCode) {
+      e.preventDefault()
+      const sourceCode = e.dataTransfer.getData('text/plain')
+      if (!sourceCode || sourceCode === targetCode) return
+      const sorted = this.sortedNodes
+      const sourceIdx = sorted.findIndex(n => n.nodeCode === sourceCode)
+      const targetIdx = sorted.findIndex(n => n.nodeCode === targetCode)
+      if (sourceIdx === -1 || targetIdx === -1) return
+      const newSortNo = sorted[targetIdx].sortNo || 0
+      const sourceNode = this.nodes.find(n => n.nodeCode === sourceCode)
+      if (sourceNode) {
+        sourceNode.sortNo = newSortNo
+        const idx = this.nodes.findIndex(n => n.nodeCode === sourceCode)
+        this.nodes[idx] = { ...sourceNode }
+        this.saveAll()
+      }
+    },
+    async loadNodes() {
+      const res = await api.get('/node/list', { params: { chainCode: this.chainCode } })
+      this.nodes = res.data || []
+    },
+    async loadTraceGroups() {
+      if (!this.chainCode) return
+      try {
+        const res = await api.get('/chain/trace-groups', { params: { chainCode: this.chainCode } })
+        this.traceGroups = res.data || []
+      } catch (e) {
+        console.error('加载Trace分组失败:', e)
+      }
+    },
+    async runTraceGroup(traceId) {
+      try {
+        const res = await api.post('/chain/runByTrace', null, {
+          params: { chainCode: this.chainCode, traceId, parallel: false }
+        })
+        const executionId = res.data.executionId
+        Message.success('分组执行已启动')
+        const router = useRouter()
+        router.push('/execute/detail/' + executionId)
+      } catch (e) {
+        Message.error('执行失败: ' + (e.message || '未知错误'))
+      }
+    },
+    selectNode(node) {
+      const n = { ...node }
+      if (n.bodyType === 'file' && n.bodyData && n.bodyData.startsWith('FILE_')) {
+        n._uploadedFile = { fileId: n.bodyData, fileName: '已上传文件' }
+      }
+      this.selectedNode = n
+      this.parseExtractRules()
+      this.parseAssertRules()
+    },
+    parseExtractRules() {
+      try {
+        const raw = this.selectedNode && this.selectedNode.extractRules
+        if (!raw) { this.extractRuleList = []; return }
+        const obj = JSON.parse(raw)
+        const rules = obj.rules || []
+        this.extractRuleList = rules.map(r => ({ varName: r.varName || '', jsonPath: r.jsonPath || '' }))
+      } catch (e) { this.extractRuleList = [] }
+    },
+    parseAssertRules() {
+      try {
+        const raw = this.selectedNode && this.selectedNode.assertRules
+        if (!raw) { this.assertStatusCode = ''; this.assertStatusMode = 'eq'; this.assertBodyRules = []; return }
+        const obj = JSON.parse(raw)
+        if (obj.statusCode !== undefined && obj.statusCode !== null && obj.statusCode !== '') {
+          this.assertStatusCode = String(obj.statusCode)
+          this.assertStatusMode = 'eq'
+        } else {
+          this.assertStatusCode = ''
+          this.assertStatusMode = 'eq'
+        }
+        const bodyRules = obj.body || {}
+        this.assertBodyRules = Object.entries(bodyRules).map(([path, expected]) => ({
+          path, operator: 'eq', expected: String(expected)
+        }))
+      } catch (e) { this.assertStatusCode = ''; this.assertBodyRules = [] }
+    },
+    syncExtractRules() {
+      if (!this.selectedNode) return
+      const rules = this.extractRuleList.filter(r => r.varName && r.jsonPath)
+      this.selectedNode.extractRules = rules.length > 0 ? JSON.stringify({ rules }) : ''
+    },
+    syncAssertRules() {
+      if (!this.selectedNode) return
+      const obj = {}
+      if (this.assertStatusCode !== '' && this.assertStatusCode !== null) {
+        obj.statusCode = parseInt(this.assertStatusCode) || this.assertStatusCode
+      }
+      const bodyRules = {}
+      this.assertBodyRules.forEach(r => {
+        if (r.path) {
+          if (r.operator === 'notNull') {
+            bodyRules[r.path] = '__NOT_NULL__'
+          } else {
+            const val = r.expected
+            bodyRules[r.path] = isNaN(val) ? val : Number(val)
+          }
+        }
+      })
+      if (Object.keys(bodyRules).length > 0) obj.body = bodyRules
+      this.selectedNode.assertRules = Object.keys(obj).length > 0 ? JSON.stringify(obj) : ''
+    },
+    addExtractRule() {
+      this.extractRuleList.push({ varName: '', jsonPath: '' })
+    },
+    removeExtractRule(idx) {
+      this.extractRuleList.splice(idx, 1)
+      this.syncExtractRules()
+    },
+    addAssertBodyRule() {
+      this.assertBodyRules.push({ path: '', operator: 'eq', expected: '' })
+    },
+    removeAssertBodyRule(idx) {
+      this.assertBodyRules.splice(idx, 1)
+      this.syncAssertRules()
+    },
+    methodType(m) {
+      const map = { GET: 'success', POST: 'primary', PUT: 'warning', DELETE: 'danger', PATCH: 'info' }
+      return map[m] || 'info'
+    },
+    formatJson(field) {
+      try {
+        const val = this.selectedNode[field]
+        this.selectedNode[field] = JSON.stringify(JSON.parse(val), null, 2)
+      } catch (e) {
+        Message.warning('JSON格式错误')
+      }
+    },
+    copyText(text) {
+      navigator.clipboard.writeText(text)
+      Message.success('已复制')
+    },
+    formatFileSize(bytes) {
+      if (!bytes) return '0 B'
+      const units = ['B', 'KB', 'MB', 'GB']
+      let i = 0
+      let size = bytes
+      while (size >= 1024 && i < units.length - 1) { size /= 1024; i++ }
+      return size.toFixed(1) + ' ' + units[i]
+    },
+    handleFileUploadSuccess(response) {
+      if (response.code === 200) {
+        this.selectedNode.bodyData = response.data.fileId
+        this.selectedNode._uploadedFile = response.data
+        Message.success('文件上传成功')
       } else {
-        const val = r.expected
-        bodyRules[r.path] = isNaN(val) ? val : Number(val)
+        Message.error(response.message || '上传失败')
       }
-    }
-  })
-  if (Object.keys(bodyRules).length > 0) obj.body = bodyRules
-  selectedNode.value.assertRules = Object.keys(obj).length > 0 ? JSON.stringify(obj) : ''
-}
-
-const addExtractRule = () => {
-  extractRuleList.value.push({ varName: '', jsonPath: '' })
-}
-
-const removeExtractRule = (idx) => {
-  extractRuleList.value.splice(idx, 1)
-  syncExtractRules()
-}
-
-const addAssertBodyRule = () => {
-  assertBodyRules.value.push({ path: '', operator: 'eq', expected: '' })
-}
-
-const removeAssertBodyRule = (idx) => {
-  assertBodyRules.value.splice(idx, 1)
-  syncAssertRules()
-}
-
-const methodType = (m) => {
-  const map = { GET: 'success', POST: 'primary', PUT: 'warning', DELETE: 'danger', PATCH: 'info' }
-  return map[m] || 'info'
-}
-
-const formatJson = (field) => {
-  try {
-    const val = selectedNode.value[field]
-    selectedNode.value[field] = JSON.stringify(JSON.parse(val), null, 2)
-  } catch (e) {
-    ElMessage.warning('JSON格式错误')
-  }
-}
-
-const copyText = (text) => {
-  navigator.clipboard.writeText(text)
-  ElMessage.success('已复制')
-}
-
-const formatFileSize = (bytes) => {
-  if (!bytes) return '0 B'
-  const units = ['B', 'KB', 'MB', 'GB']
-  let i = 0
-  let size = bytes
-  while (size >= 1024 && i < units.length - 1) { size /= 1024; i++ }
-  return size.toFixed(1) + ' ' + units[i]
-}
-
-const handleFileUploadSuccess = (response) => {
-  if (response.code === 200) {
-    selectedNode.value.bodyData = response.data.fileId
-    selectedNode.value._uploadedFile = response.data
-    ElMessage.success('文件上传成功')
-  } else {
-    ElMessage.error(response.message || '上传失败')
-  }
-}
-
-const handleFileUploadError = () => {
-  ElMessage.error('文件上传失败')
-}
-
-const beforeFileUpload = (file) => {
-  const maxSize = 50 * 1024 * 1024
-  if (file.size > maxSize) {
-    ElMessage.error('文件大小不能超过50MB')
-    return false
-  }
-  return true
-}
-
-const removeUploadedFile = () => {
-  selectedNode.value.bodyData = ''
-  selectedNode.value._uploadedFile = null
-}
-
-const saveNode = async () => {
-  syncExtractRules()
-  syncAssertRules()
-  const data = { ...selectedNode.value }
-  delete data._uploadedFile
-  await api.post('/node/edit', data)
-  ElMessage.success('保存成功')
-  loadNodes()
-}
-
-const deleteNode = async () => {
-  await api.post('/node/delete', null, { params: { id: selectedNode.value.id } })
-  ElMessage.success('删除成功')
-  selectedNode.value = null
-  loadNodes()
-}
-
-const saveAll = async () => {
-  for (const node of nodes.value) {
-    const data = { ...node }
-    delete data._uploadedFile
-    await api.post('/node/edit', data)
-  }
-  ElMessage.success('全部保存成功')
-}
-
-const onDragStart = (e) => {
-  e.dataTransfer.setData('text/plain', 'httpNode')
-}
-
-const onDrop = async (e) => {
-  const data = e.dataTransfer.getData('text/plain')
-  if (data !== 'httpNode') return
-  try {
-    await api.post('/node/create', { chainCode, nodeName: '新节点', requestMethod: 'GET', requestUrl: 'http://' })
-    await loadNodes()
-  } catch (e) {
-    ElMessage.error('新增失败: ' + (e.response?.data?.message || e.message))
-  }
-}
-
-const addNode = async () => {
-  try {
-    await api.post('/node/create', { chainCode, nodeName: '新节点', requestMethod: 'GET', requestUrl: 'http://' })
-    await loadNodes()
-    ElMessage.success('已新增节点')
-  } catch (e) {
-    ElMessage.error('新增失败: ' + (e.response?.data?.message || e.message))
-  }
-}
-
-const openImportDialog = () => {
-  swaggerUrl.value = ''
-  swaggerResult.value = []
-  jsonPreview.value = []
-  curlCommand.value = ''
-  pasteJson.value = ''
-  importDialogVisible.value = true
-}
-
-const importFromSwagger = async () => {
-  if (!swaggerUrl.value) {
-    ElMessage.warning('请输入Swagger URL')
-    return
-  }
-  importLoading.value = true
-  try {
-    const resp = await fetch(swaggerUrl.value)
-    const spec = await resp.json()
-    const result = []
-    const paths = spec.paths || {}
-    const baseUrl = spec.servers?.[0]?.url || ''
-    for (const [path, methods] of Object.entries(paths)) {
-      for (const [method, detail] of Object.entries(methods)) {
-        if (['get','post','put','delete','patch'].includes(method.toLowerCase())) {
-          result.push({
-            nodeName: detail.summary || detail.operationId || path,
-            method: method.toUpperCase(),
-            url: baseUrl + path,
-            headers: JSON.stringify(detail.requestBody?.content?.['application/json'] ? { 'Content-Type': 'application/json' } : {}),
-            bodyData: ''
-          })
+    },
+    handleFileUploadError() {
+      Message.error('文件上传失败')
+    },
+    beforeFileUpload(file) {
+      const maxSize = 50 * 1024 * 1024
+      if (file.size > maxSize) {
+        Message.error('文件大小不能超过50MB')
+        return false
+      }
+      return true
+    },
+    removeUploadedFile() {
+      this.selectedNode.bodyData = ''
+      this.selectedNode._uploadedFile = null
+    },
+    async saveNode() {
+      this.syncExtractRules()
+      this.syncAssertRules()
+      const data = { ...this.selectedNode }
+      delete data._uploadedFile
+      await api.post('/node/edit', data)
+      Message.success('保存成功')
+      this.loadNodes()
+    },
+    async deleteNode() {
+      await api.post('/node/delete', null, { params: { id: this.selectedNode.id } })
+      Message.success('删除成功')
+      this.selectedNode = null
+      this.loadNodes()
+    },
+    async saveAll() {
+      for (const node of this.nodes) {
+        const data = { ...node }
+        delete data._uploadedFile
+        await api.post('/node/edit', data)
+      }
+      Message.success('全部保存成功')
+    },
+    onDragStart(e) {
+      e.dataTransfer.setData('text/plain', 'httpNode')
+    },
+    async onDrop(e) {
+      const data = e.dataTransfer.getData('text/plain')
+      if (data !== 'httpNode') return
+      try {
+        await api.post('/node/create', { chainCode: this.chainCode, nodeName: '新节点', requestMethod: 'GET', requestUrl: 'http://' })
+        await this.loadNodes()
+      } catch (err) {
+        Message.error('新增失败: ' + (err.response && err.response.data && err.response.data.message || err.message))
+      }
+    },
+    async addNode() {
+      try {
+        await api.post('/node/create', { chainCode: this.chainCode, nodeName: '新节点', requestMethod: 'GET', requestUrl: 'http://' })
+        await this.loadNodes()
+        Message.success('已新增节点')
+      } catch (e) {
+        Message.error('新增失败: ' + (e.response && e.response.data && e.response.data.message || e.message))
+      }
+    },
+    openImportDialog() {
+      this.swaggerUrl = ''
+      this.swaggerResult = []
+      this.jsonPreview = []
+      this.curlCommand = ''
+      this.pasteJson = ''
+      this.importDialogVisible = true
+    },
+    async importFromSwagger() {
+      if (!this.swaggerUrl) {
+        Message.warning('请输入Swagger URL')
+        return
+      }
+      this.importLoading = true
+      try {
+        const resp = await fetch(this.swaggerUrl)
+        const spec = await resp.json()
+        const result = []
+        const paths = spec.paths || {}
+        const baseUrl = (spec.servers && spec.servers[0] && spec.servers[0].url) || ''
+        for (const [path, methods] of Object.entries(paths)) {
+          for (const [method, detail] of Object.entries(methods)) {
+            if (['get','post','put','delete','patch'].includes(method.toLowerCase())) {
+              result.push({
+                nodeName: detail.summary || detail.operationId || path,
+                method: method.toUpperCase(),
+                url: baseUrl + path,
+                headers: JSON.stringify(detail.requestBody && detail.requestBody.content && detail.requestBody.content['application/json'] ? { 'Content-Type': 'application/json' } : {}),
+                bodyData: ''
+              })
+            }
+          }
+        }
+        this.swaggerResult = result
+        Message.success('解析到 ' + result.length + ' 个接口')
+      } catch (e) {
+        Message.error('解析失败: ' + e.message)
+      } finally {
+        this.importLoading = false
+      }
+    },
+    async confirmSwaggerImport() {
+      const list = this.swaggerResult.map((item, i) => ({ ...item, sort: i + 1, parallelGroup: '' }))
+      await api.post('/node/import', { chainCode: this.chainCode, interfaces: list })
+      Message.success('导入 ' + list.length + ' 个接口成功')
+      this.importDialogVisible = false
+      this.loadNodes()
+    },
+    handleJsonFile(file) {
+      var self = this
+      const reader = new FileReader()
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result)
+          const result = self.parseImportData(data)
+          self.jsonPreview = result
+          Message.success('解析到 ' + result.length + ' 个接口')
+        } catch (err) {
+          Message.error('JSON解析失败: ' + err.message)
         }
       }
-    }
-    swaggerResult.value = result
-    ElMessage.success(`解析到 ${result.length} 个接口`)
-  } catch (e) {
-    ElMessage.error('解析失败: ' + e.message)
-  } finally {
-    importLoading.value = false
-  }
-}
-
-const confirmSwaggerImport = async () => {
-  const list = swaggerResult.value.map((item, i) => ({ ...item, sort: i + 1, parallelGroup: '' }))
-  await api.post('/node/import', { chainCode, interfaces: list })
-  ElMessage.success(`导入 ${list.length} 个接口成功`)
-  importDialogVisible.value = false
-  loadNodes()
-}
-
-const handleJsonFile = (file) => {
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    try {
-      const data = JSON.parse(e.target.result)
-      const result = parseImportData(data)
-      jsonPreview.value = result
-      ElMessage.success(`解析到 ${result.length} 个接口`)
-    } catch (err) {
-      ElMessage.error('JSON解析失败: ' + err.message)
-    }
-  }
-  reader.readAsText(file.raw)
-}
-
-const parseImportData = (data) => {
-  if (Array.isArray(data)) {
-    return data.map(item => ({
-      nodeName: item.nodeName || item.name || item.title || '未命名',
-      method: (item.method || 'GET').toUpperCase(),
-      url: item.url || item.request?.url || '',
-      headers: typeof item.headers === 'string' ? item.headers : JSON.stringify(item.headers || {}),
-      bodyData: item.bodyData || item.body || item.request?.body || ''
-    }))
-  }
-  if (data.item || data.requests) {
-    const items = data.item || data.requests || []
-    return items.map(item => ({
-      nodeName: item.name || item.nodeName || '未命名',
-      method: (item.request?.method || item.method || 'GET').toUpperCase(),
-      url: item.request?.url || item.url || '',
-      headers: JSON.stringify(item.request?.header || item.headers || {}),
-      bodyData: item.request?.body?.raw || item.bodyData || ''
-    }))
-  }
-  if (data.paths) {
-    const result = []
-    for (const [path, methods] of Object.entries(data.paths)) {
-      for (const [method, detail] of Object.entries(methods)) {
-        if (['get','post','put','delete','patch'].includes(method.toLowerCase())) {
-          result.push({
-            nodeName: detail.summary || detail.operationId || path,
-            method: method.toUpperCase(),
-            url: path,
-            headers: '{}',
-            bodyData: ''
-          })
+      reader.readAsText(file.raw)
+    },
+    parseImportData(data) {
+      if (Array.isArray(data)) {
+        return data.map(item => ({
+          nodeName: item.nodeName || item.name || item.title || '未命名',
+          method: (item.method || 'GET').toUpperCase(),
+          url: item.url || (item.request && item.request.url) || '',
+          headers: typeof item.headers === 'string' ? item.headers : JSON.stringify(item.headers || {}),
+          bodyData: item.bodyData || item.body || (item.request && item.request.body) || ''
+        }))
+      }
+      if (data.item || data.requests) {
+        const items = data.item || data.requests || []
+        return items.map(item => ({
+          nodeName: item.name || item.nodeName || '未命名',
+          method: (item.request && item.request.method || item.method || 'GET').toUpperCase(),
+          url: (item.request && item.request.url) || item.url || '',
+          headers: JSON.stringify((item.request && item.request.header) || item.headers || {}),
+          bodyData: (item.request && item.request.body && item.request.body.raw) || item.bodyData || ''
+        }))
+      }
+      if (data.paths) {
+        const result = []
+        for (const [path, methods] of Object.entries(data.paths)) {
+          for (const [method, detail] of Object.entries(methods)) {
+            if (['get','post','put','delete','patch'].includes(method.toLowerCase())) {
+              result.push({
+                nodeName: detail.summary || detail.operationId || path,
+                method: method.toUpperCase(),
+                url: path,
+                headers: '{}',
+                bodyData: ''
+              })
+            }
+          }
         }
+        return result
       }
-    }
-    return result
-  }
-  return []
-}
-
-const confirmJsonImport = async () => {
-  const list = jsonPreview.value.map((item, i) => ({ ...item, sort: i + 1, parallelGroup: '' }))
-  await api.post('/node/import', { chainCode, interfaces: list })
-  ElMessage.success(`导入 ${list.length} 个接口成功`)
-  importDialogVisible.value = false
-  loadNodes()
-}
-
-const importFromCurl = async () => {
-  if (!curlCommand.value.trim()) {
-    ElMessage.warning('请输入cURL命令')
-    return
-  }
-  importLoading.value = true
-  try {
-    const result = parseCurl(curlCommand.value)
-    await api.post('/node/import', { chainCode, interfaces: [result] })
-    ElMessage.success('导入成功')
-    importDialogVisible.value = false
-    loadNodes()
-  } catch (e) {
-    ElMessage.error('解析失败: ' + e.message)
-  } finally {
-    importLoading.value = false
-  }
-}
-
-const parseCurl = (cmd) => {
-  const lines = cmd.replace(/\\\n/g, ' ').replace(/\\/g, ' ').split(/\s+/)
-  let method = 'GET', url = '', headers = {}, body = ''
-  for (let i = 0; i < lines.length; i++) {
-    const t = lines[i].trim()
-    if (t === '-X' && lines[i+1]) { method = lines[++i].replace(/['"]/g, '').toUpperCase() }
-    else if (t.startsWith('-H') && lines[i+1]) {
-      const h = lines[++i].replace(/^['"]|['"]$/g, '')
-      const [k, ...v] = h.split(':')
-      if (k) headers[k.trim()] = v.join(':').trim()
-    }
-    else if ((t === '-d' || t === '--data') && lines[i+1]) {
-      body = lines[++i].replace(/^['"]|['"]$/g, '')
-      if (method === 'GET') method = 'POST'
-    }
-    else if (t.startsWith('http')) { url = t.replace(/['"]/g, '') }
-  }
-  return {
-    nodeName: url ? new URL(url).pathname.split('/').filter(Boolean).pop() || 'cURL导入' : 'cURL导入',
-    method,
-    url,
-    headers: JSON.stringify(headers),
-    bodyData: body
-  }
-}
-
-const importFromPaste = async () => {
-  if (!pasteJson.value.trim()) {
-    ElMessage.warning('请粘贴JSON数据')
-    return
-  }
-  importLoading.value = true
-  try {
-    const data = JSON.parse(pasteJson.value)
-    const list = (Array.isArray(data) ? data : [data]).map((item, i) => ({
-      nodeName: item.nodeName || item.name || '未命名',
-      method: (item.method || 'GET').toUpperCase(),
-      url: item.url || '',
-      headers: typeof item.headers === 'string' ? item.headers : JSON.stringify(item.headers || {}),
-      bodyData: item.bodyData || item.body || '',
-      sort: i + 1,
-      parallelGroup: ''
-    }))
-    await api.post('/node/import', { chainCode, interfaces: list })
-    ElMessage.success(`导入 ${list.length} 个接口成功`)
-    importDialogVisible.value = false
-    loadNodes()
-  } catch (e) {
-    ElMessage.error('JSON解析失败: ' + e.message)
-  } finally {
-    importLoading.value = false
-  }
-}
-
-const autoLayout = () => {
-  ElMessage.success('已自动布局')
-}
-
-const undo = () => ElMessage.info('撤销')
-const redo = () => ElMessage.info('重做')
-
-const generateTestData = async () => {
-  if (nodes.value.length === 0) {
-    ElMessage.warning('请先添加节点')
-    return
-  }
-  aiLoading.value = true
-  try {
-    const res = await api.post('/ai/data/generate', { chainCode, idGenerateMode: 'AUTO_INCREMENT', idStep: 1 })
-    const nodeData = res.data.nodeData
-    const message = res.data.message || '测试数据生成成功'
-    let updatedCount = 0
-    for (const node of nodes.value) {
-      if (nodeData[node.nodeCode] && nodeData[node.nodeCode].bodyData) {
-        node.bodyData = nodeData[node.nodeCode].bodyData
-        updatedCount++
+      return []
+    },
+    async confirmJsonImport() {
+      const list = this.jsonPreview.map((item, i) => ({ ...item, sort: i + 1, parallelGroup: '' }))
+      await api.post('/node/import', { chainCode: this.chainCode, interfaces: list })
+      Message.success('导入 ' + list.length + ' 个接口成功')
+      this.importDialogVisible = false
+      this.loadNodes()
+    },
+    async importFromCurl() {
+      if (!this.curlCommand.trim()) {
+        Message.warning('请输入cURL命令')
+        return
       }
-    }
-    if (updatedCount > 0) {
-      await saveAll()
-      ElMessage.success(`${message}，已写入 ${updatedCount} 个节点的请求体，请在右侧「请求配置」中查看`)
-    } else {
-      ElMessage.warning('未生成到有效数据，请检查节点是否配置了请求URL')
-    }
-  } catch (e) {
-    ElMessage.error('AI生成失败: ' + (e.message || '未知错误'))
-  } finally {
-    aiLoading.value = false
-  }
-}
-
-const executeChain = async () => {
-  const res = await api.post('/execute/run', { chainCode })
-  const executionId = res.data.executionId
-  ElMessage.success('执行已启动')
-  router.push('/execute/detail/' + executionId)
-}
-
-// Version management
-async function loadVersions() {
-  try {
-    const { data } = await api.get('/chain/versions', { params: { chainCode, all: 'false' } })
-    if (data.code === 200) {
-      versions.value = data.data.list || []
-      if (versions.value.length > 0 && !currentVersion.value) {
-        currentVersion.value = versions.value[0].version
+      this.importLoading = true
+      try {
+        const result = this.parseCurl(this.curlCommand)
+        await api.post('/node/import', { chainCode: this.chainCode, interfaces: [result] })
+        Message.success('导入成功')
+        this.importDialogVisible = false
+        this.loadNodes()
+      } catch (e) {
+        Message.error('解析失败: ' + e.message)
+      } finally {
+        this.importLoading = false
       }
+    },
+    parseCurl(cmd) {
+      const lines = cmd.replace(/\\\n/g, ' ').replace(/\\/g, ' ').split(/\s+/)
+      let method = 'GET', url = '', headers = {}, body = ''
+      for (let i = 0; i < lines.length; i++) {
+        const t = lines[i].trim()
+        if (t === '-X' && lines[i+1]) { method = lines[++i].replace(/['"]/g, '').toUpperCase() }
+        else if (t.startsWith('-H') && lines[i+1]) {
+          const h = lines[++i].replace(/^['"]|['"]$/g, '')
+          const [k, ...v] = h.split(':')
+          if (k) headers[k.trim()] = v.join(':').trim()
+        }
+        else if ((t === '-d' || t === '--data') && lines[i+1]) {
+          body = lines[++i].replace(/^['"]|['"]$/g, '')
+          if (method === 'GET') method = 'POST'
+        }
+        else if (t.startsWith('http')) { url = t.replace(/['"]/g, '') }
+      }
+      return {
+        nodeName: url ? new URL(url).pathname.split('/').filter(Boolean).pop() || 'cURL导入' : 'cURL导入',
+        method,
+        url,
+        headers: JSON.stringify(headers),
+        bodyData: body
+      }
+    },
+    async importFromPaste() {
+      if (!this.pasteJson.trim()) {
+        Message.warning('请粘贴JSON数据')
+        return
+      }
+      this.importLoading = true
+      try {
+        const data = JSON.parse(this.pasteJson)
+        const list = (Array.isArray(data) ? data : [data]).map((item, i) => ({
+          nodeName: item.nodeName || item.name || '未命名',
+          method: (item.method || 'GET').toUpperCase(),
+          url: item.url || '',
+          headers: typeof item.headers === 'string' ? item.headers : JSON.stringify(item.headers || {}),
+          bodyData: item.bodyData || item.body || '',
+          sort: i + 1,
+          parallelGroup: ''
+        }))
+        await api.post('/node/import', { chainCode: this.chainCode, interfaces: list })
+        Message.success('导入 ' + list.length + ' 个接口成功')
+        this.importDialogVisible = false
+        this.loadNodes()
+      } catch (e) {
+        Message.error('JSON解析失败: ' + e.message)
+      } finally {
+        this.importLoading = false
+      }
+    },
+    autoLayout() {
+      Message.success('已自动布局')
+    },
+    undo() { Message.info('撤销') },
+    redo() { Message.info('重做') },
+    async generateTestData() {
+      if (this.nodes.length === 0) {
+        Message.warning('请先添加节点')
+        return
+      }
+      this.aiLoading = true
+      try {
+        const res = await api.post('/ai/data/generate', { chainCode: this.chainCode, idGenerateMode: 'AUTO_INCREMENT', idStep: 1 })
+        const nodeData = res.data.nodeData
+        const msg = res.data.message || '测试数据生成成功'
+        let updatedCount = 0
+        for (const node of this.nodes) {
+          if (nodeData[node.nodeCode] && nodeData[node.nodeCode].bodyData) {
+            node.bodyData = nodeData[node.nodeCode].bodyData
+            updatedCount++
+          }
+        }
+        if (updatedCount > 0) {
+          await this.saveAll()
+          Message.success(msg + '，已写入 ' + updatedCount + ' 个节点的请求体，请在右侧「请求配置」中查看')
+        } else {
+          Message.warning('未生成到有效数据，请检查节点是否配置了请求URL')
+        }
+      } catch (e) {
+        Message.error('AI生成失败: ' + (e.message || '未知错误'))
+      } finally {
+        this.aiLoading = false
+      }
+    },
+    async executeChain() {
+      const res = await api.post('/execute/run', { chainCode: this.chainCode })
+      const executionId = res.data.executionId
+      Message.success('执行已启动')
+      const router = useRouter()
+      router.push('/execute/detail/' + executionId)
+    },
+    // Version management
+    async loadVersions() {
+      try {
+        const { data } = await api.get('/chain/versions', { params: { chainCode: this.chainCode, all: 'false' } })
+        if (data.code === 200) {
+          this.versions = data.data.list || []
+          if (this.versions.length > 0 && !this.currentVersion) {
+            this.currentVersion = this.versions[0].version
+          }
+        }
+      } catch (e) {
+        console.error('加载版本列表失败:', e)
+      }
+    },
+    async onVersionChange(version) {
+      if (!version) {
+        this.diffSummary = null
+        this.diffData = null
+        return
+      }
+      try {
+        const { data } = await api.get('/chain/version/diff', {
+          params: { chainCode: this.chainCode, version }
+        })
+        if (data.code === 200) {
+          this.diffData = data.data
+          this.diffSummary = data.data.summary || null
+        }
+      } catch (e) {
+        console.error('加载Diff失败:', e)
+      }
+    },
+    getNodeDiffType(node) {
+      if (!this.diffData || !this.diffData.nodes || !node) return null
+      const found = this.diffData.nodes.find(n => n.nodeCode === node.nodeCode)
+      return found ? found.changeType : null
+    },
+    getNodeFieldChanges(node) {
+      if (!this.diffData || !this.diffData.nodes || !node) return []
+      const found = this.diffData.nodes.find(n => n.nodeCode === node.nodeCode)
+      return found && found.fieldChanges ? found.fieldChanges : []
+    },
+    diffTagType(type) {
+      if (type === 'ADDED') return 'success'
+      if (type === 'REMOVED') return 'danger'
+      if (type === 'MODIFIED') return 'warning'
+      return 'info'
+    },
+    diffLabel(type) {
+      if (type === 'ADDED') return '新增'
+      if (type === 'REMOVED') return '已删除'
+      if (type === 'MODIFIED') return '已修改'
+      if (type === 'UNCHANGED') return '未变化'
+      return type
     }
-  } catch (e) {
-    console.error('加载版本列表失败:', e)
   }
 }
-
-async function onVersionChange(version) {
-  if (!version) {
-    diffSummary.value = null
-    diffData.value = null
-    return
-  }
-  try {
-    const { data } = await api.get('/chain/version/diff', {
-      params: { chainCode, version }
-    })
-    if (data.code === 200) {
-      diffData.value = data.data
-      diffSummary.value = data.data.summary || null
-    }
-  } catch (e) {
-    console.error('加载Diff失败:', e)
-  }
-}
-
-function getNodeDiffType(node) {
-  if (!diffData.value || !diffData.value.nodes || !node) return null
-  const found = diffData.value.nodes.find(n => n.nodeCode === node.nodeCode)
-  return found ? found.changeType : null
-}
-
-function getNodeFieldChanges(node) {
-  if (!diffData.value || !diffData.value.nodes || !node) return []
-  const found = diffData.value.nodes.find(n => n.nodeCode === node.nodeCode)
-  return found && found.fieldChanges ? found.fieldChanges : []
-}
-
-function diffTagType(type) {
-  if (type === 'ADDED') return 'success'
-  if (type === 'REMOVED') return 'danger'
-  if (type === 'MODIFIED') return 'warning'
-  return 'info'
-}
-
-function diffLabel(type) {
-  if (type === 'ADDED') return '新增'
-  if (type === 'REMOVED') return '已删除'
-  if (type === 'MODIFIED') return '已修改'
-  if (type === 'UNCHANGED') return '未变化'
-  return type
-}
-
-onMounted(() => {
-  loadNodes()
-  loadVersions()
-})
 </script>
 
 <style scoped>
@@ -1357,30 +1290,30 @@ onMounted(() => {
   margin-left: 4px;
 }
 
-.toolbar :deep(.el-button) {
+.toolbar ::v-deep .el-button {
   border-radius: 10px;
   font-weight: 500;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
 }
 
-.toolbar :deep(.el-button--primary) {
+.toolbar ::v-deep .el-button--primary {
   background: linear-gradient(135deg, #6366f1, #818cf8);
   border: none;
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
 }
 
-.toolbar :deep(.el-button--success) {
+.toolbar ::v-deep .el-button--success {
   background: linear-gradient(135deg, #10b981, #34d399);
   border: none;
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
 }
 
-.toolbar :deep(.el-button--warning) {
+.toolbar ::v-deep .el-button--warning {
   box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25);
 }
 
-.toolbar :deep(.el-button:hover) {
+.toolbar ::v-deep .el-button:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
@@ -1519,7 +1452,7 @@ onMounted(() => {
 
 .method-tag { min-width: 42px; text-align: center; }
 
-:deep(.method-tag) {
+::v-deep .method-tag {
   border-radius: 6px;
   font-weight: 600;
   font-size: 11px;
@@ -1764,9 +1697,9 @@ onMounted(() => {
   padding: 0 20px;
 }
 
-.config-tabs :deep(.el-tabs__header) { margin-bottom: 18px; }
-.config-tabs :deep(.el-tabs__active-bar) { background: #6366f1; }
-.config-tabs :deep(.el-tabs__nav-wrap::after) { height: 1px; }
+.config-tabs ::v-deep .el-tabs__header { margin-bottom: 18px; }
+.config-tabs ::v-deep .el-tabs__active-bar { background: #6366f1; }
+.config-tabs ::v-deep .el-tabs__nav-wrap::after { height: 1px; }
 
 /* ── Config Sections ── */
 .config-section { margin-bottom: 20px; }
@@ -1792,7 +1725,7 @@ onMounted(() => {
 .config-actions { display: flex; gap: 4px; margin-top: 4px; }
 
 /* ── Code Editor ── */
-.code-editor :deep(textarea) {
+.code-editor ::v-deep textarea {
   font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
   font-size: 13px;
   line-height: 1.5;
@@ -1801,14 +1734,14 @@ onMounted(() => {
 
 /* ── File Upload ── */
 .file-upload-area { border-radius: 12px; overflow: hidden; }
-.file-upload-area :deep(.el-upload-dragger) {
+.file-upload-area ::v-deep .el-upload-dragger {
   padding: 32px;
   border: 2px dashed rgba(99, 102, 241, 0.2);
   border-radius: 12px;
   transition: all 0.2s;
 }
 
-.file-upload-area :deep(.el-upload-dragger:hover) {
+.file-upload-area ::v-deep .el-upload-dragger:hover {
   border-color: #6366f1;
   background: rgba(99, 102, 241, 0.03);
 }
@@ -1931,25 +1864,24 @@ onMounted(() => {
 }
 
 /* ── Dialog Overrides ── */
-:deep(.el-dialog) {
+::v-deep .el-dialog {
   border-radius: 16px;
   overflow: hidden;
 }
 
-:deep(.el-dialog__header) {
+::v-deep .el-dialog__header {
   padding: 18px 24px;
   border-bottom: 1px solid rgba(99, 102, 241, 0.08);
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.03), transparent);
 }
 
-:deep(.el-dialog__body) {
+::v-deep .el-dialog__body {
   padding: 24px;
 }
 
-/* ── Element Plus Overrides ── */
-:deep(.el-input__wrapper),
-:deep(.el-select .el-input__wrapper),
-:deep(.el-textarea__inner) {
+/* ── Element UI Overrides ── */
+::v-deep .el-input__inner,
+::v-deep .el-textarea__inner {
   border-radius: 10px;
   background: #fff;
   border: 1px solid #d0d5dd;
@@ -1957,29 +1889,25 @@ onMounted(() => {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-:deep(.el-input__wrapper:hover),
-:deep(.el-textarea__inner:hover) {
+::v-deep .el-input__inner:hover,
+::v-deep .el-textarea__inner:hover {
   border-color: #a5b4fc;
   box-shadow: none;
 }
 
-:deep(.el-input__wrapper.is-focus),
-:deep(.el-textarea__inner:focus) {
+::v-deep .el-input__inner:focus,
+::v-deep .el-textarea__inner:focus {
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
   border-color: #6366f1;
 }
 
-:deep(.el-tabs__content) {
-  border-radius: 10px;
-}
-
-:deep(.el-tabs__active-bar) { background: #6366f1; }
-:deep(.el-tabs__item) {
+::v-deep .el-tabs__active-bar { background: #6366f1; }
+::v-deep .el-tabs__item {
   font-weight: 500;
   color: #6b7280;
   transition: color 0.2s;
 }
-:deep(.el-tabs__item.is-active) {
+::v-deep .el-tabs__item.is-active {
   color: #6366f1;
   font-weight: 600;
 }
@@ -2013,9 +1941,6 @@ onMounted(() => {
 .node-card.change-removed {
   border: 2px solid #ef4444;
   opacity: 0.6;
-}
-.node-card.change-unchanged {
-  border: 1px solid rgba(99, 102, 241, 0.1);
 }
 .change-indicator {
   position: absolute;

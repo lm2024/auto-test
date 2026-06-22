@@ -2,7 +2,7 @@
   <div class="version-history">
     <div class="history-header">
       <span class="history-title">版本历史</span>
-      <el-button size="small" text @click="loadVersions(true)" v-if="versions.length >= 5">
+      <el-button size="small" type="text" @click="loadVersions(true)" v-if="versions.length >= 5">
         加载全部
       </el-button>
     </div>
@@ -27,43 +27,43 @@
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue'
+<script>
 import axios from 'axios'
 
-const props = defineProps({
-  chainCode: { type: String, required: true },
-  selectedVersion: { type: Number, default: 0 }
-})
-
-defineEmits(['select-version'])
-
-const versions = ref([])
-
-function formatTime(time) {
-  if (!time) return ''
-  const d = new Date(time)
-  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-}
-
-async function loadVersions(all = false) {
-  try {
-    const { data } = await axios.get('/api/chain/versions', {
-      params: { chainCode: props.chainCode, all: all ? 'true' : 'false' }
-    })
-    if (data.code === 200) {
-      versions.value = data.data.list || []
+export default {
+  name: 'VersionHistory',
+  props: {
+    chainCode: { type: String, required: true },
+    selectedVersion: { type: Number, default: 0 }
+  },
+  data() {
+    return {
+      versions: []
     }
-  } catch (e) {
-    console.error('加载版本历史失败:', e)
+  },
+  mounted() {
+    this.loadVersions()
+  },
+  methods: {
+    formatTime(time) {
+      if (!time) return ''
+      const d = new Date(time)
+      return d.toLocaleDateString() + ' ' + d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+    },
+    async loadVersions(all) {
+      try {
+        const { data } = await axios.get('/api/chain/versions', {
+          params: { chainCode: this.chainCode, all: all ? 'true' : 'false' }
+        })
+        if (data.code === 200) {
+          this.versions = data.data.list || []
+        }
+      } catch (e) {
+        console.error('加载版本历史失败:', e)
+      }
+    }
   }
 }
-
-onMounted(() => {
-  loadVersions()
-})
-
-defineExpose({ loadVersions })
 </script>
 
 <style scoped>

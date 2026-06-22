@@ -1,7 +1,7 @@
 <template>
   <div class="ai-analysis" v-if="analysis">
     <div class="ai-header">
-      <el-icon><MagicStick /></el-icon>
+      <i class="el-icon-magic-stick"></i>
       <span>AI 差异分析</span>
     </div>
     <div class="ai-body">
@@ -25,12 +25,13 @@
   </div>
 </template>
 
-<script setup>
-import { MagicStick } from '@element-plus/icons-vue'
-
-const props = defineProps({
-  analysis: { type: Object, default: null }
-})
+<script>
+export default {
+  name: 'AiAnalysis',
+  props: {
+    analysis: { type: Object, default: null }
+  }
+}
 </script>
 
 <style scoped>
