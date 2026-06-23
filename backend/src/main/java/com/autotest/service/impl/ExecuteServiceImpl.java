@@ -869,6 +869,8 @@ public class ExecuteServiceImpl implements ExecuteService {
         vo.setExtractedVars(log.getExtractedVars());
         vo.setStartTime(log.getStartTime());
         vo.setEndTime(log.getEndTime());
+        vo.setBizOperTraceId(log.getBizOperTraceId());
+        vo.setSortNo(log.getSortNo());
         return vo;
     }
 

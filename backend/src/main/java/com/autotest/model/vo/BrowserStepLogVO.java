@@ -12,6 +12,7 @@ public class BrowserStepLogVO {
     private Long costMs;
     private String pageUrl;
     private String pageTitle;
+    private String bizOperTraceId;
     private Date createTime;
 
     public Integer getStepIndex() { return stepIndex; }
@@ -32,6 +33,8 @@ public class BrowserStepLogVO {
     public void setPageUrl(String pageUrl) { this.pageUrl = pageUrl; }
     public String getPageTitle() { return pageTitle; }
     public void setPageTitle(String pageTitle) { this.pageTitle = pageTitle; }
+    public String getBizOperTraceId() { return bizOperTraceId; }
+    public void setBizOperTraceId(String bizOperTraceId) { this.bizOperTraceId = bizOperTraceId; }
     public Date getCreateTime() { return createTime; }
     public void setCreateTime(Date createTime) { this.createTime = createTime; }
 }

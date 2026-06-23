@@ -20,39 +20,65 @@ public class BrowserSessionManager {
     private BrowserConfig browserConfig;
 
     private Playwright playwright;
-    private Browser browser;
+    private Browser headlessBrowser;
+    private Browser visibleBrowser;
     private final ConcurrentHashMap<String, BrowserContext> sessions = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Boolean> sessionHeadless = new ConcurrentHashMap<>();
     private final AtomicInteger sessionCounter = new AtomicInteger(0);
-    private boolean initialized = false;
+    private boolean headlessInitialized = false;
+    private boolean visibleInitialized = false;
 
-    public synchronized void ensureInitialized() {
-        if (initialized) return;
-        playwright = Playwright.create();
-        BrowserType.LaunchOptions launchOptions = new BrowserType.LaunchOptions()
-                .setHeadless(browserConfig.isHeadless())
-                .setTimeout(browserConfig.getDefaultTimeout());
+    private synchronized Browser getOrInitBrowser(boolean headless) {
+        if (playwright == null) {
+            playwright = Playwright.create();
+        }
+        if (headless) {
+            if (!headlessInitialized) {
+                BrowserType.LaunchOptions opts = new BrowserType.LaunchOptions()
+                        .setHeadless(true)
+                        .setTimeout(browserConfig.getDefaultTimeout());
+                headlessBrowser = launchBrowser(opts);
+                headlessInitialized = true;
+                log.info("Headless browser initialized: type={}", browserConfig.getBrowserType());
+            }
+            return headlessBrowser;
+        } else {
+            if (!visibleInitialized) {
+                BrowserType.LaunchOptions opts = new BrowserType.LaunchOptions()
+                        .setHeadless(false)
+                        .setTimeout(browserConfig.getDefaultTimeout());
+                visibleBrowser = launchBrowser(opts);
+                visibleInitialized = true;
+                log.info("Visible browser initialized: type={}", browserConfig.getBrowserType());
+            }
+            return visibleBrowser;
+        }
+    }
+
+    private Browser launchBrowser(BrowserType.LaunchOptions opts) {
         switch (browserConfig.getBrowserType().toLowerCase()) {
             case "firefox":
-                browser = playwright.firefox().launch(launchOptions);
-                break;
+                return playwright.firefox().launch(opts);
             case "webkit":
-                browser = playwright.webkit().launch(launchOptions);
-                break;
+                return playwright.webkit().launch(opts);
             default:
-                browser = playwright.chromium().launch(launchOptions);
+                return playwright.chromium().launch(opts);
         }
-        initialized = true;
-        log.info("Browser initialized: type={}, headless={}", browserConfig.getBrowserType(), browserConfig.isHeadless());
     }
 
     public String createSession() {
-        ensureInitialized();
+        return createSession(browserConfig.isHeadless());
+    }
+
+    public String createSession(boolean headless) {
+        Browser browser = getOrInitBrowser(headless);
         Browser.NewContextOptions contextOptions = new Browser.NewContextOptions()
                 .setViewportSize(1280, 720);
         BrowserContext context = browser.newContext(contextOptions);
         String sessionId = "session_" + sessionCounter.incrementAndGet();
         sessions.put(sessionId, context);
-        log.info("Browser session created: {}", sessionId);
+        sessionHeadless.put(sessionId, headless);
+        log.info("Browser session created: {}, headless={}", sessionId, headless);
         return sessionId;
     }
 
@@ -90,7 +116,8 @@ public class BrowserSessionManager {
     @PreDestroy
     public void shutdown() {
         closeAllSessions();
-        if (browser != null) browser.close();
+        if (headlessBrowser != null) headlessBrowser.close();
+        if (visibleBrowser != null) visibleBrowser.close();
         if (playwright != null) playwright.close();
         log.info("Playwright shut down");
     }

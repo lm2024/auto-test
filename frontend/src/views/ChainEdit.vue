@@ -91,6 +91,7 @@
           <el-icon class="empty-icon"><Connection /></el-icon>
           <div class="empty-title">暂无分组数据</div>
           <div class="empty-desc">链路节点未携带 bizOperTraceId 信息</div>
+          <el-button v-if="nodes.length === 0" type="primary" @click="addNode" :icon="Plus" style="margin-top:16px">新增节点</el-button>
         </div>
         <div v-for="(group, gIdx) in traceGroups" :key="group.traceId" class="trace-group-card">
           <div class="trace-group-header">
@@ -129,7 +130,8 @@
         <div v-if="nodes.length === 0" class="empty-canvas" @drop="onDrop" @dragover.prevent>
           <el-icon class="empty-icon"><Connection /></el-icon>
           <div class="empty-title">拖拽节点到此处</div>
-          <div class="empty-desc">或点击左侧「批量导入」添加接口</div>
+          <div class="empty-desc">或点击下方按钮新增节点，也可点击左侧「批量导入」添加接口</div>
+          <el-button type="primary" @click="addNode" :icon="Plus" style="margin-top:16px">新增节点</el-button>
         </div>
         <template v-for="(node, index) in sortedNodes" :key="node.nodeCode">
           <div class="node-card"

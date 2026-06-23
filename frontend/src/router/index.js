@@ -36,6 +36,21 @@ const routes = [
     path: '/dict/category',
     name: 'DictCategory',
     component: () => import('../views/DictCategory.vue')
+  },
+  {
+    path: '/browser/tasks',
+    name: 'BrowserTaskList',
+    component: () => import('../views/BrowserTaskList.vue')
+  },
+  {
+    path: '/browser/tasks/edit/:taskCode',
+    name: 'BrowserTaskEditor',
+    component: () => import('../views/BrowserTaskEditor.vue')
+  },
+  {
+    path: '/browser/exec/:executionId',
+    name: 'BrowserExecDetail',
+    component: () => import('../views/BrowserExecDetail.vue')
   }
 ]
 

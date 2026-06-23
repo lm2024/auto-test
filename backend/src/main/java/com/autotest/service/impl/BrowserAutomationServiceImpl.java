@@ -31,7 +31,7 @@ public class BrowserAutomationServiceImpl implements BrowserAutomationService {
 
     @Override
     public String createSession(boolean headless) {
-        return sessionManager.createSession();
+        return sessionManager.createSession(headless);
     }
 
     @Override

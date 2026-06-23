@@ -37,6 +37,7 @@
       <div v-if="selectedRows.length > 0" class="batch-bar">
         <span>已选 {{ selectedRows.length }} 条</span>
         <el-button type="success" size="small" @click="batchExecute">批量执行</el-button>
+        <el-button type="warning" size="small" @click="batchAiExecute">AI 执行</el-button>
         <el-button type="danger" size="small" @click="batchDelete">批量删除</el-button>
         <el-button size="small" @click="clearSelection">取消选择</el-button>
       </div>
@@ -80,15 +81,23 @@
             {{ formatTime(row.createTime) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="280" fixed="right" align="center" class-name="action-column">
-          <template #default="{ row, $index }">
-            <div class="action-btns" :style="{ background: $index % 2 === 1 ? '#fafafe' : '#ffffff' }">
-              <el-button size="small" @click="$router.push('/chain/edit/' + row.chainCode)">编排</el-button>
-              <el-button size="small" type="success" @click="executeChain(row.chainCode)">执行</el-button>
-              <el-button size="small" @click="copyChain(row.chainCode)">复制</el-button>
-              <el-button size="small" @click="editChain(row)">编辑</el-button>
-              <el-button size="small" type="danger" @click="deleteChain(row.chainCode)">删除</el-button>
-            </div>
+        <el-table-column label="操作" width="70" fixed="right" align="center" class-name="action-column">
+          <template #default="{ row }">
+            <el-dropdown trigger="click" @command="(cmd) => handleAction(cmd, row)" placement="bottom-end" :teleported="true">
+              <span class="kebab-trigger">
+                <el-icon :size="18"><MoreFilled /></el-icon>
+              </span>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="edit" :icon="EditPen">编排</el-dropdown-item>
+                  <el-dropdown-item command="execute" :icon="VideoPlay">执行</el-dropdown-item>
+                  <el-dropdown-item command="aiExec" :icon="MagicStick">AI 执行</el-dropdown-item>
+                  <el-dropdown-item command="copy" :icon="CopyDocument">复制</el-dropdown-item>
+                  <el-dropdown-item command="editInfo" :icon="Edit">编辑</el-dropdown-item>
+                  <el-dropdown-item command="delete" :icon="Delete" divided>删除</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </template>
         </el-table-column>
       </el-table>
@@ -150,13 +159,76 @@
         <el-button type="primary" @click="submitForm">确定</el-button>
       </template>
     </el-dialog>
+
+    <!-- AI 执行对话框 -->
+    <el-dialog v-model="aiExecVisible" title="AI 智能执行" width="520px" class="ai-exec-dialog">
+      <div class="ai-exec-chain-info" v-if="aiExecTarget">
+        <div class="chain-tag-row">
+          <el-tag type="primary" size="small">{{ aiExecTarget.chainCode }}</el-tag>
+          <span class="chain-name-text">{{ aiExecTarget.chainName }}</span>
+        </div>
+        <div class="chain-meta">
+          <span>节点数: {{ aiExecTarget.nodeCount || 0 }}</span>
+          <span v-if="aiExecBatch">共 {{ aiExecBatch.length }} 条链路</span>
+        </div>
+      </div>
+
+      <el-form label-width="100px" class="ai-exec-form">
+        <el-form-item label="执行方式">
+          <el-radio-group v-model="aiExecMode">
+            <el-radio value="immediate">立刻执行</el-radio>
+            <el-radio value="scheduled">定时执行</el-radio>
+          </el-radio-group>
+        </el-form-item>
+
+        <template v-if="aiExecMode === 'scheduled'">
+          <el-form-item label="执行时间">
+            <el-date-picker
+              v-model="aiExecTime"
+              type="datetime"
+              placeholder="选择日期时间"
+              format="YYYY-MM-DD HH:mm:ss"
+              value-format="YYYY-MM-DD HH:mm:ss"
+              :disabled-date="disabledDate"
+              style="width:100%"
+            />
+          </el-form-item>
+        </template>
+
+        <el-form-item label="执行模式">
+          <el-radio-group v-model="aiExecHeadless">
+            <el-radio :value="false">
+              <span style="display:flex;align-items:center;gap:4px">
+                <el-icon><View /></el-icon> 显性执行（可见浏览器窗口）
+              </span>
+            </el-radio>
+            <el-radio :value="true">
+              <span style="display:flex;align-items:center;gap:4px">
+                <el-icon><Hide /></el-icon> 隐性执行（后台运行）
+              </span>
+            </el-radio>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="aiExecVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmAiExec" :loading="aiExecLoading">
+          {{ aiExecMode === 'immediate' ? '立即执行' : '设置定时' }}
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { View, Hide, MoreFilled, EditPen, VideoPlay, MagicStick, CopyDocument, Edit, Delete } from '@element-plus/icons-vue'
 import api from '../api'
+
+const router = useRouter()
 
 const chains = ref([])
 const filter = ref({ chainName: '', executeMode: null, systemCategory: '', funcCategory: '', priority: null, chainType: '' })
@@ -170,6 +242,15 @@ const selectedRows = ref([])
 const tableRef = ref(null)
 const systemCategories = ref([])
 const funcCategories = ref([])
+
+// AI 执行相关
+const aiExecVisible = ref(false)
+const aiExecTarget = ref(null)
+const aiExecBatch = ref(null) // 批量执行时的链路列表
+const aiExecMode = ref('immediate')
+const aiExecTime = ref('')
+const aiExecHeadless = ref(false)
+const aiExecLoading = ref(false)
 
 const loadCategories = async () => {
   try {
@@ -289,6 +370,94 @@ const batchExecute = async () => {
   const failed = results.filter(r => r.status === 'failed').length
   ElMessage.success(`执行启动: ${started}条成功，${failed}条失败`)
   clearSelection()
+}
+
+// ── 操作下拉菜单分发 ──
+const handleAction = (command, row) => {
+  switch (command) {
+    case 'edit': router.push('/chain/edit/' + row.chainCode); break
+    case 'execute': executeChain(row.chainCode); break
+    case 'aiExec': showAiExecDialog(row); break
+    case 'copy': copyChain(row.chainCode); break
+    case 'editInfo': editChain(row); break
+    case 'delete': deleteChain(row.chainCode); break
+  }
+}
+
+// ── AI 执行 ──
+const showAiExecDialog = (row) => {
+  aiExecTarget.value = row
+  aiExecBatch.value = null
+  aiExecMode.value = 'immediate'
+  aiExecTime.value = ''
+  aiExecHeadless.value = false
+  aiExecVisible.value = true
+}
+
+const batchAiExecute = () => {
+  if (!selectedRows.value.length) return
+  aiExecTarget.value = selectedRows.value[0]
+  aiExecBatch.value = selectedRows.value.map(r => ({ chainCode: r.chainCode, chainName: r.chainName }))
+  aiExecMode.value = 'immediate'
+  aiExecTime.value = ''
+  aiExecHeadless.value = false
+  aiExecVisible.value = true
+}
+
+const disabledDate = (time) => {
+  return time.getTime() < Date.now() - 8.64e7
+}
+
+const confirmAiExec = async () => {
+  aiExecLoading.value = true
+  try {
+    const chainCodes = aiExecBatch.value
+      ? aiExecBatch.value.map(c => c.chainCode)
+      : [aiExecTarget.value.chainCode]
+
+    const params = {
+      chainCodes,
+      headless: aiExecHeadless.value
+    }
+
+    if (aiExecMode.value === 'scheduled') {
+      if (!aiExecTime.value) {
+        ElMessage.warning('请选择定时执行时间')
+        aiExecLoading.value = false
+        return
+      }
+      params.scheduledAt = aiExecTime.value
+      await api.post('/execute/ai-run', params)
+      ElMessage.success(`已设置定时 AI 执行: ${aiExecTime.value}`)
+    } else {
+      // 立刻执行：调用后端 API 获取 executionId，然后跳转到实时监控页
+      const res = await api.post('/execute/ai-run', params)
+      const execData = res.data
+      const executionId = execData?.executionId
+      if (executionId) {
+        aiExecVisible.value = false
+        ElMessage.success('AI 执行已启动')
+        router.push('/browser/exec/' + executionId)
+      } else if (execData?.results) {
+        // 批量执行返回多个结果
+        aiExecVisible.value = false
+        const ids = execData.results.filter(r => r.executionId).map(r => r.executionId)
+        if (ids.length === 1) {
+          router.push('/browser/exec/' + ids[0])
+        } else if (ids.length > 1) {
+          ElMessage.success(`${ids.length} 条 AI 执行已启动，请在执行记录中查看`)
+          router.push('/execute/list')
+        }
+      } else {
+        ElMessage.warning('AI 执行返回异常')
+      }
+    }
+    if (aiExecBatch.value) clearSelection()
+  } catch (e) {
+    ElMessage.error('AI 执行失败: ' + (e.response?.data?.message || e.message))
+  } finally {
+    aiExecLoading.value = false
+  }
 }
 
 onMounted(() => { loadCategories(); loadChains() })
@@ -471,94 +640,48 @@ onMounted(() => { loadCategories(); loadChains() })
   background: transparent !important;
 }
 
-/* ── Action Buttons ── */
-.action-btns {
-  display: flex;
+/* ── Kebab Menu Trigger (⋮ three-dot icon) ── */
+.kebab-trigger {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  flex-wrap: nowrap;
-  background: #ffffff !important;
-  background-color: #ffffff !important;
-  width: 100%;
-}
-
-.action-btns :deep(.el-button) {
-  margin: 0;
-  padding: 7px 11px;
-  font-size: 12px;
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
-  font-weight: 500;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: visible;
+  cursor: pointer;
+  color: #94a3b8;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
 }
-
-.action-btns :deep(.el-button::after) {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.action-btns :deep(.el-button:hover::after) {
-  opacity: 1;
-}
-
-.action-btns :deep(.el-button:hover) {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.action-btns :deep(.el-button:active) {
-  transform: translateY(0) scale(0.98);
-}
-
-.action-btns :deep(.el-button--primary) {
-  background: linear-gradient(135deg, #6366f1, #818cf8);
-  border: none;
-  color: #fff;
-}
-
-.action-btns :deep(.el-button--primary:hover) {
-  background: linear-gradient(135deg, #4f46e5, #6366f1);
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
-}
-
-.action-btns :deep(.el-button--success) {
-  background: linear-gradient(135deg, #10b981, #34d399);
-  border: none;
-  color: #fff;
-}
-
-.action-btns :deep(.el-button--success:hover) {
-  background: linear-gradient(135deg, #059669, #10b981);
-  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
-}
-
-.action-btns :deep(.el-button--danger) {
-  background: linear-gradient(135deg, #ef4444, #f87171);
-  border: none;
-  color: #fff;
-}
-
-.action-btns :deep(.el-button--danger:hover) {
-  background: linear-gradient(135deg, #dc2626, #ef4444);
-  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
-}
-
-.action-btns :deep(.el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--danger)) {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  color: #475569;
-}
-
-.action-btns :deep(.el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--danger):hover) {
-  border-color: #6366f1;
+.kebab-trigger:hover {
+  background: rgba(99, 102, 241, 0.08);
   color: #6366f1;
-  background: rgba(99, 102, 241, 0.05);
+  transform: scale(1.08);
+}
+.kebab-trigger:active {
+  transform: scale(0.94);
+}
+
+/* ── Dropdown Menu ── */
+::deep(.el-dropdown-menu__item) {
+  padding: 9px 16px !important;
+  font-size: 13px !important;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+::deep(.el-dropdown-menu__item:hover) {
+  background: rgba(99, 102, 241, 0.06) !important;
+  color: #6366f1 !important;
+}
+::deep(.el-dropdown-menu__item .el-icon) {
+  margin-right: 8px;
+  font-size: 15px;
+}
+::deep(.el-dropdown-menu) {
+  border-radius: 10px !important;
+  padding: 4px 0 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+  border: 1px solid rgba(99, 102, 241, 0.08) !important;
 }
 
 /* ── Table Row Animation ── */
@@ -644,5 +767,37 @@ onMounted(() => { loadCategories(); loadChains() })
 :deep(.el-pagination .el-pager li) {
   border-radius: 8px;
   min-width: 32px;
+}
+
+/* ── AI 执行对话框 ── */
+.ai-exec-chain-info {
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.06), rgba(251, 191, 36, 0.03));
+  border: 1px solid rgba(245, 158, 11, 0.15);
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+.chain-tag-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.chain-name-text {
+  font-weight: 600;
+  font-size: 15px;
+  color: #1e1b4b;
+}
+.chain-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: #6b7280;
+}
+.ai-exec-form {
+  margin-top: 8px;
+}
+.ai-exec-form :deep(.el-radio) {
+  margin-bottom: 8px;
 }
 </style>

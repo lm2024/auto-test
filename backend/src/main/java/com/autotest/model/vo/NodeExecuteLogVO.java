@@ -18,6 +18,8 @@ public class NodeExecuteLogVO {
     private String extractedVars;
     private Date startTime;
     private Date endTime;
+    private String bizOperTraceId;
+    private Integer sortNo;
 
     public String getNodeCode() { return nodeCode; }
     public void setNodeCode(String nodeCode) { this.nodeCode = nodeCode; }
@@ -49,4 +51,8 @@ public class NodeExecuteLogVO {
     public void setStartTime(Date startTime) { this.startTime = startTime; }
     public Date getEndTime() { return endTime; }
     public void setEndTime(Date endTime) { this.endTime = endTime; }
+    public String getBizOperTraceId() { return bizOperTraceId; }
+    public void setBizOperTraceId(String bizOperTraceId) { this.bizOperTraceId = bizOperTraceId; }
+    public Integer getSortNo() { return sortNo; }
+    public void setSortNo(Integer sortNo) { this.sortNo = sortNo; }
 }

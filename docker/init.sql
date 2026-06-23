@@ -167,6 +167,8 @@ CREATE TABLE `test_node_execute_log` (
   `cost_ms` bigint DEFAULT NULL COMMENT 'æ‰§è¡Œè€—æ—¶(æ¯«ç§’)',
   `error_message` text COMMENT 'é”™è¯¯ä¿¡æ¯',
   `extracted_vars` longtext COMMENT 'æå–çš„å˜é‡(JSON)',
+  `biz_oper_trace_id` varchar(64) DEFAULT NULL COMMENT 'ä¸šåŠ¡æ“ä½œTraceId',
+  `sort_no` int DEFAULT NULL COMMENT 'èŠ‚ç‚¹æ’åºå·',
   `start_time` datetime DEFAULT NULL COMMENT 'èŠ‚ç‚¹å¼€å§‹æ—¶é—´',
   `end_time` datetime DEFAULT NULL COMMENT 'èŠ‚ç‚¹ç»“æŸæ—¶é—´',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'åˆ›å»ºæ—¶é—´',
@@ -260,128 +262,128 @@ INSERT INTO `test_node_config` (`id`, `chain_code`, `node_id`, `node_code`, `nod
 INSERT INTO `test_execute_main` (`id`, `execution_id`, `chain_code`, `status`, `start_time`, `end_time`, `total_cost_ms`, `error_message`, `node_count`, `success_count`, `fail_count`, `skip_count`, `create_time`, `update_time`) VALUES (1,'EXEC_630848F417','CHAIN_9558229B29','FAILED','2026-06-17 10:24:45','2026-06-17 10:24:46',849,'æ–­è¨€å¤±è´¥: å“åº”ç =401',5,2,1,2,'2026-06-17 10:24:44','2026-06-17 10:24:45'),(2,'EXEC_761110A9DD','CHAIN_7601436D04','FAILED','2026-06-17 14:01:51','2026-06-17 14:01:53',1787,'æ–­è¨€å¤±è´¥: å“åº”ç =401',27,2,1,24,'2026-06-17 14:01:51','2026-06-17 14:01:52');
 
 -- =============================================
--- ä¯ÀÀÆ÷×Ô¶¯»¯ÈÎÎñ±í
+-- ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 -- =============================================
 DROP TABLE IF EXISTS rowser_task;
 CREATE TABLE rowser_task (
-  id bigint NOT NULL AUTO_INCREMENT COMMENT '×ÔÔöÖ÷¼ü',
-  	ask_code varchar(64) NOT NULL COMMENT 'ÈÎÎñ±àÂë',
-  	ask_name varchar(128) NOT NULL COMMENT 'ÈÎÎñÃû³Æ',
-  description text COMMENT 'ÈÎÎñÃèÊö',
-  source_type varchar(16) NOT NULL DEFAULT 'AI' COMMENT 'À´Ô´ÀàĞÍ: AI=AIÉú³É, PLUGIN=²å¼şÂ¼ÖÆ, MANUAL=ÊÖ¶¯±à¼­',
-  source_ref varchar(128) DEFAULT NULL COMMENT 'À´Ô´ÒıÓÃ(Èç²å¼ştraceId/Á´Â·code)',
-  	arget_url varchar(512) DEFAULT NULL COMMENT 'ÆğÊ¼URL',
-  status tinyint NOT NULL DEFAULT '1' COMMENT '×´Ì¬: 1=ÆôÓÃ, 0=½ûÓÃ',
-  	otal_steps int DEFAULT '0' COMMENT '×Ü²½ÖèÊı',
-  use_screenshot_check tinyint DEFAULT '1' COMMENT 'Ö´ĞĞÊ±ÊÇ·ñ½ØÍ¼ÑéÖ¤',
-  	imeout_seconds int DEFAULT '300' COMMENT '³¬Ê±ÃëÊı',
-  create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '´´½¨Ê±¼ä',
-  update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '¸üĞÂÊ±¼ä',
-  create_by varchar(64) DEFAULT NULL COMMENT '´´½¨ÈË',
+  id bigint NOT NULL AUTO_INCREMENT COMMENT 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½',
+  	ask_code varchar(64) NOT NULL COMMENT 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½',
+  	ask_name varchar(128) NOT NULL COMMENT 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½',
+  description text COMMENT 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½',
+  source_type varchar(16) NOT NULL DEFAULT 'AI' COMMENT 'ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ï¿½: AI=AIï¿½ï¿½ï¿½ï¿½, PLUGIN=ï¿½ï¿½ï¿½Â¼ï¿½ï¿½, MANUAL=ï¿½Ö¶ï¿½ï¿½à¼­',
+  source_ref varchar(128) DEFAULT NULL COMMENT 'ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½traceId/ï¿½ï¿½Â·code)',
+  	arget_url varchar(512) DEFAULT NULL COMMENT 'ï¿½ï¿½Ê¼URL',
+  status tinyint NOT NULL DEFAULT '1' COMMENT '×´Ì¬: 1=ï¿½ï¿½ï¿½ï¿½, 0=ï¿½ï¿½ï¿½ï¿½',
+  	otal_steps int DEFAULT '0' COMMENT 'ï¿½Ü²ï¿½ï¿½ï¿½ï¿½ï¿½',
+  use_screenshot_check tinyint DEFAULT '1' COMMENT 'Ö´ï¿½ï¿½Ê±ï¿½Ç·ï¿½ï¿½Í¼ï¿½ï¿½Ö¤',
+  	imeout_seconds int DEFAULT '300' COMMENT 'ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½',
+  create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½',
+  update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½',
+  create_by varchar(64) DEFAULT NULL COMMENT 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½',
   PRIMARY KEY (id),
   UNIQUE KEY uk_task_code (	ask_code),
   KEY idx_source_type (source_type),
   KEY idx_create_time (create_time)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='ä¯ÀÀÆ÷×Ô¶¯»¯ÈÎÎñ±í';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½';
 
 -- =============================================
--- ÈÎÎñ²½Öè±í
+-- ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 -- =============================================
 DROP TABLE IF EXISTS rowser_task_action;
 CREATE TABLE rowser_task_action (
-  id bigint NOT NULL AUTO_INCREMENT COMMENT '×ÔÔöÖ÷¼ü',
-  	ask_code varchar(64) NOT NULL COMMENT 'ÈÎÎñ±àÂë',
-  step_index int NOT NULL COMMENT '²½ÖèĞòºÅ(´Ó0¿ªÊ¼)',
-  ction_type varchar(20) NOT NULL COMMENT '²Ù×÷ÀàĞÍ',
-  ction_name varchar(128) DEFAULT NULL COMMENT '²½ÖèÃû³Æ',
-  	arget_selector varchar(512) DEFAULT NULL COMMENT 'Ä¿±êÑ¡ÔñÆ÷(CSS)',
-  	arget_frame varchar(128) DEFAULT NULL COMMENT 'Ä¿±êiframe',
-  	arget_url varchar(512) DEFAULT NULL COMMENT 'µ¼º½URL',
-  alue text COMMENT 'ÊäÈëÖµ/Ñ¡ÖĞÖµ',
-  wait_delay_ms int DEFAULT '500' COMMENT 'Ö´ĞĞÇ°µÈ´ıºÁÃëÊı',
-  	imeout_ms int DEFAULT '10000' COMMENT '³¬Ê±ºÁÃëÊı',
-  ssert_type varchar(32) DEFAULT NULL COMMENT '¶ÏÑÔÀàĞÍ',
-  ssert_value varchar(256) DEFAULT NULL COMMENT '¶ÏÑÔÆÚÍûÖµ',
-  description text COMMENT '²½ÖèÃèÊö',
-  continue_on_fail tinyint DEFAULT '0' COMMENT 'Ê§°ÜºóÊÇ·ñ¼ÌĞø',
-  ext_config text COMMENT 'À©Õ¹ÅäÖÃJSON',
-  create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '´´½¨Ê±¼ä',
+  id bigint NOT NULL AUTO_INCREMENT COMMENT 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½',
+  	ask_code varchar(64) NOT NULL COMMENT 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½',
+  step_index int NOT NULL COMMENT 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½0ï¿½ï¿½Ê¼)',
+  ction_type varchar(20) NOT NULL COMMENT 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½',
+  ction_name varchar(128) DEFAULT NULL COMMENT 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½',
+  	arget_selector varchar(512) DEFAULT NULL COMMENT 'Ä¿ï¿½ï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½(CSS)',
+  	arget_frame varchar(128) DEFAULT NULL COMMENT 'Ä¿ï¿½ï¿½iframe',
+  	arget_url varchar(512) DEFAULT NULL COMMENT 'ï¿½ï¿½ï¿½ï¿½URL',
+  alue text COMMENT 'ï¿½ï¿½ï¿½ï¿½Öµ/Ñ¡ï¿½ï¿½Öµ',
+  wait_delay_ms int DEFAULT '500' COMMENT 'Ö´ï¿½ï¿½Ç°ï¿½È´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½',
+  	imeout_ms int DEFAULT '10000' COMMENT 'ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½',
+  ssert_type varchar(32) DEFAULT NULL COMMENT 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½',
+  ssert_value varchar(256) DEFAULT NULL COMMENT 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµ',
+  description text COMMENT 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½',
+  continue_on_fail tinyint DEFAULT '0' COMMENT 'Ê§ï¿½Üºï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½',
+  ext_config text COMMENT 'ï¿½ï¿½Õ¹ï¿½ï¿½ï¿½ï¿½JSON',
+  create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½',
   PRIMARY KEY (id),
   KEY idx_task_code (	ask_code),
   KEY idx_task_step (	ask_code,step_index)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='ÈÎÎñ²½Öè±í';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½';
 
 -- =============================================
--- ä¯ÀÀÆ÷Ö´ĞĞ¼ÇÂ¼±í
+-- ï¿½ï¿½ï¿½ï¿½ï¿½Ö´ï¿½Ğ¼ï¿½Â¼ï¿½ï¿½
 -- =============================================
 DROP TABLE IF EXISTS rowser_execution;
 CREATE TABLE rowser_execution (
-  id bigint NOT NULL AUTO_INCREMENT COMMENT '×ÔÔöÖ÷¼ü',
-  execution_id varchar(32) NOT NULL COMMENT 'Ö´ĞĞID',
-  	ask_code varchar(64) NOT NULL COMMENT 'ÈÎÎñ±àÂë',
-  	rigger_type varchar(16) NOT NULL DEFAULT 'MANUAL' COMMENT '´¥·¢·½Ê½',
-  status varchar(16) NOT NULL DEFAULT 'RUNNING' COMMENT 'Ö´ĞĞ×´Ì¬',
-  start_time datetime DEFAULT NULL COMMENT '¿ªÊ¼Ê±¼ä',
-  end_time datetime DEFAULT NULL COMMENT '½áÊøÊ±¼ä',
-  	otal_steps int DEFAULT '0' COMMENT '×Ü²½ÖèÊı',
-  success_steps int DEFAULT '0' COMMENT '³É¹¦²½ÖèÊı',
-  ail_steps int DEFAULT '0' COMMENT 'Ê§°Ü²½ÖèÊı',
-  error_message text COMMENT 'È«¾Ö´íÎóĞÅÏ¢',
-  rowser_type varchar(16) DEFAULT 'chromium' COMMENT 'ä¯ÀÀÆ÷ÀàĞÍ',
-  headless tinyint DEFAULT '1' COMMENT 'ÊÇ·ñÎŞÍ·Ä£Ê½',
-  screenshot_count int DEFAULT '0' COMMENT '½ØÍ¼ÊıÁ¿',
-  create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '´´½¨Ê±¼ä',
-  update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '¸üĞÂÊ±¼ä',
+  id bigint NOT NULL AUTO_INCREMENT COMMENT 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½',
+  execution_id varchar(32) NOT NULL COMMENT 'Ö´ï¿½ï¿½ID',
+  	ask_code varchar(64) NOT NULL COMMENT 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½',
+  	rigger_type varchar(16) NOT NULL DEFAULT 'MANUAL' COMMENT 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê½',
+  status varchar(16) NOT NULL DEFAULT 'RUNNING' COMMENT 'Ö´ï¿½ï¿½×´Ì¬',
+  start_time datetime DEFAULT NULL COMMENT 'ï¿½ï¿½Ê¼Ê±ï¿½ï¿½',
+  end_time datetime DEFAULT NULL COMMENT 'ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½',
+  	otal_steps int DEFAULT '0' COMMENT 'ï¿½Ü²ï¿½ï¿½ï¿½ï¿½ï¿½',
+  success_steps int DEFAULT '0' COMMENT 'ï¿½É¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½',
+  ail_steps int DEFAULT '0' COMMENT 'Ê§ï¿½Ü²ï¿½ï¿½ï¿½ï¿½ï¿½',
+  error_message text COMMENT 'È«ï¿½Ö´ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢',
+  rowser_type varchar(16) DEFAULT 'chromium' COMMENT 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½',
+  headless tinyint DEFAULT '1' COMMENT 'ï¿½Ç·ï¿½ï¿½ï¿½Í·Ä£Ê½',
+  screenshot_count int DEFAULT '0' COMMENT 'ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½',
+  create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½',
+  update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½',
   PRIMARY KEY (id),
   UNIQUE KEY uk_execution_id (execution_id),
   KEY idx_task_code (	ask_code),
   KEY idx_status (status),
   KEY idx_start_time (start_time)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='ä¯ÀÀÆ÷Ö´ĞĞ¼ÇÂ¼±í';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='ï¿½ï¿½ï¿½ï¿½ï¿½Ö´ï¿½Ğ¼ï¿½Â¼ï¿½ï¿½';
 
 -- =============================================
--- ²½ÖèÖ´ĞĞÈÕÖ¾±í
+-- ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ï¿½ï¿½ï¿½Ö¾ï¿½ï¿½
 -- =============================================
 DROP TABLE IF EXISTS rowser_step_log;
 CREATE TABLE rowser_step_log (
-  id bigint NOT NULL AUTO_INCREMENT COMMENT '×ÔÔöÖ÷¼ü',
-  execution_id varchar(32) NOT NULL COMMENT 'Ö´ĞĞID',
-  step_index int NOT NULL COMMENT '²½ÖèĞòºÅ',
-  ction_type varchar(20) NOT NULL COMMENT '²Ù×÷ÀàĞÍ',
+  id bigint NOT NULL AUTO_INCREMENT COMMENT 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½',
+  execution_id varchar(32) NOT NULL COMMENT 'Ö´ï¿½ï¿½ID',
+  step_index int NOT NULL COMMENT 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½',
+  ction_type varchar(20) NOT NULL COMMENT 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½',
   status varchar(16) NOT NULL COMMENT '×´Ì¬',
-  description text COMMENT 'Ö´ĞĞÃèÊö',
-  screenshot_path varchar(256) DEFAULT NULL COMMENT '½ØÍ¼ÎÄ¼şÂ·¾¶',
-  error_message text COMMENT '´íÎóĞÅÏ¢',
-  cost_ms bigint DEFAULT NULL COMMENT 'ºÄÊ±ºÁÃë',
-  console_logs text COMMENT 'ä¯ÀÀÆ÷¿ØÖÆÌ¨ÈÕÖ¾',
+  description text COMMENT 'Ö´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½',
+  screenshot_path varchar(256) DEFAULT NULL COMMENT 'ï¿½ï¿½Í¼ï¿½Ä¼ï¿½Â·ï¿½ï¿½',
+  error_message text COMMENT 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢',
+  cost_ms bigint DEFAULT NULL COMMENT 'ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½',
+  console_logs text COMMENT 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì¨ï¿½ï¿½Ö¾',
   
-etwork_requests text COMMENT '¸Ã²½Öè´¥·¢µÄÍøÂçÇëÇó(JSON)',
-  page_url varchar(512) DEFAULT NULL COMMENT 'µ±Ç°Ò³ÃæURL',
-  page_title varchar(256) DEFAULT NULL COMMENT 'µ±Ç°Ò³Ãæ±êÌâ',
-  create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '´´½¨Ê±¼ä',
+etwork_requests text COMMENT 'ï¿½Ã²ï¿½ï¿½è´¥ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(JSON)',
+  page_url varchar(512) DEFAULT NULL COMMENT 'ï¿½ï¿½Ç°Ò³ï¿½ï¿½URL',
+  page_title varchar(256) DEFAULT NULL COMMENT 'ï¿½ï¿½Ç°Ò³ï¿½ï¿½ï¿½ï¿½ï¿½',
+  create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½',
   PRIMARY KEY (id),
   KEY idx_execution (execution_id),
   KEY idx_exec_step (execution_id,step_index)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='²½ÖèÖ´ĞĞÈÕÖ¾±í';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ï¿½ï¿½ï¿½Ö¾ï¿½ï¿½';
 
 -- =============================================
--- ¶¨Ê±ÈÎÎñÅäÖÃ±í
+-- ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã±ï¿½
 -- =============================================
 DROP TABLE IF EXISTS rowser_schedule;
 CREATE TABLE rowser_schedule (
-  id bigint NOT NULL AUTO_INCREMENT COMMENT '×ÔÔöÖ÷¼ü',
-  	ask_code varchar(64) NOT NULL COMMENT 'ÈÎÎñ±àÂë',
-  cron_expression varchar(64) NOT NULL COMMENT 'Cron±í´ïÊ½',
-  schedule_name varchar(128) DEFAULT NULL COMMENT 'µ÷¶ÈÃû³Æ',
-  enabled tinyint DEFAULT '1' COMMENT 'ÊÇ·ñÆôÓÃ',
-  last_run_time datetime DEFAULT NULL COMMENT 'ÉÏ´ÎÖ´ĞĞÊ±¼ä',
+  id bigint NOT NULL AUTO_INCREMENT COMMENT 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½',
+  	ask_code varchar(64) NOT NULL COMMENT 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½',
+  cron_expression varchar(64) NOT NULL COMMENT 'Cronï¿½ï¿½ï¿½ï¿½Ê½',
+  schedule_name varchar(128) DEFAULT NULL COMMENT 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½',
+  enabled tinyint DEFAULT '1' COMMENT 'ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½',
+  last_run_time datetime DEFAULT NULL COMMENT 'ï¿½Ï´ï¿½Ö´ï¿½ï¿½Ê±ï¿½ï¿½',
   
-ext_run_time datetime DEFAULT NULL COMMENT 'ÏÂ´ÎÖ´ĞĞÊ±¼ä',
+ext_run_time datetime DEFAULT NULL COMMENT 'ï¿½Â´ï¿½Ö´ï¿½ï¿½Ê±ï¿½ï¿½',
   
-otify_on_fail tinyint DEFAULT '0' COMMENT 'Ê§°ÜÊÇ·ñÍ¨Öª',
-  create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '´´½¨Ê±¼ä',
-  update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '¸üĞÂÊ±¼ä',
+otify_on_fail tinyint DEFAULT '0' COMMENT 'Ê§ï¿½ï¿½ï¿½Ç·ï¿½Í¨Öª',
+  create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½',
+  update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½',
   PRIMARY KEY (id),
   UNIQUE KEY uk_task_schedule (	ask_code),
   KEY idx_enabled (enabled)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='¶¨Ê±ÈÎÎñÅäÖÃ±í';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã±ï¿½';
