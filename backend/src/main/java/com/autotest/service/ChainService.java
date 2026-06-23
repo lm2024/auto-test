@@ -16,9 +16,10 @@ public interface ChainService {
 
     List<ChainVO> listChainsByCategory(String chainName, Integer executeMode,
                                          String systemCategory, String funcCategory, Integer priority,
-                                         int offset, int pageSize);
+                                         String chainType, int offset, int pageSize);
     int countChainsByCategory(String chainName, Integer executeMode,
-                               String systemCategory, String funcCategory, Integer priority);
+                               String systemCategory, String funcCategory, Integer priority,
+                               String chainType);
     ChainVO getChainDetail(String chainCode);
     ChainVO copyChain(String chainCode);
     ChainVO pluginCreateChain(PluginChainCreateDTO dto);

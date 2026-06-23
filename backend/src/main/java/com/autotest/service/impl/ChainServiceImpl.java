@@ -49,6 +49,7 @@ public class ChainServiceImpl implements ChainService {
         chain.setChainName(dto.getChainName());
         chain.setExecuteMode(dto.getExecuteMode() != null ? dto.getExecuteMode() : 1);
         chain.setDescription(dto.getDescription());
+        chain.setChainType(dto.getChainType() != null ? dto.getChainType() : "API");
         chain.setStatus(1);
         chain.setCurrentVersion(1);
         chainMapper.insert(chain);
@@ -73,6 +74,7 @@ public class ChainServiceImpl implements ChainService {
         if (dto.getSystemCategory() != null) chain.setSystemCategory(dto.getSystemCategory());
         if (dto.getFuncCategory() != null) chain.setFuncCategory(dto.getFuncCategory());
         if (dto.getPriority() != null) chain.setPriority(dto.getPriority());
+        if (dto.getChainType() != null) chain.setChainType(dto.getChainType());
         chainMapper.update(chain);
 
         return getChainDetail(dto.getChainCode());
@@ -102,7 +104,7 @@ public class ChainServiceImpl implements ChainService {
     @Override
     public List<ChainVO> listChainsByCategory(String chainName, Integer executeMode,
                                                String systemCategory, String funcCategory, Integer priority,
-                                               int offset, int pageSize) {
+                                               String chainType, int offset, int pageSize) {
         List<TestChain> chains = chainMapper.selectListByCategory(chainName, executeMode, systemCategory, funcCategory, priority, offset, pageSize);
         return chains.stream().map(chain -> {
             ChainVO vo = buildChainVO(chain);
@@ -113,7 +115,8 @@ public class ChainServiceImpl implements ChainService {
 
     @Override
     public int countChainsByCategory(String chainName, Integer executeMode,
-                                      String systemCategory, String funcCategory, Integer priority) {
+                                      String systemCategory, String funcCategory, Integer priority,
+                                      String chainType) {
         return chainMapper.countByCategory(chainName, executeMode, systemCategory, funcCategory, priority);
     }
 
@@ -195,6 +198,7 @@ public class ChainServiceImpl implements ChainService {
         chain.setChainCode(chainCode);
         chain.setChainName(dto.getChainName());
         chain.setExecuteMode(1); // Default serial
+        chain.setChainType("MIXED");
         chain.setStatus(1);
         chain.setCurrentVersion(1);
         chainMapper.insert(chain);
@@ -347,6 +351,7 @@ public class ChainServiceImpl implements ChainService {
         vo.setSystemCategory(chain.getSystemCategory());
         vo.setFuncCategory(chain.getFuncCategory());
         vo.setPriority(chain.getPriority());
+        vo.setChainType(chain.getChainType());
         return vo;
     }
 

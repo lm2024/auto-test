@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.autotest.mapper.BrowserScheduleMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO browser_schedule (chain_code, cron_expression, schedule_name, enabled)
+        VALUES (#{chainCode}, #{cronExpression}, #{scheduleName}, #{enabled})
+    </insert>
+
+    <update id="update">
+        UPDATE browser_schedule
+        SET cron_expression = #{cronExpression}, schedule_name = #{scheduleName},
+            enabled = #{enabled}, last_run_time = #{lastRunTime},
+            next_run_time = #{nextRunTime}, notify_on_fail = #{notifyOnFail}
+        WHERE chain_code = #{chainCode}
+    </update>
+
+    <delete id="deleteByChainCode">
+        DELETE FROM browser_schedule WHERE chain_code = #{chainCode}
+    </delete>
+
+    <select id="selectByChainCode" resultType="com.autotest.model.entity.BrowserSchedule">
+        SELECT * FROM browser_schedule WHERE chain_code = #{chainCode}
+    </select>
+
+    <select id="selectEnabled" resultType="com.autotest.model.entity.BrowserSchedule">
+        SELECT * FROM browser_schedule WHERE enabled = 1
+    </select>
+
+</mapper>

@@ -257,7 +257,6 @@ onUnmounted(() => { if (ws) ws.close() })
 
 /* ── Layout ── */
 .execute-detail {
-  height: calc(100vh - 80px);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -299,8 +298,6 @@ onUnmounted(() => { if (ws) ws.close() })
 
 /* ── Nodes Area ── */
 .nodes-area {
-  flex: 1;
-  overflow-y: auto;
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -584,8 +581,6 @@ onUnmounted(() => { if (ws) ws.close() })
 
 /* ── Trace Groups Area ── */
 .trace-groups-area {
-  flex: 1;
-  overflow-y: auto;
   padding: 16px;
   display: flex;
   flex-direction: column;

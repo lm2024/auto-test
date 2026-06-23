@@ -25,6 +25,11 @@
           <el-option label="P1 常规回归" :value="1" />
           <el-option label="P2 低频验证" :value="2" />
         </el-select>
+        <el-select v-model="filter.chainType" placeholder="链路类型" clearable style="width:120px;margin-left:10px">
+          <el-option label="API 接口" value="API" />
+          <el-option label="浏览器" value="BROWSER" />
+          <el-option label="混合" value="MIXED" />
+        </el-select>
         <el-button type="primary" style="margin-left:10px" @click="loadChains">查询</el-button>
         <el-button @click="resetFilter">重置</el-button>
       </div>
@@ -45,6 +50,11 @@
             <el-tag :type="row.executeMode === 1 ? 'primary' : 'warning'">
               {{ row.executeMode === 1 ? '全串行' : '分组并行' }}
             </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="类型" width="90">
+          <template #default="{ row }">
+            <el-tag :type="chainTypeTag(row.chainType)" size="small">{{ chainTypeText(row.chainType) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="nodeCount" label="节点数" width="80" />
@@ -127,6 +137,13 @@
             <el-option label="P2 低频验证" :value="2" />
           </el-select>
         </el-form-item>
+        <el-form-item label="链路类型">
+          <el-select v-model="form.chainType" clearable placeholder="选择类型">
+            <el-option label="API 接口" value="API" />
+            <el-option label="浏览器自动化" value="BROWSER" />
+            <el-option label="混合" value="MIXED" />
+          </el-select>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -142,13 +159,13 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 
 const chains = ref([])
-const filter = ref({ chainName: '', executeMode: null, systemCategory: '', funcCategory: '', priority: null })
+const filter = ref({ chainName: '', executeMode: null, systemCategory: '', funcCategory: '', priority: null, chainType: '' })
 const pageNo = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增链路')
-const form = ref({ chainName: '', executeMode: 1, description: '', systemCategory: '', funcCategory: '', priority: 2, isEdit: false })
+const form = ref({ chainName: '', executeMode: 1, description: '', systemCategory: '', funcCategory: '', priority: 2, chainType: 'API', isEdit: false })
 const selectedRows = ref([])
 const tableRef = ref(null)
 const systemCategories = ref([])
@@ -181,9 +198,17 @@ const loadChains = async () => {
 }
 
 const resetFilter = () => {
-  filter.value = { chainName: '', executeMode: null, systemCategory: '', funcCategory: '', priority: null }
+  filter.value = { chainName: '', executeMode: null, systemCategory: '', funcCategory: '', priority: null, chainType: '' }
   pageNo.value = 1
   loadChains()
+}
+
+const chainTypeTag = (type) => {
+  return { API: '', BROWSER: 'success', MIXED: 'warning' }[type] || ''
+}
+
+const chainTypeText = (type) => {
+  return { API: 'API', BROWSER: '浏览器', MIXED: '混合' }[type] || type || 'API'
 }
 
 const formatTime = (t) => {

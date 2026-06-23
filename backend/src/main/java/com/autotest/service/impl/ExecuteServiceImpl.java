@@ -513,6 +513,8 @@ public class ExecuteServiceImpl implements ExecuteService {
                         config.getNodeName(), "SUCCESS", costMs, httpResult.statusCode, null);
 
                 context.addNodeLog(logEntry);
+                saveNodeLogImmediate(logEntry);
+                System.err.println("[DEBUG_EXEC] Node SUCCESS: " + config.getNodeCode() + ", status=" + logEntry.getStatus());
                 return new NodeResult(true, null);
             } else {
                 String errMsg = "断言失败: 响应码=" + httpResult.statusCode;
@@ -524,6 +526,7 @@ public class ExecuteServiceImpl implements ExecuteService {
                         config.getNodeName(), "FAILED", costMs, httpResult.statusCode, errMsg);
 
                 context.addNodeLog(logEntry);
+                saveNodeLogImmediate(logEntry);
                 return new NodeResult(false, errMsg);
             }
         } catch (Exception e) {
@@ -537,7 +540,20 @@ public class ExecuteServiceImpl implements ExecuteService {
                     config.getNodeName(), "FAILED", costMs, null, e.getMessage());
 
             context.addNodeLog(logEntry);
+            saveNodeLogImmediate(logEntry);
             return new NodeResult(false, e.getMessage());
+        }
+    }
+
+    private void saveNodeLogImmediate(TestNodeExecuteLog nodeLog) {
+        try {
+            log.info("[DEBUG] saveNodeLogImmediate: executionId={}, node={}", 
+                nodeLog.getExecutionId(), nodeLog.getNodeCode());
+            nodeExecuteLogMapper.batchInsert(java.util.Collections.singletonList(nodeLog));
+            log.info("[DEBUG] saveNodeLogImmediate: SUCCESS");
+        } catch (Exception e) {
+            log.error("Failed to save node log immediately, executionId={}", 
+                nodeLog.getExecutionId(), e);
         }
     }
 
@@ -550,6 +566,7 @@ public class ExecuteServiceImpl implements ExecuteService {
         logEntry.setStartTime(new Date());
         logEntry.setEndTime(new Date());
         context.addNodeLog(logEntry);
+        saveNodeLogImmediate(logEntry);
 
         pushService.pushNodeStatus(context.getExecutionId(), config.getNodeCode(),
                 config.getNodeName(), "SKIPPED", 0, null, null);

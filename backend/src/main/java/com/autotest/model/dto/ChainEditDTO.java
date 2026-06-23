@@ -13,6 +13,7 @@ public class ChainEditDTO {
     private String systemCategory;
     private String funcCategory;
     private Integer priority;
+    private String chainType;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -32,4 +33,6 @@ public class ChainEditDTO {
     public void setFuncCategory(String funcCategory) { this.funcCategory = funcCategory; }
     public Integer getPriority() { return priority; }
     public void setPriority(Integer priority) { this.priority = priority; }
+    public String getChainType() { return chainType; }
+    public void setChainType(String chainType) { this.chainType = chainType; }
 }

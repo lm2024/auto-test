@@ -22,6 +22,9 @@ public class TestChain {
     private String funcCategory;
     private Integer priority;
 
+    // 浏览器自动化类型
+    private String chainType;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getChainCode() { return chainCode; }
@@ -56,4 +59,6 @@ public class TestChain {
     public void setFuncCategory(String funcCategory) { this.funcCategory = funcCategory; }
     public Integer getPriority() { return priority; }
     public void setPriority(Integer priority) { this.priority = priority; }
+    public String getChainType() { return chainType; }
+    public void setChainType(String chainType) { this.chainType = chainType; }
 }

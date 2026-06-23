@@ -8,6 +8,7 @@ public class ChainCreateDTO {
     private String chainCode;
     private Integer executeMode = 1;
     private String description;
+    private String chainType;
 
     public String getChainName() { return chainName; }
     public void setChainName(String chainName) { this.chainName = chainName; }
@@ -17,4 +18,6 @@ public class ChainCreateDTO {
     public void setExecuteMode(Integer executeMode) { this.executeMode = executeMode; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+    public String getChainType() { return chainType; }
+    public void setChainType(String chainType) { this.chainType = chainType; }
 }
