@@ -51,17 +51,21 @@ public class BrowserAutomationServiceImpl implements BrowserAutomationService {
         BrowserStepLogVO result = actionExecutor.execute(action, page, browserConfig.getScreenshotDir());
 
         // 如果是截图步骤或者执行完毕后，自动截图
+        String screenshotPath = null;
         if ("screenshot".equals(action.getActionType())) {
-            String screenshotPath = actionExecutor.takeScreenshot(page,
+            screenshotPath = actionExecutor.takeScreenshot(page,
                     browserConfig.getScreenshotDir(),
                     "step_" + action.getStepIndex());
-            result.setScreenshotUrl(screenshotPath);
         } else if ("SUCCESS".equals(result.getStatus())) {
             // 非截图步骤也截图用于记录
-            String screenshotPath = actionExecutor.takeScreenshot(page,
+            screenshotPath = actionExecutor.takeScreenshot(page,
                     browserConfig.getScreenshotDir(),
                     "step_" + action.getStepIndex());
-            result.setScreenshotUrl(screenshotPath);
+        }
+        if (screenshotPath != null) {
+            // 将本地文件路径转为可通过 HTTP 访问的 URL
+            String fileName = screenshotPath.substring(screenshotPath.lastIndexOf('/') + 1);
+            result.setScreenshotUrl("/screenshots/" + fileName);
         }
 
         return result;
@@ -89,7 +93,10 @@ public class BrowserAutomationServiceImpl implements BrowserAutomationService {
                 String screenshotPath = actionExecutor.takeScreenshot(page,
                         screenshotDir != null ? screenshotDir : browserConfig.getScreenshotDir(),
                         "step_" + action.getStepIndex());
-                result.setScreenshotUrl(screenshotPath);
+                if (screenshotPath != null) {
+                    String fileName = screenshotPath.substring(screenshotPath.lastIndexOf('/') + 1);
+                    result.setScreenshotUrl("/screenshots/" + fileName);
+                }
             }
 
             // 如果失败且不继续，停止执行
