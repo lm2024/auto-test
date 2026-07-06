@@ -4,4 +4,4 @@ backend/target/
 /.vscode/
 /logs/
 /.playwright-mcp/
-/.mimocode/
+/.mimocode/node_modules
