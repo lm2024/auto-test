@@ -52,11 +52,12 @@ public class ChainController {
             @RequestParam(required = false) String systemCategory,
             @RequestParam(required = false) String funcCategory,
             @RequestParam(required = false) Integer priority,
+            @RequestParam(required = false) Long categoryId,
             @RequestParam(defaultValue = "1") int pageNo,
             @RequestParam(defaultValue = "10") int pageSize) {
         int offset = (pageNo - 1) * pageSize;
-        List<ChainVO> list = chainService.listChainsByCategory(chainName, executeMode, systemCategory, funcCategory, priority, offset, pageSize);
-        int total = chainService.countChainsByCategory(chainName, executeMode, systemCategory, funcCategory, priority);
+        List<ChainVO> list = chainService.listChainsByCategory(chainName, executeMode, systemCategory, funcCategory, priority, categoryId, offset, pageSize);
+        int total = chainService.countChainsByCategory(chainName, executeMode, systemCategory, funcCategory, priority, categoryId);
         Map<String, Object> data = new HashMap<>();
         data.put("list", list);
         data.put("total", total);
@@ -122,7 +123,7 @@ public class ChainController {
         return Result.success(diff);
     }
 
-    @DeleteMapping("/version/delete")
+    @PostMapping("/version/delete")
     public Result<?> deleteVersion(@Valid @RequestBody VersionDeleteDTO dto) {
         versionService.deleteVersion(dto);
         return Result.success();

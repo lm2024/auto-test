@@ -51,6 +51,7 @@ public class ChainServiceImpl implements ChainService {
         chain.setDescription(dto.getDescription());
         chain.setStatus(1);
         chain.setCurrentVersion(1);
+        if (dto.getCategoryId() != null) chain.setCategoryId(dto.getCategoryId());
         chainMapper.insert(chain);
 
         return buildChainVO(chain);
@@ -73,6 +74,7 @@ public class ChainServiceImpl implements ChainService {
         if (dto.getSystemCategory() != null) chain.setSystemCategory(dto.getSystemCategory());
         if (dto.getFuncCategory() != null) chain.setFuncCategory(dto.getFuncCategory());
         if (dto.getPriority() != null) chain.setPriority(dto.getPriority());
+        if (dto.getCategoryId() != null) chain.setCategoryId(dto.getCategoryId());
         chainMapper.update(chain);
 
         return getChainDetail(dto.getChainCode());
@@ -102,8 +104,8 @@ public class ChainServiceImpl implements ChainService {
     @Override
     public List<ChainVO> listChainsByCategory(String chainName, Integer executeMode,
                                                String systemCategory, String funcCategory, Integer priority,
-                                               int offset, int pageSize) {
-        List<TestChain> chains = chainMapper.selectListByCategory(chainName, executeMode, systemCategory, funcCategory, priority, offset, pageSize);
+                                               Long categoryId, int offset, int pageSize) {
+        List<TestChain> chains = chainMapper.selectListByCategory(chainName, executeMode, systemCategory, funcCategory, priority, categoryId, offset, pageSize);
         return chains.stream().map(chain -> {
             ChainVO vo = buildChainVO(chain);
             vo.setNodeCount(nodeConfigMapper.countByChainCode(chain.getChainCode()));
@@ -113,8 +115,9 @@ public class ChainServiceImpl implements ChainService {
 
     @Override
     public int countChainsByCategory(String chainName, Integer executeMode,
-                                      String systemCategory, String funcCategory, Integer priority) {
-        return chainMapper.countByCategory(chainName, executeMode, systemCategory, funcCategory, priority);
+                                      String systemCategory, String funcCategory, Integer priority,
+                                      Long categoryId) {
+        return chainMapper.countByCategory(chainName, executeMode, systemCategory, funcCategory, priority, categoryId);
     }
 
     @Override
@@ -347,6 +350,7 @@ public class ChainServiceImpl implements ChainService {
         vo.setSystemCategory(chain.getSystemCategory());
         vo.setFuncCategory(chain.getFuncCategory());
         vo.setPriority(chain.getPriority());
+        vo.setCategoryId(chain.getCategoryId());
         return vo;
     }
 

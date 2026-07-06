@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.autotest.mapper.SysUserMapper">
+
+    <resultMap id="BaseResultMap" type="com.autotest.model.entity.SysUser">
+        <id column="id" property="id"/>
+        <result column="username" property="username"/>
+        <result column="password" property="password"/>
+        <result column="display_name" property="displayName"/>
+        <result column="role" property="role"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="status" property="status"/>
+        <result column="last_login_time" property="lastLoginTime"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_user (username, password, display_name, role, tenant_id, status)
+        VALUES (#{username}, #{password}, #{displayName}, #{role}, #{tenantId}, #{status})
+    </insert>
+
+    <update id="update">
+        UPDATE sys_user
+        <set>
+            <if test="displayName != null">display_name = #{displayName},</if>
+            <if test="password != null">password = #{password},</if>
+            <if test="role != null">role = #{role},</if>
+            <if test="tenantId != null">tenant_id = #{tenantId},</if>
+            <if test="status != null">status = #{status},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM sys_user WHERE id = #{id}
+    </delete>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT * FROM sys_user WHERE id = #{id}
+    </select>
+
+    <select id="selectByUsername" resultMap="BaseResultMap">
+        SELECT * FROM sys_user WHERE username = #{username}
+    </select>
+
+    <select id="selectList" resultMap="BaseResultMap">
+        SELECT * FROM sys_user
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (username LIKE CONCAT('%', #{keyword}, '%')
+                     OR display_name LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="tenantId != null">
+                AND tenant_id = #{tenantId}
+            </if>
+        </where>
+        ORDER BY create_time DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countList" resultType="int">
+        SELECT COUNT(*) FROM sys_user
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (username LIKE CONCAT('%', #{keyword}, '%')
+                     OR display_name LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="tenantId != null">
+                AND tenant_id = #{tenantId}
+            </if>
+        </where>
+    </select>
+
+    <update id="updateLoginTime">
+        UPDATE sys_user SET last_login_time = NOW() WHERE id = #{id}
+    </update>
+</mapper>

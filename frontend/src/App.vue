@@ -1,5 +1,11 @@
 <template>
-  <el-container class="app-container">
+  <!-- 登录页：全屏，无菜单 -->
+  <div v-if="isLoginPage" class="login-wrapper">
+    <router-view />
+  </div>
+
+  <!-- 已登录：侧边栏 + 主内容 -->
+  <el-container v-else class="app-container">
     <el-aside :width="asideWidth + 'px'" class="app-aside" ref="asideRef">
       <div class="logo">
         <span v-if="!isCollapsed">接口测试平台</span>
@@ -27,11 +33,37 @@
           <el-icon><Collection /></el-icon>
           <template #title>分类字典管理</template>
         </el-menu-item>
+        <el-menu-item index="/user/list" v-if="user && user.role === 'ADMIN'">
+          <el-icon><User /></el-icon>
+          <template #title>用户管理</template>
+        </el-menu-item>
+        <el-menu-item index="/scheduled-task" v-if="user && user.role === 'ADMIN'">
+          <el-icon><Timer /></el-icon>
+          <template #title>定时任务</template>
+        </el-menu-item>
+        <el-menu-item index="/plugin/download">
+          <el-icon><Monitor /></el-icon>
+          <template #title>插件下载</template>
+        </el-menu-item>
         <el-menu-item index="/system/config">
           <el-icon><Setting /></el-icon>
           <template #title>系统设置</template>
         </el-menu-item>
       </el-menu>
+
+      <div class="user-info" v-if="user">
+        <el-dropdown trigger="click">
+          <span class="user-name">
+            <el-icon><User /></el-icon>
+            {{ user.displayName || user.username }}
+          </span>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item @click="handleLogout">退出登录</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </div>
       <div class="collapse-btn" @click="toggleCollapse">
         <el-icon :size="18">
           <Fold v-if="!isCollapsed" />
@@ -51,11 +83,15 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
-import { List, Document, Setting, User, Collection, Fold, Expand } from '@element-plus/icons-vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { List, Document, Setting, User, Collection, Fold, Expand, Timer, Monitor } from '@element-plus/icons-vue'
+import { getUser, logout } from './utils/auth'
 
 const route = useRoute()
+const router = useRouter()
+const user = ref(getUser())
+const isLoginPage = computed(() => route.path === '/login')
 const asideRef = ref(null)
 
 const isCollapsed = ref(localStorage.getItem('menuCollapsed') === 'true')
@@ -101,7 +137,13 @@ onMounted(() => {
   if (isCollapsed.value) {
     asideWidth.value = 64
   }
+  user.value = getUser()
 })
+
+const handleLogout = () => {
+  logout()
+  router.push('/login')
+}
 </script>
 
 <style>
@@ -111,6 +153,11 @@ onMounted(() => {
 html, body, #app {
   height: 100%;
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.login-wrapper {
+  height: 100vh;
+  width: 100%;
 }
 
 .app-container {
@@ -203,6 +250,29 @@ html, body, #app {
 
 .collapse-btn:hover {
   background: rgba(255, 255, 255, 0.08);
+  color: #e0e7ff;
+}
+
+/* ── User Info ── */
+.user-info {
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+
+.user-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(191, 203, 217, 0.8);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-name:hover {
   color: #e0e7ff;
 }
 

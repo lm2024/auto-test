@@ -54,11 +54,12 @@ public class ExecuteController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String startTime,
             @RequestParam(required = false) String endTime,
+            @RequestParam(required = false) Long categoryId,
             @RequestParam(defaultValue = "1") int pageNo,
             @RequestParam(defaultValue = "10") int pageSize) {
         List<ExecuteMainVO> records = executeService.listExecuteRecords(
-                chainCode, status, startTime, endTime, pageNo, pageSize);
-        int total = executeService.countExecuteRecords(chainCode, status, startTime, endTime);
+                chainCode, status, startTime, endTime, categoryId, pageNo, pageSize);
+        int total = executeService.countExecuteRecords(chainCode, status, startTime, endTime, categoryId);
         Map<String, Object> data = new HashMap<>();
         data.put("list", records);
         data.put("total", total);

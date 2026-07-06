@@ -1,6 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { isLoggedIn } from '../utils/auth'
 
 const routes = [
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('../views/Login.vue'),
+    meta: { public: true }
+  },
   { path: '/', redirect: '/chain/list' },
   {
     path: '/chain/list',
@@ -36,12 +43,37 @@ const routes = [
     path: '/dict/category',
     name: 'DictCategory',
     component: () => import('../views/DictCategory.vue')
+  },
+  {
+    path: '/plugin/download',
+    name: 'PluginDownload',
+    component: () => import('../views/PluginDownload.vue')
+  },
+  {
+    path: '/user/list',
+    name: 'UserList',
+    component: () => import('../views/UserList.vue')
+  },
+  {
+    path: '/scheduled-task',
+    name: 'ScheduledTask',
+    component: () => import('../views/ScheduledTask.vue')
   }
 ]
 
 const router = createRouter({
   history: createWebHistory(),
   routes
+})
+
+router.beforeEach((to, from, next) => {
+  if (to.meta.public) {
+    next()
+  } else if (!isLoggedIn()) {
+    next('/login')
+  } else {
+    next()
+  }
 })
 
 export default router

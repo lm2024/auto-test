@@ -21,6 +21,9 @@ public class ChainVO {
     private String funcCategory;
     private Integer priority;
 
+    // 阶段三新增字段
+    private Long categoryId;
+
     public Long getChainId() { return chainId; }
     public void setChainId(Long chainId) { this.chainId = chainId; }
     public String getChainCode() { return chainCode; }
@@ -50,4 +53,7 @@ public class ChainVO {
     public void setFuncCategory(String funcCategory) { this.funcCategory = funcCategory; }
     public Integer getPriority() { return priority; }
     public void setPriority(Integer priority) { this.priority = priority; }
+
+    public Long getCategoryId() { return categoryId; }
+    public void setCategoryId(Long categoryId) { this.categoryId = categoryId; }
 }

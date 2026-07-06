@@ -16,6 +16,14 @@
         </el-select>
         <el-date-picker v-model="dateRange" type="daterange" range-separator="至"
           start-placeholder="开始日期" end-placeholder="结束日期" style="margin-left:10px" />
+        <el-popover trigger="click" :width="300">
+          <template #reference>
+            <el-button style="margin-left:10px">
+              {{ filter.categoryId ? '已选分类' : '选择分类' }}
+            </el-button>
+          </template>
+          <CategoryTree mode="select" v-model="filter.categoryId" />
+        </el-popover>
         <el-button type="primary" style="margin-left:10px" @click="loadRecords">查询</el-button>
       </div>
 
@@ -67,9 +75,10 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import api from '../api'
+import CategoryTree from '../components/CategoryTree.vue'
 
 const records = ref([])
-const filter = ref({ chainCode: '', status: '' })
+const filter = ref({ chainCode: '', status: '', categoryId: null })
 const dateRange = ref(null)
 const pageNo = ref(1)
 const pageSize = ref(10)
@@ -81,6 +90,7 @@ const loadRecords = async () => {
     params.startTime = dateRange.value[0]
     params.endTime = dateRange.value[1]
   }
+  if (!params.categoryId) delete params.categoryId
   const res = await api.get('/execute/list', { params })
   records.value = res.data?.list || []
   total.value = res.data?.total || 0

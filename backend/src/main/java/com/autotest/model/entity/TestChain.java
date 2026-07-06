@@ -22,6 +22,10 @@ public class TestChain {
     private String funcCategory;
     private Integer priority;
 
+    // 阶段三新增字段
+    private Long categoryId;
+    private Long tenantId;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getChainCode() { return chainCode; }
@@ -56,4 +60,9 @@ public class TestChain {
     public void setFuncCategory(String funcCategory) { this.funcCategory = funcCategory; }
     public Integer getPriority() { return priority; }
     public void setPriority(Integer priority) { this.priority = priority; }
+
+    public Long getCategoryId() { return categoryId; }
+    public void setCategoryId(Long categoryId) { this.categoryId = categoryId; }
+    public Long getTenantId() { return tenantId; }
+    public void setTenantId(Long tenantId) { this.tenantId = tenantId; }
 }

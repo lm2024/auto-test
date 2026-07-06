@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.autotest.mapper.SysScheduledTaskMapper">
+
+    <resultMap id="BaseResultMap" type="com.autotest.model.entity.SysScheduledTask">
+        <id column="id" property="id"/>
+        <result column="task_name" property="taskName"/>
+        <result column="task_type" property="taskType"/>
+        <result column="chain_code" property="chainCode"/>
+        <result column="category_id" property="categoryId"/>
+        <result column="cron_expression" property="cronExpression"/>
+        <result column="interval_minutes" property="intervalMinutes"/>
+        <result column="enabled" property="enabled"/>
+        <result column="last_run_time" property="lastRunTime"/>
+        <result column="next_run_time" property="nextRunTime"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_scheduled_task (task_name, task_type, chain_code, category_id,
+            cron_expression, interval_minutes, enabled, tenant_id)
+        VALUES (#{taskName}, #{taskType}, #{chainCode}, #{categoryId},
+            #{cronExpression}, #{intervalMinutes}, #{enabled}, #{tenantId})
+    </insert>
+
+    <update id="update">
+        UPDATE sys_scheduled_task
+        <set>
+            <if test="taskName != null">task_name = #{taskName},</if>
+            <if test="taskType != null">task_type = #{taskType},</if>
+            <if test="chainCode != null">chain_code = #{chainCode},</if>
+            <if test="categoryId != null">category_id = #{categoryId},</if>
+            <if test="cronExpression != null">cron_expression = #{cronExpression},</if>
+            <if test="intervalMinutes != null">interval_minutes = #{intervalMinutes},</if>
+            <if test="enabled != null">enabled = #{enabled},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM sys_scheduled_task WHERE id = #{id}
+    </delete>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT * FROM sys_scheduled_task WHERE id = #{id}
+    </select>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT * FROM sys_scheduled_task
+        <where>
+            <if test="tenantId != null">
+                AND (tenant_id = #{tenantId} OR tenant_id IS NULL)
+            </if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="selectEnabled" resultMap="BaseResultMap">
+        SELECT * FROM sys_scheduled_task WHERE enabled = 1
+        <if test="tenantId != null">
+            AND (tenant_id = #{tenantId} OR tenant_id IS NULL)
+        </if>
+    </select>
+
+    <select id="countAll" resultType="int">
+        SELECT COUNT(*) FROM sys_scheduled_task
+        <where>
+            <if test="tenantId != null">
+                AND (tenant_id = #{tenantId} OR tenant_id IS NULL)
+            </if>
+        </where>
+    </select>
+
+    <update id="updateLastRunTime">
+        UPDATE sys_scheduled_task SET last_run_time = NOW() WHERE id = #{id}
+    </update>
+</mapper>

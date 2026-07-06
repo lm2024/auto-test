@@ -2,6 +2,12 @@ server:
   port: 8080
   servlet:
     context-path: /
+  servlet.encoding:
+    charset: UTF-8
+    enabled: true
+    force: true
+    force-request: true
+    force-response: true
 
 spring:
   servlet:
@@ -26,6 +32,7 @@ spring:
       test-while-idle: true
       test-on-borrow: false
       test-on-return: false
+      connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000;characterEncoding=UTF-8
 
 mybatis:
   mapper-locations: classpath:mapper/*.xml
@@ -48,3 +55,18 @@ ai:
 # 测试账号密码 AES 加密密钥（必须为16字节）
 account:
   aes-key: autotest_key_16!
+
+# JWT 配置
+jwt:
+  secret: auto-test-jwt-secret-key-2026
+  expiration: 86400000
+
+# SSO OAuth2 配置
+sso:
+  enabled: false
+  client-id: your-client-id
+  client-secret: your-client-secret
+  authorize-url: https://sso.company.com/oauth2/authorize
+  token-url: https://sso.company.com/oauth2/token
+  user-info-url: https://sso.company.com/oauth2/userinfo
+  redirect-uri: http://localhost:3001/api/sso/callback

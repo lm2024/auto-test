@@ -19,13 +19,15 @@
         <result column="system_category" property="systemCategory"/>
         <result column="func_category" property="funcCategory"/>
         <result column="priority" property="priority"/>
+        <result column="category_id" property="categoryId"/>
+        <result column="tenant_id" property="tenantId"/>
     </resultMap>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO test_chain (chain_code, chain_name, execute_mode, description, create_by, status, current_version, chain_fingerprint,
-            biz_oper_trace_id, account_code, system_category, func_category, priority)
+            biz_oper_trace_id, account_code, system_category, func_category, priority, category_id, tenant_id)
         VALUES (#{chainCode}, #{chainName}, #{executeMode}, #{description}, #{createBy}, #{status}, #{currentVersion}, #{chainFingerprint},
-            #{bizOperTraceId}, #{accountCode}, #{systemCategory}, #{funcCategory}, #{priority})
+            #{bizOperTraceId}, #{accountCode}, #{systemCategory}, #{funcCategory}, #{priority}, #{categoryId}, #{tenantId})
     </insert>
 
     <update id="update">
@@ -42,6 +44,8 @@
             <if test="systemCategory != null">system_category = #{systemCategory},</if>
             <if test="funcCategory != null">func_category = #{funcCategory},</if>
             <if test="priority != null">priority = #{priority},</if>
+            <if test="categoryId != null">category_id = #{categoryId},</if>
+            <if test="tenantId != null">tenant_id = #{tenantId},</if>
         </set>
         WHERE chain_code = #{chainCode}
     </update>
@@ -85,6 +89,9 @@
             <if test="priority != null">
                 AND priority = #{priority}
             </if>
+            <if test="categoryId != null">
+                AND category_id = #{categoryId}
+            </if>
         </where>
         ORDER BY create_time DESC
         LIMIT #{offset}, #{pageSize}
@@ -107,6 +114,9 @@
             </if>
             <if test="priority != null">
                 AND priority = #{priority}
+            </if>
+            <if test="categoryId != null">
+                AND category_id = #{categoryId}
             </if>
         </where>
     </select>

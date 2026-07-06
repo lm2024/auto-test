@@ -785,7 +785,7 @@ public class ExecuteServiceImpl implements ExecuteService {
     @Override
     public List<ExecuteMainVO> listExecuteRecords(String chainCode, String status,
                                                    String startTime, String endTime,
-                                                   int pageNo, int pageSize) {
+                                                   Long categoryId, int pageNo, int pageSize) {
         Date start = null, end = null;
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         try {
@@ -796,12 +796,17 @@ public class ExecuteServiceImpl implements ExecuteService {
         }
 
         int offset = (pageNo - 1) * pageSize;
-        List<TestExecuteMain> records = executeMainMapper.selectList(chainCode, status, start, end, offset, pageSize);
+        List<TestExecuteMain> records;
+        if (categoryId != null) {
+            records = executeMainMapper.selectListByCategory(chainCode, status, start, end, categoryId, offset, pageSize);
+        } else {
+            records = executeMainMapper.selectList(chainCode, status, start, end, offset, pageSize);
+        }
         return records.stream().map(this::buildExecuteMainVO).collect(Collectors.toList());
     }
 
     @Override
-    public int countExecuteRecords(String chainCode, String status, String startTime, String endTime) {
+    public int countExecuteRecords(String chainCode, String status, String startTime, String endTime, Long categoryId) {
         Date start = null, end = null;
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         try {
@@ -809,6 +814,9 @@ public class ExecuteServiceImpl implements ExecuteService {
             if (endTime != null && !endTime.isEmpty()) end = sdf.parse(endTime);
         } catch (Exception e) {
             // Ignore parse errors
+        }
+        if (categoryId != null) {
+            return executeMainMapper.countListByCategory(chainCode, status, start, end, categoryId);
         }
         return executeMainMapper.countList(chainCode, status, start, end);
     }

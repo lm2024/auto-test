@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.autotest.mapper.SysTaskExecuteLogMapper">
+
+    <resultMap id="BaseResultMap" type="com.autotest.model.entity.SysTaskExecuteLog">
+        <id column="id" property="id"/>
+        <result column="task_id" property="taskId"/>
+        <result column="execution_ids" property="executionIds"/>
+        <result column="status" property="status"/>
+        <result column="trigger_type" property="triggerType"/>
+        <result column="start_time" property="startTime"/>
+        <result column="end_time" property="endTime"/>
+        <result column="error_message" property="errorMessage"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_task_execute_log (task_id, execution_ids, status, trigger_type, start_time, end_time, error_message)
+        VALUES (#{taskId}, #{executionIds}, #{status}, #{triggerType}, #{startTime}, #{endTime}, #{errorMessage})
+    </insert>
+
+    <select id="selectByTaskId" resultMap="BaseResultMap">
+        SELECT * FROM sys_task_execute_log
+        WHERE task_id = #{taskId}
+        ORDER BY create_time DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countByTaskId" resultType="int">
+        SELECT COUNT(*) FROM sys_task_execute_log WHERE task_id = #{taskId}
+    </select>
+</mapper>

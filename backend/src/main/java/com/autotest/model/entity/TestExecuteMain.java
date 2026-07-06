@@ -15,6 +15,7 @@ public class TestExecuteMain {
     private Integer successCount;
     private Integer failCount;
     private Integer skipCount;
+    private Long tenantId;
     private Date createTime;
     private Date updateTime;
 
@@ -42,6 +43,8 @@ public class TestExecuteMain {
     public void setFailCount(Integer failCount) { this.failCount = failCount; }
     public Integer getSkipCount() { return skipCount; }
     public void setSkipCount(Integer skipCount) { this.skipCount = skipCount; }
+    public Long getTenantId() { return tenantId; }
+    public void setTenantId(Long tenantId) { this.tenantId = tenantId; }
     public Date getCreateTime() { return createTime; }
     public void setCreateTime(Date createTime) { this.createTime = createTime; }
     public Date getUpdateTime() { return updateTime; }

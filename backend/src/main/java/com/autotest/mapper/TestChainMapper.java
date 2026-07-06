@@ -18,13 +18,15 @@ public interface TestChainMapper {
                                          @Param("systemCategory") String systemCategory,
                                          @Param("funcCategory") String funcCategory,
                                          @Param("priority") Integer priority,
+                                         @Param("categoryId") Long categoryId,
                                          @Param("offset") int offset,
                                          @Param("pageSize") int pageSize);
     int countByCategory(@Param("chainName") String chainName,
                         @Param("executeMode") Integer executeMode,
                         @Param("systemCategory") String systemCategory,
                         @Param("funcCategory") String funcCategory,
-                        @Param("priority") Integer priority);
+                        @Param("priority") Integer priority,
+                        @Param("categoryId") Long categoryId);
     int countByChainCode(@Param("chainCode") String chainCode);
     int countByChainName(@Param("chainName") String chainName);
 }

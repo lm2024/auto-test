@@ -3,3 +3,5 @@ backend/target/
 /.idea/
 /.vscode/
 /logs/
+/.playwright-mcp/
+/.mimocode/

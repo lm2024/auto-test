@@ -22,4 +22,16 @@ public interface TestExecuteMainMapper {
                   @Param("status") String status,
                   @Param("startTime") Date startTime,
                   @Param("endTime") Date endTime);
+    List<TestExecuteMain> selectListByCategory(@Param("chainCode") String chainCode,
+                                               @Param("status") String status,
+                                               @Param("startTime") Date startTime,
+                                               @Param("endTime") Date endTime,
+                                               @Param("categoryId") Long categoryId,
+                                               @Param("offset") int offset,
+                                               @Param("pageSize") int pageSize);
+    int countListByCategory(@Param("chainCode") String chainCode,
+                            @Param("status") String status,
+                            @Param("startTime") Date startTime,
+                            @Param("endTime") Date endTime,
+                            @Param("categoryId") Long categoryId);
 }

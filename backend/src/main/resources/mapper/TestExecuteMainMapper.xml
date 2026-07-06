@@ -81,4 +81,50 @@
             </if>
         </where>
     </select>
+
+    <select id="selectListByCategory" resultMap="BaseResultMap">
+        SELECT e.* FROM test_execute_main e
+        INNER JOIN test_chain c ON e.chain_code = c.chain_code
+        <where>
+            <if test="chainCode != null and chainCode != ''">
+                AND e.chain_code = #{chainCode}
+            </if>
+            <if test="status != null and status != ''">
+                AND e.status = #{status}
+            </if>
+            <if test="startTime != null">
+                AND e.start_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND e.start_time &lt;= #{endTime}
+            </if>
+            <if test="categoryId != null">
+                AND c.category_id = #{categoryId}
+            </if>
+        </where>
+        ORDER BY e.start_time DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countListByCategory" resultType="int">
+        SELECT COUNT(*) FROM test_execute_main e
+        INNER JOIN test_chain c ON e.chain_code = c.chain_code
+        <where>
+            <if test="chainCode != null and chainCode != ''">
+                AND e.chain_code = #{chainCode}
+            </if>
+            <if test="status != null and status != ''">
+                AND e.status = #{status}
+            </if>
+            <if test="startTime != null">
+                AND e.start_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND e.start_time &lt;= #{endTime}
+            </if>
+            <if test="categoryId != null">
+                AND c.category_id = #{categoryId}
+            </if>
+        </where>
+    </select>
 </mapper>

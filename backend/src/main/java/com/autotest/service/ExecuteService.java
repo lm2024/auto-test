@@ -14,6 +14,6 @@ public interface ExecuteService {
     List<NodeExecuteLogVO> getNodeLogs(String executionId);
     List<ExecuteMainVO> listExecuteRecords(String chainCode, String status,
                                             String startTime, String endTime,
-                                            int pageNo, int pageSize);
-    int countExecuteRecords(String chainCode, String status, String startTime, String endTime);
+                                            Long categoryId, int pageNo, int pageSize);
+    int countExecuteRecords(String chainCode, String status, String startTime, String endTime, Long categoryId);
 }

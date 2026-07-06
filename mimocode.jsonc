@@ -32,6 +32,14 @@
       ],
       "enabled": true,
       "type": "local"
+    },
+    "playwright": {
+      "command": [
+        "npx",
+        "@playwright/mcp@latest"
+      ],
+      "enabled": true,
+      "type": "local"
     }
   }
 }

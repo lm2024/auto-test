@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.autotest.mapper.SysTenantMapper">
+
+    <resultMap id="BaseResultMap" type="com.autotest.model.entity.SysTenant">
+        <id column="id" property="id"/>
+        <result column="tenant_code" property="tenantCode"/>
+        <result column="tenant_name" property="tenantName"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_tenant (tenant_code, tenant_name, status)
+        VALUES (#{tenantCode}, #{tenantName}, #{status})
+    </insert>
+
+    <update id="update">
+        UPDATE sys_tenant
+        <set>
+            <if test="tenantName != null">tenant_name = #{tenantName},</if>
+            <if test="status != null">status = #{status},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM sys_tenant WHERE id = #{id}
+    </delete>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT * FROM sys_tenant WHERE id = #{id}
+    </select>
+
+    <select id="selectByCode" resultMap="BaseResultMap">
+        SELECT * FROM sys_tenant WHERE tenant_code = #{tenantCode}
+    </select>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT * FROM sys_tenant ORDER BY create_time DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countAll" resultType="int">
+        SELECT COUNT(*) FROM sys_tenant
+    </select>
+</mapper>

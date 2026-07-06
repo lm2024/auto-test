@@ -3,68 +3,72 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>分类字典管理</span>
-          <el-button type="primary" @click="showCreateDialog">新增分类</el-button>
+          <span>分类管理</span>
         </div>
       </template>
 
-      <div class="filter-bar">
-        <el-select v-model="filter.categoryType" placeholder="分类类型" clearable style="width:200px">
-          <el-option label="系统分类(system)" value="system" />
-          <el-option label="功能分类(func)" value="func" />
-        </el-select>
-        <el-button type="primary" style="margin-left:10px" @click="loadCategories">查询</el-button>
-        <el-button @click="resetFilter">重置</el-button>
-      </div>
+      <div class="category-layout">
+        <div class="tree-panel">
+          <CategoryTree
+            ref="categoryTreeRef"
+            mode="manage"
+            v-model="selectedCategoryId"
+            @add-root="showCreateDialog(null)"
+            @add-child="showCreateDialog($event.id)"
+            @edit="editCategory"
+            @delete="deleteCategory"
+            @refresh="loadTree"
+          />
+        </div>
 
-      <el-table :data="categories" border stripe style="margin-top:15px">
-        <el-table-column prop="categoryType" label="分类类型" width="120">
-          <template #default="{ row }">
-            <el-tag :type="row.categoryType === 'system' ? '' : 'success'">
-              {{ row.categoryType === 'system' ? '系统分类' : '功能分类' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="categoryCode" label="分类编码" width="180" />
-        <el-table-column prop="categoryName" label="分类名称" width="180" />
-        <el-table-column prop="sortOrder" label="排序号" width="100" />
-        <el-table-column label="操作" width="200">
-          <template #default="{ row }">
-            <el-button size="small" @click="editCategory(row)">编辑</el-button>
-            <el-button size="small" type="danger" @click="deleteCategory(row.id)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+        <div class="detail-panel" v-if="selectedCategoryId">
+          <el-descriptions :title="selectedCategory?.categoryName || '分类详情'" :column="1" border>
+            <el-descriptions-item label="分类ID">{{ selectedCategory?.id }}</el-descriptions-item>
+            <el-descriptions-item label="父分类ID">{{ selectedCategory?.parentId || '无 (根节点)' }}</el-descriptions-item>
+            <el-descriptions-item label="排序号">{{ selectedCategory?.sortOrder }}</el-descriptions-item>
+            <el-descriptions-item label="状态">
+              <el-tag :type="selectedCategory?.status === 1 ? 'success' : 'info'">
+                {{ selectedCategory?.status === 1 ? '启用' : '禁用' }}
+              </el-tag>
+            </el-descriptions-item>
+          </el-descriptions>
 
-      <div class="pagination-bar">
-        <el-pagination
-          v-model:current-page="pageNo"
-          v-model:page-size="pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="total"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="loadCategories"
-          @current-change="loadCategories"
-        />
+          <div class="chain-section">
+            <div class="chain-header">
+              <h4>该分类下的链路</h4>
+              <el-button type="primary" size="small" @click="executeCategoryChains" :disabled="!chains.length">
+                执行全部
+              </el-button>
+            </div>
+            <el-table :data="chains" border stripe size="small" style="margin-top:10px">
+              <el-table-column prop="chainCode" label="链路编码" width="180" />
+              <el-table-column prop="chainName" label="链路名称" width="200" />
+              <el-table-column prop="nodeCount" label="节点数" width="80" />
+              <el-table-column label="操作" width="100">
+                <template #default="{ row }">
+                  <el-button size="small" type="success" @click="executeChain(row.chainCode)">执行</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </div>
+
+        <div class="detail-panel empty" v-else>
+          <el-empty description="请选择左侧分类查看详情" />
+        </div>
       </div>
     </el-card>
 
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
       <el-form :model="form" label-width="100px">
-        <el-form-item label="分类类型">
-          <el-select v-model="form.categoryType" :disabled="isEdit">
-            <el-option label="系统分类" value="system" />
-            <el-option label="功能分类" value="func" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="分类编码">
-          <el-input v-model="form.categoryCode" :disabled="isEdit" placeholder="如 login_auth" />
-        </el-form-item>
         <el-form-item label="分类名称">
-          <el-input v-model="form.categoryName" placeholder="如 登录认证" />
+          <el-input v-model="form.categoryName" />
         </el-form-item>
         <el-form-item label="排序号">
           <el-input-number v-model="form.sortOrder" :min="0" />
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-switch v-model="form.status" :active-value="1" :inactive-value="0" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -76,75 +80,105 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
+import CategoryTree from '../components/CategoryTree.vue'
 
-const categories = ref([])
-const filter = ref({ categoryType: '' })
-const pageNo = ref(1)
-const pageSize = ref(10)
-const total = ref(0)
+const categoryTreeRef = ref(null)
+const selectedCategoryId = ref(null)
+const selectedCategory = ref(null)
+const chains = ref([])
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增分类')
 const isEdit = ref(false)
 const editId = ref(null)
-const form = ref({ categoryType: 'system', categoryCode: '', categoryName: '', sortOrder: 0 })
+const form = ref({ categoryName: '', sortOrder: 0, status: 1, parentId: 0 })
 
-const loadCategories = async () => {
-  const params = { pageNo: pageNo.value, pageSize: pageSize.value }
-  if (filter.value.categoryType) params.type = filter.value.categoryType
-  const res = await api.get('/dict/category/list', { params })
-  categories.value = res.data?.list || []
-  total.value = res.data?.total || 0
+const loadTree = () => {
+  categoryTreeRef.value?.loadTree()
 }
 
-const resetFilter = () => {
-  filter.value = { categoryType: '' }
-  pageNo.value = 1
-  loadCategories()
+const loadCategoryDetail = async (id) => {
+  if (!id) {
+    selectedCategory.value = null
+    chains.value = []
+    return
+  }
+  try {
+    const res = await api.get('/category/detail', { params: { id } })
+    selectedCategory.value = res.data
+  } catch (e) {
+    selectedCategory.value = null
+  }
+  try {
+    const res = await api.get('/chain/list', { params: { categoryId: id, pageNo: 1, pageSize: 100 } })
+    chains.value = res.data?.list || []
+  } catch (e) {
+    chains.value = []
+  }
 }
 
-const showCreateDialog = () => {
-  dialogTitle.value = '新增分类'
+watch(selectedCategoryId, (val) => {
+  loadCategoryDetail(val)
+})
+
+const showCreateDialog = (parentId) => {
+  dialogTitle.value = parentId ? '新增子分类' : '新增根分类'
   isEdit.value = false
   editId.value = null
-  form.value = { categoryType: 'system', categoryCode: '', categoryName: '', sortOrder: 0 }
+  form.value = { categoryName: '', sortOrder: 0, status: 1, parentId: parentId || 0 }
   dialogVisible.value = true
 }
 
-const editCategory = (row) => {
+const editCategory = (data) => {
   dialogTitle.value = '编辑分类'
   isEdit.value = true
-  editId.value = row.id
-  form.value = { categoryType: row.categoryType, categoryCode: row.categoryCode, categoryName: row.categoryName, sortOrder: row.sortOrder }
+  editId.value = data.id
+  form.value = { categoryName: data.categoryName, sortOrder: data.sortOrder, status: data.status, parentId: data.parentId }
   dialogVisible.value = true
 }
 
 const submitForm = async () => {
-  if (!form.value.categoryCode || !form.value.categoryName) {
-    ElMessage.warning('请填写必填字段')
+  if (!form.value.categoryName) {
+    ElMessage.warning('请输入分类名称')
     return
   }
   if (isEdit.value) {
-    await api.put('/dict/category/update?id=' + editId.value, form.value)
+    await api.put('/category/update?id=' + editId.value, form.value)
     ElMessage.success('编辑成功')
   } else {
-    await api.post('/dict/category/create', form.value)
+    await api.post('/category/create', form.value)
     ElMessage.success('创建成功')
   }
   dialogVisible.value = false
-  loadCategories()
+  loadTree()
 }
 
-const deleteCategory = async (id) => {
-  await ElMessageBox.confirm('确定删除该分类？', '提示', { type: 'warning' })
-  await api.delete('/dict/category/delete', { params: { id } })
+const deleteCategory = async (data) => {
+  await ElMessageBox.confirm(`确定删除分类"${data.categoryName}"？子分类将同步删除。`, '提示', { type: 'warning' })
+  await api.delete('/category/delete', { params: { id: data.id } })
   ElMessage.success('删除成功')
-  loadCategories()
+  if (selectedCategoryId.value === data.id) {
+    selectedCategoryId.value = null
+  }
+  loadTree()
 }
 
-onMounted(loadCategories)
+const executeChain = async (chainCode) => {
+  const res = await api.post('/execute/run', { chainCode })
+  ElMessage.success('执行已启动: ' + res.data.executionId)
+}
+
+const executeCategoryChains = async () => {
+  if (!chains.value.length) return
+  const chainCodes = chains.value.map(c => c.chainCode)
+  const res = await api.post('/execute/batchRun', { chainCodes })
+  const started = (res.data || []).filter(r => r.status === 'started').length
+  ElMessage.success(`已启动 ${started} 条链路执行`)
+}
+
+onMounted(loadTree)
 </script>
 
 <style scoped>
@@ -156,16 +190,44 @@ onMounted(loadCategories)
   font-size: 16px;
   color: #1e1b4b;
 }
-.filter-bar {
+
+.category-layout {
+  display: flex;
+  gap: 24px;
+  min-height: 500px;
+}
+
+.tree-panel {
+  width: 320px;
+  flex-shrink: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.detail-panel {
+  flex: 1;
+}
+
+.detail-panel.empty {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 0;
-  flex-wrap: wrap;
+  justify-content: center;
 }
-.pagination-bar {
+
+.chain-section {
+  margin-top: 24px;
+}
+
+.chain-header {
   display: flex;
-  justify-content: flex-end;
-  padding: 16px 0 0;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chain-header h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e1b4b;
 }
 </style>

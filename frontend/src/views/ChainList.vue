@@ -25,6 +25,14 @@
           <el-option label="P1 常规回归" :value="1" />
           <el-option label="P2 低频验证" :value="2" />
         </el-select>
+        <el-popover trigger="click" :width="300">
+          <template #reference>
+            <el-button style="margin-left:10px">
+              {{ filter.categoryId ? '已选分类' : '选择分类' }}
+            </el-button>
+          </template>
+          <CategoryTree mode="select" v-model="filter.categoryId" />
+        </el-popover>
         <el-button type="primary" style="margin-left:10px" @click="loadChains">查询</el-button>
         <el-button @click="resetFilter">重置</el-button>
       </div>
@@ -70,14 +78,21 @@
             {{ formatTime(row.createTime) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="280" fixed="right" align="center" class-name="action-column">
+        <el-table-column label="操作" width="80" fixed="right" align="center" class-name="action-column">
           <template #default="{ row, $index }">
             <div class="action-btns" :style="{ background: $index % 2 === 1 ? '#fafafe' : '#ffffff' }">
-              <el-button size="small" @click="$router.push('/chain/edit/' + row.chainCode)">编排</el-button>
-              <el-button size="small" type="success" @click="executeChain(row.chainCode)">执行</el-button>
-              <el-button size="small" @click="copyChain(row.chainCode)">复制</el-button>
-              <el-button size="small" @click="editChain(row)">编辑</el-button>
-              <el-button size="small" type="danger" @click="deleteChain(row.chainCode)">删除</el-button>
+              <el-dropdown trigger="click">
+                <el-button :icon="MoreFilled" circle size="small" />
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item @click="$router.push('/chain/edit/' + row.chainCode)" :icon="Edit">编排</el-dropdown-item>
+                    <el-dropdown-item @click="executeChain(row.chainCode)" :icon="VideoPlay" divided>执行</el-dropdown-item>
+                    <el-dropdown-item @click="copyChain(row.chainCode)" :icon="CopyDocument">复制</el-dropdown-item>
+                    <el-dropdown-item @click="editChain(row)" :icon="Setting">编辑</el-dropdown-item>
+                    <el-dropdown-item @click="deleteChain(row.chainCode)" :icon="Delete" divided>删除</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
             </div>
           </template>
         </el-table-column>
@@ -139,10 +154,12 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { MoreFilled, Edit, VideoPlay, CopyDocument, Setting, Delete } from '@element-plus/icons-vue'
 import api from '../api'
+import CategoryTree from '../components/CategoryTree.vue'
 
 const chains = ref([])
-const filter = ref({ chainName: '', executeMode: null, systemCategory: '', funcCategory: '', priority: null })
+const filter = ref({ chainName: '', executeMode: null, systemCategory: '', funcCategory: '', priority: null, categoryId: null })
 const pageNo = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
@@ -175,13 +192,14 @@ const loadChains = async () => {
   if (!params.systemCategory) delete params.systemCategory
   if (!params.funcCategory) delete params.funcCategory
   if (params.priority === null || params.priority === undefined || params.priority === '') delete params.priority
+  if (!params.categoryId) delete params.categoryId
   const res = await api.get('/chain/list', { params })
   chains.value = res.data?.list || []
   total.value = res.data?.total || 0
 }
 
 const resetFilter = () => {
-  filter.value = { chainName: '', executeMode: null, systemCategory: '', funcCategory: '', priority: null }
+  filter.value = { chainName: '', executeMode: null, systemCategory: '', funcCategory: '', priority: null, categoryId: null }
   pageNo.value = 1
   loadChains()
 }
@@ -451,8 +469,6 @@ onMounted(() => { loadCategories(); loadChains() })
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  flex-wrap: nowrap;
   background: #ffffff !important;
   background-color: #ffffff !important;
   width: 100%;

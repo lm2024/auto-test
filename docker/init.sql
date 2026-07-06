@@ -1,3 +1,5 @@
+SET NAMES utf8mb4;
+
 CREATE DATABASE IF NOT EXISTS auto_test DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 
 USE auto_test;
@@ -77,11 +79,15 @@ CREATE TABLE `test_chain` (
   `system_category` varchar(64) DEFAULT NULL COMMENT '系统分类',
   `func_category` varchar(64) DEFAULT NULL COMMENT '功能分类',
   `priority` int DEFAULT '2' COMMENT '优先级：0=P0核心回归，1=P1常规回归，2=P2低频验证',
+  `category_id` bigint DEFAULT NULL COMMENT '树形分类ID',
+  `tenant_id` bigint DEFAULT NULL COMMENT '租户ID',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_chain_code` (`chain_code`),
   KEY `idx_chain_name` (`chain_name`),
   KEY `idx_execute_mode` (`execute_mode`),
-  KEY `idx_create_time` (`create_time`)
+  KEY `idx_create_time` (`create_time`),
+  KEY `idx_category_id` (`category_id`),
+  KEY `idx_tenant_id` (`tenant_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='测试链路表';
 
 -- =============================================
@@ -137,6 +143,7 @@ CREATE TABLE `test_execute_main` (
   `success_count` int DEFAULT NULL COMMENT '成功节点数',
   `fail_count` int DEFAULT NULL COMMENT '失败节点数',
   `skip_count` int DEFAULT NULL COMMENT '跳过节点数',
+  `tenant_id` bigint DEFAULT NULL COMMENT '租户ID',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
@@ -144,7 +151,8 @@ CREATE TABLE `test_execute_main` (
   KEY `idx_chain_code` (`chain_code`),
   KEY `idx_status` (`status`),
   KEY `idx_start_time` (`start_time`),
-  KEY `idx_chain_status` (`chain_code`,`status`)
+  KEY `idx_chain_status` (`chain_code`,`status`),
+  KEY `idx_tenant_id` (`tenant_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='执行主日志表';
 
 -- =============================================
@@ -230,6 +238,116 @@ CREATE TABLE `test_node_snapshot` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='接口快照表';
 
 -- =============================================
+-- 租户表
+-- =============================================
+DROP TABLE IF EXISTS `sys_tenant`;
+CREATE TABLE `sys_tenant` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+  `tenant_code` varchar(64) NOT NULL COMMENT '租户编码',
+  `tenant_name` varchar(128) NOT NULL COMMENT '租户名称',
+  `status` int DEFAULT '1' COMMENT '状态：0=禁用，1=可用',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_tenant_code` (`tenant_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='租户表';
+
+-- =============================================
+-- 系统用户表
+-- =============================================
+DROP TABLE IF EXISTS `sys_user`;
+CREATE TABLE `sys_user` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+  `username` varchar(64) NOT NULL COMMENT '用户名',
+  `password` varchar(256) NOT NULL COMMENT '密码（BCrypt加密）',
+  `display_name` varchar(128) DEFAULT NULL COMMENT '显示名称',
+  `role` varchar(32) NOT NULL DEFAULT 'USER' COMMENT '角色：ADMIN/USER',
+  `tenant_id` bigint DEFAULT NULL COMMENT '所属租户ID',
+  `status` int DEFAULT '1' COMMENT '状态：0=禁用，1=可用',
+  `last_login_time` datetime DEFAULT NULL COMMENT '最后登录时间',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_username` (`username`),
+  KEY `idx_tenant_id` (`tenant_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统用户表';
+
+-- =============================================
+-- SSO用户映射表
+-- =============================================
+DROP TABLE IF EXISTS `sys_user_sso`;
+CREATE TABLE `sys_user_sso` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+  `user_id` bigint NOT NULL COMMENT '关联用户ID',
+  `sso_provider` varchar(64) DEFAULT NULL COMMENT 'SSO提供商',
+  `sso_subject` varchar(128) NOT NULL COMMENT 'SSO用户标识',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_sso` (`sso_provider`, `sso_subject`),
+  KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='SSO用户映射表';
+
+-- =============================================
+-- 树形分类表
+-- =============================================
+DROP TABLE IF EXISTS `sys_category`;
+CREATE TABLE `sys_category` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+  `parent_id` bigint DEFAULT '0' COMMENT '父分类ID，0表示根节点',
+  `category_name` varchar(128) NOT NULL COMMENT '分类名称',
+  `sort_order` int DEFAULT '0' COMMENT '排序号',
+  `icon` varchar(64) DEFAULT NULL COMMENT '图标',
+  `tenant_id` bigint DEFAULT NULL COMMENT '租户ID',
+  `status` int DEFAULT '1' COMMENT '状态：0=禁用，1=可用',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_parent_id` (`parent_id`),
+  KEY `idx_tenant_id` (`tenant_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='树形分类表';
+
+-- =============================================
+-- 定时任务表
+-- =============================================
+DROP TABLE IF EXISTS `sys_scheduled_task`;
+CREATE TABLE `sys_scheduled_task` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+  `task_name` varchar(128) NOT NULL COMMENT '任务名称',
+  `task_type` varchar(32) NOT NULL COMMENT '任务类型：SINGLE=单链路，CATEGORY=按分类',
+  `chain_code` varchar(64) DEFAULT NULL COMMENT '链路编码（SINGLE类型）',
+  `category_id` bigint DEFAULT NULL COMMENT '分类ID（CATEGORY类型）',
+  `cron_expression` varchar(64) DEFAULT NULL COMMENT 'Cron表达式',
+  `interval_minutes` int DEFAULT NULL COMMENT '间隔分钟数',
+  `enabled` int DEFAULT '1' COMMENT '是否启用：0=禁用，1=启用',
+  `last_run_time` datetime DEFAULT NULL COMMENT '上次执行时间',
+  `next_run_time` datetime DEFAULT NULL COMMENT '下次执行时间',
+  `tenant_id` bigint DEFAULT NULL COMMENT '租户ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_tenant_id` (`tenant_id`),
+  KEY `idx_enabled` (`enabled`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='定时任务表';
+
+-- =============================================
+-- 定时任务执行日志表
+-- =============================================
+DROP TABLE IF EXISTS `sys_task_execute_log`;
+CREATE TABLE `sys_task_execute_log` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+  `task_id` bigint NOT NULL COMMENT '关联任务ID',
+  `execution_ids` text COMMENT '执行ID列表（逗号分隔）',
+  `status` varchar(16) DEFAULT NULL COMMENT '执行状态',
+  `trigger_type` varchar(32) DEFAULT NULL COMMENT '触发类型：SCHEDULED/MANUAL',
+  `start_time` datetime DEFAULT NULL COMMENT '开始时间',
+  `end_time` datetime DEFAULT NULL COMMENT '结束时间',
+  `error_message` text COMMENT '错误信息',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_task_id` (`task_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='定时任务执行日志表';
+
+-- =============================================
 -- 初始数据：分类字典
 -- =============================================
 INSERT INTO `dict_category` (`id`, `category_type`, `category_code`, `category_name`, `sort_order`, `status`, `create_time`) VALUES
@@ -258,3 +376,33 @@ INSERT INTO `test_node_config` (`id`, `chain_code`, `node_id`, `node_code`, `nod
 -- 初始数据：执行记录
 -- =============================================
 INSERT INTO `test_execute_main` (`id`, `execution_id`, `chain_code`, `status`, `start_time`, `end_time`, `total_cost_ms`, `error_message`, `node_count`, `success_count`, `fail_count`, `skip_count`, `create_time`, `update_time`) VALUES (1,'EXEC_630848F417','CHAIN_9558229B29','FAILED','2026-06-17 10:24:45','2026-06-17 10:24:46',849,'断言失败: 响应码=401',5,2,1,2,'2026-06-17 10:24:44','2026-06-17 10:24:45'),(2,'EXEC_761110A9DD','CHAIN_7601436D04','FAILED','2026-06-17 14:01:51','2026-06-17 14:01:53',1787,'断言失败: 响应码=401',27,2,1,24,'2026-06-17 14:01:51','2026-06-17 14:01:52');
+
+-- =============================================
+-- 初始数据：默认租户
+-- =============================================
+INSERT INTO `sys_tenant` (`id`, `tenant_code`, `tenant_name`, `status`) VALUES
+(1, 'default', '默认租户', 1);
+
+-- =============================================
+-- 初始数据：管理员用户（密码: admin123，BCrypt加密）
+-- =============================================
+INSERT INTO `sys_user` (`id`, `username`, `password`, `display_name`, `role`, `tenant_id`, `status`) VALUES
+(1, 'admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5EH', '系统管理员', 'ADMIN', 1, 1);
+
+-- =============================================
+-- 初始数据：树形分类
+-- =============================================
+INSERT INTO `sys_category` (`id`, `parent_id`, `category_name`, `sort_order`, `tenant_id`) VALUES
+(1, 0, '用户管理', 1, 1),
+(2, 0, '订单系统', 2, 1),
+(3, 0, '支付系统', 3, 1),
+(4, 0, '审批流程', 4, 1),
+(5, 0, '数据查询', 5, 1),
+(6, 1, '登录模块', 1, 1),
+(7, 1, '注册模块', 2, 1),
+(8, 2, '订单创建', 1, 1),
+(9, 2, '订单查询', 2, 1),
+(10, 3, '支付下单', 1, 1),
+(11, 3, '支付回调', 2, 1),
+(12, 6, 'SSO登录', 1, 1),
+(13, 6, '账号密码登录', 2, 1);
