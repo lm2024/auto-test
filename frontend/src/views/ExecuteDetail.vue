@@ -77,19 +77,19 @@
         </el-descriptions>
 
         <div class="section-title">请求头</div>
-        <el-input :model-value="formatJson(currentLog.requestHeaders)" type="textarea" :rows="3" readonly />
+        <MonacoEditor :model-value="formatJson(currentLog.requestHeaders)" language="json" :height="120" :readonly="true" />
         <el-button size="small" @click="copyText(currentLog.requestHeaders)">复制</el-button>
 
         <div class="section-title">请求体</div>
-        <el-input :model-value="formatJson(currentLog.requestBody)" type="textarea" :rows="5" readonly />
+        <MonacoEditor :model-value="formatJson(currentLog.requestBody)" language="json" :height="200" :readonly="true" />
         <el-button size="small" @click="copyText(currentLog.requestBody)">复制</el-button>
 
         <div class="section-title">响应体</div>
-        <el-input :model-value="formatJson(currentLog.responseBody)" type="textarea" :rows="5" readonly />
+        <MonacoEditor :model-value="formatJson(currentLog.responseBody)" language="json" :height="200" :readonly="true" />
         <el-button size="small" @click="copyText(currentLog.responseBody)">复制</el-button>
 
         <div v-if="currentLog.errorMessage" class="section-title" style="color:#f56c6c">错误信息</div>
-        <el-input v-if="currentLog.errorMessage" :model-value="currentLog.errorMessage" type="textarea" :rows="3" readonly />
+        <MonacoEditor v-if="currentLog.errorMessage" :model-value="currentLog.errorMessage" language="plaintext" :height="100" :readonly="true" />
       </template>
     </el-dialog>
 
@@ -144,6 +144,7 @@ import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Loading, WarningFilled, InfoFilled, CircleCheckFilled, DocumentCopy, MagicStick, Monitor } from '@element-plus/icons-vue'
 import api from '../api'
+import MonacoEditor from '../components/MonacoEditor.vue'
 
 const route = useRoute()
 const executionId = route.params.executionId

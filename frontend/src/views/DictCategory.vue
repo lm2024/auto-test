@@ -44,9 +44,12 @@
               <el-table-column prop="chainCode" label="链路编码" width="180" />
               <el-table-column prop="chainName" label="链路名称" width="200" />
               <el-table-column prop="nodeCount" label="节点数" width="80" />
-              <el-table-column label="操作" width="100">
+              <el-table-column label="操作" width="80" align="center" class-name="action-column">
                 <template #default="{ row }">
-                  <el-button size="small" type="success" @click="executeChain(row.chainCode)">执行</el-button>
+                  <ActionMenu
+                    :items="[{ label: '执行', command: 'execute', icon: VideoPlay }]"
+                    @command="(cmd) => onDictChainCommand(cmd, row)"
+                  />
                 </template>
               </el-table-column>
             </el-table>
@@ -82,8 +85,10 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { VideoPlay } from '@element-plus/icons-vue'
 import api from '../api'
 import CategoryTree from '../components/CategoryTree.vue'
+import ActionMenu from '../components/ActionMenu.vue'
 
 const categoryTreeRef = ref(null)
 const selectedCategoryId = ref(null)
@@ -170,6 +175,10 @@ const executeChain = async (chainCode) => {
   ElMessage.success('执行已启动: ' + res.data.executionId)
 }
 
+const onDictChainCommand = (cmd, row) => {
+  if (cmd === 'execute') executeChain(row.chainCode)
+}
+
 const executeCategoryChains = async () => {
   if (!chains.value.length) return
   const chainCodes = chains.value.map(c => c.chainCode)
@@ -188,7 +197,7 @@ onMounted(loadTree)
   align-items: center;
   font-weight: 700;
   font-size: 16px;
-  color: #1e1b4b;
+  color: var(--sb-text);
 }
 
 .category-layout {
@@ -200,7 +209,7 @@ onMounted(loadTree)
 .tree-panel {
   width: 320px;
   flex-shrink: 0;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--sb-border-strong);
   border-radius: 12px;
   padding: 16px;
 }
@@ -228,6 +237,6 @@ onMounted(loadTree)
 .chain-header h4 {
   font-size: 15px;
   font-weight: 600;
-  color: #1e1b4b;
+  color: var(--sb-text);
 }
 </style>

@@ -52,18 +52,41 @@ public class ChainController {
             @RequestParam(required = false) String systemCategory,
             @RequestParam(required = false) String funcCategory,
             @RequestParam(required = false) Integer priority,
-            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) String categoryId,
             @RequestParam(defaultValue = "1") int pageNo,
             @RequestParam(defaultValue = "10") int pageSize) {
         int offset = (pageNo - 1) * pageSize;
-        List<ChainVO> list = chainService.listChainsByCategory(chainName, executeMode, systemCategory, funcCategory, priority, categoryId, offset, pageSize);
-        int total = chainService.countChainsByCategory(chainName, executeMode, systemCategory, funcCategory, priority, categoryId);
+        List<String> sysCats = splitCsv(systemCategory);
+        List<String> funcCats = splitCsv(funcCategory);
+        List<Long> catIds = splitCsvLong(categoryId);
+        List<ChainVO> list = chainService.listChainsByCategory(chainName, executeMode, sysCats, funcCats, priority, catIds, offset, pageSize);
+        int total = chainService.countChainsByCategory(chainName, executeMode, sysCats, funcCats, priority, catIds);
         Map<String, Object> data = new HashMap<>();
         data.put("list", list);
         data.put("total", total);
         data.put("pageNo", pageNo);
         data.put("pageSize", pageSize);
         return Result.success(data);
+    }
+
+    private List<String> splitCsv(String csv) {
+        if (csv == null || csv.trim().isEmpty()) return null;
+        List<String> result = new ArrayList<>();
+        for (String s : csv.split(",")) {
+            if (!s.trim().isEmpty()) result.add(s.trim());
+        }
+        return result.isEmpty() ? null : result;
+    }
+
+    private List<Long> splitCsvLong(String csv) {
+        if (csv == null || csv.trim().isEmpty()) return null;
+        List<Long> result = new ArrayList<>();
+        for (String s : csv.split(",")) {
+            if (!s.trim().isEmpty()) {
+                try { result.add(Long.valueOf(s.trim())); } catch (NumberFormatException ignored) {}
+            }
+        }
+        return result.isEmpty() ? null : result;
     }
 
     @GetMapping("/detail")

@@ -80,17 +80,26 @@
             <if test="executeMode != null">
                 AND execute_mode = #{executeMode}
             </if>
-            <if test="systemCategory != null and systemCategory != ''">
-                AND system_category = #{systemCategory}
+            <if test="systemCategories != null and systemCategories.size() > 0">
+                AND system_category IN
+                <foreach collection="systemCategories" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
             </if>
-            <if test="funcCategory != null and funcCategory != ''">
-                AND func_category = #{funcCategory}
+            <if test="funcCategories != null and funcCategories.size() > 0">
+                AND func_category IN
+                <foreach collection="funcCategories" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
             </if>
             <if test="priority != null">
                 AND priority = #{priority}
             </if>
-            <if test="categoryId != null">
-                AND category_id = #{categoryId}
+            <if test="categoryIds != null and categoryIds.size() > 0">
+                AND category_id IN
+                <foreach collection="categoryIds" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
             </if>
         </where>
         ORDER BY create_time DESC
@@ -106,17 +115,26 @@
             <if test="executeMode != null">
                 AND execute_mode = #{executeMode}
             </if>
-            <if test="systemCategory != null and systemCategory != ''">
-                AND system_category = #{systemCategory}
+            <if test="systemCategories != null and systemCategories.size() > 0">
+                AND system_category IN
+                <foreach collection="systemCategories" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
             </if>
-            <if test="funcCategory != null and funcCategory != ''">
-                AND func_category = #{funcCategory}
+            <if test="funcCategories != null and funcCategories.size() > 0">
+                AND func_category IN
+                <foreach collection="funcCategories" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
             </if>
             <if test="priority != null">
                 AND priority = #{priority}
             </if>
-            <if test="categoryId != null">
-                AND category_id = #{categoryId}
+            <if test="categoryIds != null and categoryIds.size() > 0">
+                AND category_id IN
+                <foreach collection="categoryIds" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
             </if>
         </where>
     </select>

@@ -64,6 +64,12 @@
           </template>
         </el-dropdown>
       </div>
+      <div class="theme-toggle" @click="toggleTheme" :title="isDark ? '切换到亮色' : '切换到暗色'">
+        <el-icon :size="18">
+          <Sunny v-if="isDark" />
+          <Moon v-else />
+        </el-icon>
+      </div>
       <div class="collapse-btn" @click="toggleCollapse">
         <el-icon :size="18">
           <Fold v-if="!isCollapsed" />
@@ -85,7 +91,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { List, Document, Setting, User, Collection, Fold, Expand, Timer, Monitor } from '@element-plus/icons-vue'
+import { List, Document, Setting, User, Collection, Fold, Expand, Timer, Monitor, Sunny, Moon } from '@element-plus/icons-vue'
 import { getUser, logout } from './utils/auth'
 
 const route = useRoute()
@@ -148,15 +154,30 @@ const handleLogout = () => {
   logout()
   router.push('/login')
 }
+
+// ── 亮/暗主题切换 ──
+const isDark = ref(document.documentElement.classList.contains('dark'))
+const toggleTheme = () => {
+  isDark.value = !isDark.value
+  if (isDark.value) {
+    document.documentElement.classList.add('dark')
+    localStorage.setItem('theme', 'dark')
+  } else {
+    document.documentElement.classList.remove('dark')
+    localStorage.setItem('theme', 'light')
+  }
+}
 </script>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body, #app {
   height: 100%;
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--sb-font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  background: var(--sb-bg, #1c1c1c);
+  color: var(--sb-text, #ededed);
 }
 
 .login-wrapper {
@@ -167,7 +188,7 @@ html, body, #app {
 .app-container {
   height: 100vh;
   display: flex;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--sb-bg, #1c1c1c);
 }
 
 /* ── Sidebar ── */
@@ -175,8 +196,8 @@ html, body, #app {
   min-width: 64px;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, #1e1b4b 0%, #312e81 50%, #3730a3 100%);
-  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+  background: var(--sb-surface, #202020);
+  border-right: 1px solid var(--sb-border, rgba(255, 255, 255, 0.08));
   z-index: 10;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
@@ -193,7 +214,7 @@ html, body, #app {
 }
 
 .resize-handle:hover {
-  background: rgba(99, 102, 241, 0.5);
+  background: rgba(62, 207, 142, 0.4);
 }
 
 /* ── Logo Area ── */
@@ -204,7 +225,7 @@ html, body, #app {
   justify-content: center;
   gap: 10px;
   padding: 0 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--sb-border, rgba(255, 255, 255, 0.08));
   position: relative;
   overflow: hidden;
   white-space: nowrap;
@@ -213,31 +234,20 @@ html, body, #app {
 .logo::before {
   content: '';
   position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse at 30% 0%, rgba(99, 102, 241, 0.3) 0%, transparent 70%);
-  pointer-events: none;
-}
-
-.logo::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 20%;
-  right: 20%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(129, 140, 248, 0.5), transparent);
+  left: 18px;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--sb-green, #3ecf8e);
+  box-shadow: 0 0 12px rgba(62, 207, 142, 0.5);
 }
 
 .logo span {
   font-size: 18px;
   font-weight: 700;
   color: #fff;
-  letter-spacing: 1px;
-  position: relative;
-  background: linear-gradient(135deg, #c7d2fe, #fff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  letter-spacing: 0.5px;
+  padding-left: 16px;
 }
 
 /* ── Collapse Button ── */
@@ -247,20 +257,37 @@ html, body, #app {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: rgba(191, 203, 217, 0.7);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--sb-text-mute, #8b8b8b);
+  border-top: 1px solid var(--sb-border, rgba(255, 255, 255, 0.08));
   transition: all 0.25s;
 }
 
 .collapse-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #e0e7ff;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--sb-text, #ededed);
+}
+
+/* ── Theme Toggle ── */
+.theme-toggle {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--sb-text-mute, #8b8b8b);
+  border-top: 1px solid var(--sb-border, rgba(255, 255, 255, 0.08));
+  transition: all 0.25s;
+}
+
+.theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--sb-green, #3ecf8e);
 }
 
 /* ── User Info ── */
 .user-info {
   padding: 12px 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--sb-border, rgba(255, 255, 255, 0.08));
   cursor: pointer;
 }
 
@@ -268,7 +295,7 @@ html, body, #app {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: rgba(191, 203, 217, 0.8);
+  color: var(--sb-text-secondary, #b2b2b2);
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
@@ -277,7 +304,7 @@ html, body, #app {
 }
 
 .user-name:hover {
-  color: #e0e7ff;
+  color: var(--sb-text, #ededed);
 }
 
 /* ── Navigation Menu ── */
@@ -289,12 +316,12 @@ html, body, #app {
 }
 
 .el-menu-item {
-  color: rgba(191, 203, 217, 0.7);
+  color: var(--sb-text-mute, #8b8b8b);
   margin: 4px 0;
-  border-radius: 12px;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  height: 48px;
-  line-height: 48px;
+  border-radius: 6px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 44px;
+  line-height: 44px;
   font-size: 14px;
   font-weight: 500;
   position: relative;
@@ -309,45 +336,32 @@ html, body, #app {
   transform: translateY(-50%);
   width: 3px;
   height: 0;
-  background: #818cf8;
+  background: var(--sb-green, #3ecf8e);
   border-radius: 0 2px 2px 0;
-  transition: height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: height 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .el-menu-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #e0e7ff;
-  transform: translateX(2px);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--sb-text, #ededed);
 }
 
 .el-menu-item.is-active {
-  color: #fff;
-  background: rgba(99, 102, 241, 0.25);
-  box-shadow: 0 0 20px rgba(99, 102, 241, 0.1);
+  color: var(--sb-green-soft, #4ade80);
+  background: rgba(62, 207, 142, 0.12);
 }
 
 .el-menu-item.is-active::before {
-  height: 24px;
+  height: 20px;
 }
 
 /* ── Main Content ── */
 .app-main {
   flex: 1;
-  background: #f5f3ff;
+  background: var(--sb-bg, #1c1c1c);
   padding: 24px;
   overflow-y: auto;
   position: relative;
-}
-
-.app-main::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse at 20% 20%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 80%, rgba(16, 185, 129, 0.04) 0%, transparent 50%);
-  pointer-events: none;
-  z-index: 0;
 }
 
 .app-main > *:not(router-view) {
@@ -356,14 +370,14 @@ html, body, #app {
 }
 
 /* ── Scrollbar ── */
-.app-main::-webkit-scrollbar { width: 6px; }
+.app-main::-webkit-scrollbar { width: 8px; }
 .app-main::-webkit-scrollbar-track { background: transparent; }
 .app-main::-webkit-scrollbar-thumb {
-  background: rgba(99, 102, 241, 0.3);
-  border-radius: 3px;
+  background: rgba(62, 207, 142, 0.3);
+  border-radius: 4px;
 }
 .app-main::-webkit-scrollbar-thumb:hover {
-  background: rgba(99, 102, 241, 0.5);
+  background: rgba(62, 207, 142, 0.5);
 }
 
 /* ── Element Plus Overrides ── */
@@ -373,8 +387,8 @@ html, body, #app {
 :deep(.el-menu--collapse .el-menu-item) {
   padding: 0;
   margin: 4px 6px;
-  height: 48px;
-  border-radius: 12px;
+  height: 44px;
+  border-radius: 6px;
 }
 :deep(.el-menu--collapse .el-menu-item span) {
   display: none;

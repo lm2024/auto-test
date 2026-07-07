@@ -33,10 +33,15 @@
         <el-table-column label="创建时间" width="180">
           <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="160">
+        <el-table-column label="操作" width="80" fixed="right" align="center" class-name="action-column">
           <template #default="{ row }">
-            <el-button size="small" @click="editUser(row)">编辑</el-button>
-            <el-button size="small" type="danger" @click="deleteUser(row.id)">删除</el-button>
+            <ActionMenu
+              :items="[
+                { label: '编辑', command: 'edit', icon: Edit },
+                { label: '删除', command: 'delete', icon: Delete, divided: true, danger: true }
+              ]"
+              @command="(cmd) => onUserCommand(cmd, row)"
+            />
           </template>
         </el-table-column>
       </el-table>
@@ -89,7 +94,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Edit, Delete } from '@element-plus/icons-vue'
 import api from '../api'
+import ActionMenu from '../components/ActionMenu.vue'
 
 const users = ref([])
 const filter = ref({ keyword: '' })
@@ -161,6 +168,13 @@ const deleteUser = async (id) => {
   loadUsers()
 }
 
+const onUserCommand = (cmd, row) => {
+  switch (cmd) {
+    case 'edit': editUser(row); break
+    case 'delete': deleteUser(row.id); break
+  }
+}
+
 onMounted(loadUsers)
 </script>
 
@@ -171,7 +185,7 @@ onMounted(loadUsers)
   align-items: center;
   font-weight: 700;
   font-size: 16px;
-  color: #1e1b4b;
+  color: var(--sb-text);
 }
 .filter-bar {
   display: flex;
@@ -184,5 +198,17 @@ onMounted(loadUsers)
   display: flex;
   justify-content: flex-end;
   padding: 16px 0 0;
+}
+:deep(.el-table .action-column),
+:deep(.el-table td.action-column) {
+  background: var(--sb-surface, #ffffff) !important;
+  padding: 8px 0 !important;
+  height: auto !important;
+}
+:deep(.el-table .el-table__fixed-right-wrapper) {
+  background: var(--sb-surface, #ffffff) !important;
+}
+:deep(.el-table .el-table__fixed-right::before) {
+  display: none !important;
 }
 </style>

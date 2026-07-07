@@ -15,11 +15,11 @@ public interface ChainService {
     List<ChainVO> listChains(String chainName, Integer executeMode);
 
     List<ChainVO> listChainsByCategory(String chainName, Integer executeMode,
-                                         String systemCategory, String funcCategory, Integer priority,
-                                         Long categoryId, int offset, int pageSize);
+                                         List<String> systemCategories, List<String> funcCategories, Integer priority,
+                                         List<Long> categoryIds, int offset, int pageSize);
     int countChainsByCategory(String chainName, Integer executeMode,
-                               String systemCategory, String funcCategory, Integer priority,
-                               Long categoryId);
+                               List<String> systemCategories, List<String> funcCategories, Integer priority,
+                               List<Long> categoryIds);
     ChainVO getChainDetail(String chainCode);
     ChainVO copyChain(String chainCode);
     ChainVO pluginCreateChain(PluginChainCreateDTO dto);

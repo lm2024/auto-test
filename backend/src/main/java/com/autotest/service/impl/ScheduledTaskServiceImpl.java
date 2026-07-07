@@ -164,7 +164,9 @@ public class ScheduledTaskServiceImpl implements ScheduledTaskService {
                 executionIds.add(executionId);
             } else if ("CATEGORY".equals(task.getTaskType()) && task.getCategoryId() != null) {
                 List<TestChain> chains = chainMapper.selectListByCategory(
-                        null, null, null, null, null, task.getCategoryId(), 0, 1000);
+                        null, null, null, null, null,
+                        task.getCategoryId() != null ? Collections.singletonList(task.getCategoryId()) : null,
+                        0, 1000);
                 for (TestChain chain : chains) {
                     try {
                         String executionId = executeService.runChain(chain.getChainCode());

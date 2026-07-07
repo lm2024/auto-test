@@ -1,0 +1,151 @@
+/**
+ * Element Plus · Supabase 主题覆盖
+ * 必须在本文件之后引入 element-plus 默认样式与 dark css-vars，
+ * 才能以最高优先级覆盖。emerald 主色 + 6px 圆角，亮/暗双态。
+ *
+ * 结构：
+ *   基础层（:root）    → 亮色 EP 变量 + 全局 body/滚动条/链接/按钮
+ *   html.dark          → 暗色 EP 变量覆盖
+ *   共享组件规则        → 用令牌，亮暗通用
+ */
+
+/* ════════════ 基础层：亮色 EP 变量 ════════════ */
+:root {
+  /* ── 主色 emerald ── */
+  --el-color-primary: #3ecf8e;
+  --el-color-primary-light-3: #4ade80;
+  --el-color-primary-light-5: rgba(62, 207, 142, 0.6);
+  --el-color-primary-light-7: rgba(62, 207, 142, 0.35);
+  --el-color-primary-light-8: rgba(62, 207, 142, 0.22);
+  --el-color-primary-light-9: rgba(62, 207, 142, 0.12);
+  --el-color-primary-dark-2: #24b47e;
+
+  /* ── 表面 ── */
+  --el-bg-color: #ffffff;
+  --el-bg-color-page: #f7f8fa;
+  --el-bg-color-overlay: #ffffff;
+
+  /* ── 文字 ── */
+  --el-text-color-primary: #1c1c1c;
+  --el-text-color-regular: #3f3f46;
+  --el-text-color-secondary: #71717a;
+  --el-text-color-placeholder: #a1a1aa;
+  --el-text-color-disabled: #a1a1aa;
+
+  /* ── 边框（淡线 ladder）── */
+  --el-border-color: rgba(0, 0, 0, 0.10);
+  --el-border-color-light: rgba(0, 0, 0, 0.08);
+  --el-border-color-lighter: rgba(0, 0, 0, 0.06);
+  --el-border-color-extra-light: rgba(0, 0, 0, 0.04);
+  --el-border-color-dark: rgba(0, 0, 0, 0.16);
+  --el-border-color-darker: rgba(0, 0, 0, 0.22);
+
+  /* ── 填充 ── */
+  --el-fill-color: rgba(0, 0, 0, 0.04);
+  --el-fill-color-light: rgba(0, 0, 0, 0.03);
+  --el-fill-color-lighter: rgba(0, 0, 0, 0.02);
+  --el-fill-color-blank: #ffffff;
+  --el-fill-color-dark: rgba(0, 0, 0, 0.08);
+  --el-fill-color-darker: rgba(0, 0, 0, 0.12);
+
+  /* ── 圆角（签名 6px，绝不 pill）── */
+  --el-border-radius-base: 6px;
+  --el-border-radius-small: 4px;
+  --el-border-radius-round: 9999px;
+
+  /* ── 字体 ── */
+  --el-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --el-font-family-mono: ui-monospace, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+}
+
+/* ════════════ 暗色 EP 变量覆盖 ════════════ */
+html.dark {
+  --el-color-primary: #3ecf8e;
+  --el-color-primary-light-3: #4ade80;
+  --el-color-primary-light-5: rgba(62, 207, 142, 0.6);
+  --el-color-primary-light-7: rgba(62, 207, 142, 0.35);
+  --el-color-primary-light-8: rgba(62, 207, 142, 0.22);
+  --el-color-primary-light-9: rgba(62, 207, 142, 0.12);
+  --el-color-primary-dark-2: #24b47e;
+
+  --el-bg-color: #202020;
+  --el-bg-color-page: #1c1c1c;
+  --el-bg-color-overlay: #262626;
+
+  --el-text-color-primary: #ededed;
+  --el-text-color-regular: #b2b2b2;
+  --el-text-color-secondary: #8b8b8b;
+  --el-text-color-placeholder: #6b6b6b;
+  --el-text-color-disabled: #6b6b6b;
+
+  --el-border-color: rgba(255, 255, 255, 0.08);
+  --el-border-color-light: rgba(255, 255, 255, 0.10);
+  --el-border-color-lighter: rgba(255, 255, 255, 0.07);
+  --el-border-color-extra-light: rgba(255, 255, 255, 0.05);
+  --el-border-color-dark: rgba(255, 255, 255, 0.16);
+  --el-border-color-darker: rgba(255, 255, 255, 0.22);
+
+  --el-fill-color: rgba(255, 255, 255, 0.08);
+  --el-fill-color-light: rgba(255, 255, 255, 0.06);
+  --el-fill-color-lighter: rgba(255, 255, 255, 0.04);
+  --el-fill-color-blank: #202020;
+  --el-fill-color-dark: rgba(255, 255, 255, 0.12);
+  --el-fill-color-darker: rgba(255, 255, 255, 0.16);
+
+  --el-border-radius-base: 6px;
+  --el-border-radius-small: 4px;
+  --el-border-radius-round: 9999px;
+
+  --el-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --el-font-family-mono: ui-monospace, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+}
+
+/* ════════════ 全局基础 ════════════ */
+body {
+  background: var(--sb-bg, #f7f8fa);
+  color: var(--sb-text, #1c1c1c);
+  font-family: var(--sb-font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 全局滚动条（emerald 点缀，双态通用） */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--sb-accent-soft, rgba(62, 207, 142, 0.3));
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--sb-accent-soft-2, rgba(62, 207, 142, 0.55)); }
+
+/* 链接：emerald，hover 加深（双态通用） */
+.el-link {
+  --el-link-text-color: var(--sb-green, #3ecf8e);
+  --el-link-hover-text-color: var(--sb-green-soft, #4ade80);
+}
+
+/* 主按钮：emerald 填充 + 近黑字（Supabase 签名） */
+.el-button--primary {
+  --el-button-text-color: var(--sb-text-on-green, #0a0a0a);
+  --el-button-hover-text-color: var(--sb-text-on-green, #0a0a0a);
+  --el-button-active-text-color: var(--sb-text-on-green, #0a0a0a);
+  --el-button-disabled-text-color: var(--sb-text-on-green, #0a0a0a);
+  font-weight: 500;
+}
+
+/* 表格：默认透明底融入页面，hover 用 emerald 微染（双态通用） */
+.el-table,
+.el-table tr,
+.el-table th.el-table__cell {
+  background-color: transparent;
+}
+.el-table--enable-row-hover .el-table__body tr:hover > td.el-table__cell {
+  background-color: var(--sb-accent-bg-2, rgba(62, 207, 142, 0.10));
+}
+
+/* 卡片：表面 + 1px hairline，圆角 12px（双态通用） */
+.el-card {
+  background-color: var(--sb-surface, #ffffff);
+  border: 1px solid var(--sb-border, rgba(0, 0, 0, 0.10));
+  border-radius: var(--sb-radius-lg, 12px);
+}

@@ -35,11 +35,16 @@
         <el-table-column label="上次执行" width="180">
           <template #default="{ row }">{{ formatTime(row.lastRunTime) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="200">
+        <el-table-column label="操作" width="80" fixed="right" align="center" class-name="action-column">
           <template #default="{ row }">
-            <el-button size="small" type="success" @click="triggerTask(row.id)">立即执行</el-button>
-            <el-button size="small" @click="editTask(row)">编辑</el-button>
-            <el-button size="small" type="danger" @click="deleteTask(row.id)">删除</el-button>
+            <ActionMenu
+              :items="[
+                { label: '立即执行', command: 'trigger', icon: VideoPlay },
+                { label: '编辑', command: 'edit', icon: Edit, divided: true },
+                { label: '删除', command: 'delete', icon: Delete, danger: true }
+              ]"
+              @command="(cmd) => onTaskCommand(cmd, row)"
+            />
           </template>
         </el-table-column>
       </el-table>
@@ -101,7 +106,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Edit, Delete, VideoPlay } from '@element-plus/icons-vue'
 import api from '../api'
+import ActionMenu from '../components/ActionMenu.vue'
 
 const tasks = ref([])
 const categoryTree = ref([])
@@ -172,6 +179,14 @@ const deleteTask = async (id) => {
   loadTasks()
 }
 
+const onTaskCommand = (cmd, row) => {
+  switch (cmd) {
+    case 'trigger': triggerTask(row.id); break
+    case 'edit': editTask(row); break
+    case 'delete': deleteTask(row.id); break
+  }
+}
+
 onMounted(async () => {
   loadTasks()
   try {
@@ -190,16 +205,28 @@ onMounted(async () => {
   align-items: center;
   font-weight: 700;
   font-size: 16px;
-  color: #1e1b4b;
+  color: var(--sb-text);
 }
 .pagination-bar {
   display: flex;
   justify-content: flex-end;
   padding: 16px 0 0;
 }
+:deep(.el-table .action-column),
+:deep(.el-table td.action-column) {
+  background: var(--sb-surface, #ffffff) !important;
+  padding: 8px 0 !important;
+  height: auto !important;
+}
+:deep(.el-table .el-table__fixed-right-wrapper) {
+  background: var(--sb-surface, #ffffff) !important;
+}
+:deep(.el-table .el-table__fixed-right::before) {
+  display: none !important;
+}
 .form-hint {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--sb-text-mute);
   margin-top: 4px;
 }
 </style>

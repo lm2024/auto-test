@@ -14,24 +14,29 @@
           <el-option label="全串行" :value="1" />
           <el-option label="分组并行" :value="2" />
         </el-select>
-        <el-select v-model="filter.systemCategory" placeholder="系统分类" clearable style="width:130px;margin-left:10px">
-          <el-option v-for="item in systemCategories" :key="item.categoryCode" :label="item.categoryName" :value="item.categoryCode" />
-        </el-select>
-        <el-select v-model="filter.funcCategory" placeholder="功能分类" clearable style="width:130px;margin-left:10px">
-          <el-option v-for="item in funcCategories" :key="item.categoryCode" :label="item.categoryName" :value="item.categoryCode" />
-        </el-select>
         <el-select v-model="filter.priority" placeholder="优先级" clearable style="width:120px;margin-left:10px">
           <el-option label="P0 核心回归" :value="0" />
           <el-option label="P1 常规回归" :value="1" />
           <el-option label="P2 低频验证" :value="2" />
         </el-select>
-        <el-popover trigger="click" :width="300">
+        <el-popover trigger="click" :width="320" placement="bottom">
           <template #reference>
             <el-button style="margin-left:10px">
-              {{ filter.categoryId ? '已选分类' : '选择分类' }}
+              <span v-if="selectedCategoryNames.length === 0">选择分类</span>
+              <span v-else>已选分类 {{ selectedCategoryNames.length }} 项</span>
             </el-button>
           </template>
-          <CategoryTree mode="select" v-model="filter.categoryId" />
+          <div class="cat-popover">
+            <div class="cat-popover-head">
+              <span class="cat-popover-title">选择分类（可多选）</span>
+              <el-button v-if="filter.categoryIds.length" link type="primary" size="small" @click="clearCategoryFilter">清除</el-button>
+            </div>
+            <CategoryTree mode="select" multiple v-model="filter.categoryIds" />
+            <div v-if="selectedCategoryNames.length" class="cat-selected">
+              <el-tag v-for="name in selectedCategoryNames" :key="name" size="small" closable
+                @close="removeCategoryByName(name)" class="cat-tag">{{ name }}</el-tag>
+            </div>
+          </div>
         </el-popover>
         <el-button type="primary" style="margin-left:10px" @click="loadChains">查询</el-button>
         <el-button @click="resetFilter">重置</el-button>
@@ -56,14 +61,10 @@
           </template>
         </el-table-column>
         <el-table-column prop="nodeCount" label="节点数" width="80" />
-        <el-table-column label="系统分类" width="120">
+        <el-table-column label="分类" min-width="180">
           <template #default="{ row }">
-            {{ getCategoryName('system', row.systemCategory) || '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column label="功能分类" width="120">
-          <template #default="{ row }">
-            {{ getCategoryName('func', row.funcCategory) || '-' }}
+            <el-tag v-if="row.categoryId != null" size="small" class="cat-tag">{{ getCategoryPath(row.categoryId) }}</el-tag>
+            <span v-else class="muted-text">-</span>
           </template>
         </el-table-column>
         <el-table-column label="优先级" width="100">
@@ -79,21 +80,17 @@
           </template>
         </el-table-column>
         <el-table-column label="操作" width="80" fixed="right" align="center" class-name="action-column">
-          <template #default="{ row, $index }">
-            <div class="action-btns" :style="{ background: $index % 2 === 1 ? '#fafafe' : '#ffffff' }">
-              <el-dropdown trigger="click">
-                <el-button :icon="MoreFilled" circle size="small" />
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item @click="$router.push('/chain/edit/' + row.chainCode)" :icon="Edit">编排</el-dropdown-item>
-                    <el-dropdown-item @click="executeChain(row.chainCode)" :icon="VideoPlay" divided>执行</el-dropdown-item>
-                    <el-dropdown-item @click="copyChain(row.chainCode)" :icon="CopyDocument">复制</el-dropdown-item>
-                    <el-dropdown-item @click="editChain(row)" :icon="Setting">编辑</el-dropdown-item>
-                    <el-dropdown-item @click="deleteChain(row.chainCode)" :icon="Delete" divided>删除</el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
-            </div>
+          <template #default="{ row }">
+            <ActionMenu
+              :items="[
+                { label: '编排', command: 'edit-flow', icon: Edit },
+                { label: '执行', command: 'execute', icon: VideoPlay, divided: true },
+                { label: '复制', command: 'copy', icon: CopyDocument },
+                { label: '编辑', command: 'edit', icon: Setting },
+                { label: '删除', command: 'delete', icon: Delete, divided: true, danger: true }
+              ]"
+              @command="(cmd) => onChainCommand(cmd, row)"
+            />
           </template>
         </el-table-column>
       </el-table>
@@ -125,15 +122,17 @@
         <el-form-item label="描述">
           <el-input v-model="form.description" type="textarea" :rows="3" />
         </el-form-item>
-        <el-form-item label="系统分类">
-          <el-select v-model="form.systemCategory" clearable placeholder="选择系统分类">
-            <el-option v-for="item in systemCategories" :key="item.categoryCode" :label="item.categoryName" :value="item.categoryCode" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="功能分类">
-          <el-select v-model="form.funcCategory" clearable placeholder="选择功能分类">
-            <el-option v-for="item in funcCategories" :key="item.categoryCode" :label="item.categoryName" :value="item.categoryCode" />
-          </el-select>
+        <el-form-item label="分类">
+          <div class="cat-form-item">
+            <el-tag v-if="form.categoryId != null" size="small" class="cat-tag">
+              {{ categoryTreeMap[form.categoryId] || '已选择' }}
+            </el-tag>
+            <span v-else class="muted-text">未选择分类</span>
+            <el-button v-if="form.categoryId != null" link type="primary" size="small" @click="form.categoryId = null">清除</el-button>
+          </div>
+          <div class="cat-tree-box">
+            <CategoryTree mode="select" :key="dialogVisible" v-model="form.categoryId" />
+          </div>
         </el-form-item>
         <el-form-item label="优先级">
           <el-select v-model="form.priority" clearable placeholder="选择优先级">
@@ -152,54 +151,73 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { MoreFilled, Edit, VideoPlay, CopyDocument, Setting, Delete } from '@element-plus/icons-vue'
+import { Edit, VideoPlay, CopyDocument, Setting, Delete } from '@element-plus/icons-vue'
 import api from '../api'
 import CategoryTree from '../components/CategoryTree.vue'
+import ActionMenu from '../components/ActionMenu.vue'
+
+const router = useRouter()
 
 const chains = ref([])
-const filter = ref({ chainName: '', executeMode: null, systemCategory: '', funcCategory: '', priority: null, categoryId: null })
+const filter = ref({ chainName: '', executeMode: null, priority: null, categoryIds: [] })
 const pageNo = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增链路')
-const form = ref({ chainName: '', executeMode: 1, description: '', systemCategory: '', funcCategory: '', priority: 2, isEdit: false })
+const form = ref({ chainName: '', executeMode: 1, description: '', categoryId: null, priority: 2, isEdit: false })
 const selectedRows = ref([])
 const tableRef = ref(null)
-const systemCategories = ref([])
-const funcCategories = ref([])
-
-const loadCategories = async () => {
+const categoryTreeMap = ref({})      // id -> name
+const categoryPathMap = ref({})      // id -> "父 / 子"
+const loadCategoryTreeMap = async () => {
   try {
-    const sysRes = await api.get('/dict/category/list', { params: { type: 'system' } })
-    systemCategories.value = sysRes.data || []
-    const funcRes = await api.get('/dict/category/list', { params: { type: 'func' } })
-    funcCategories.value = funcRes.data || []
-  } catch(e) { /* ignore */ }
+    const res = await api.get('/category/tree')
+    const flat = {}
+    const pathMap = {}
+    const walk = (nodes, parentPath) => (nodes || []).forEach(n => {
+      flat[n.id] = n.categoryName
+      const full = parentPath ? parentPath + ' / ' + n.categoryName : n.categoryName
+      pathMap[n.id] = full
+      if (n.children) walk(n.children, full)
+    })
+    walk(res.data || [], '')
+    categoryTreeMap.value = flat
+    categoryPathMap.value = pathMap
+  } catch (e) { /* ignore */ }
 }
-
-const getCategoryName = (type, code) => {
-  if (!code) return ''
-  const list = type === 'system' ? systemCategories.value : funcCategories.value
-  const item = list.find(c => c.categoryCode === code)
-  return item ? item.categoryName : code
+const getCategoryPath = (id) => {
+  if (id == null) return '-'
+  return categoryPathMap.value[id] || categoryTreeMap.value[id] || '-'
 }
+const selectedCategoryNames = computed(() =>
+  filter.value.categoryIds.map(id => categoryTreeMap.value[id] ?? id)
+)
+const removeCategoryByName = (name) => {
+  const id = Object.keys(categoryTreeMap.value).find(k => categoryTreeMap.value[k] === name)
+  if (id != null) filter.value.categoryIds = filter.value.categoryIds.filter(x => String(x) !== String(id))
+}
+const clearCategoryFilter = () => { filter.value.categoryIds = [] }
 
 const loadChains = async () => {
-  const params = { ...filter.value, pageNo: pageNo.value, pageSize: pageSize.value }
-  if (!params.systemCategory) delete params.systemCategory
-  if (!params.funcCategory) delete params.funcCategory
-  if (params.priority === null || params.priority === undefined || params.priority === '') delete params.priority
-  if (!params.categoryId) delete params.categoryId
+  const params = {
+    chainName: filter.value.chainName,
+    executeMode: filter.value.executeMode,
+    priority: filter.value.priority,
+    pageNo: pageNo.value,
+    pageSize: pageSize.value
+  }
+  if (filter.value.categoryIds.length) params.categoryId = filter.value.categoryIds.join(',')
   const res = await api.get('/chain/list', { params })
   chains.value = res.data?.list || []
   total.value = res.data?.total || 0
 }
 
 const resetFilter = () => {
-  filter.value = { chainName: '', executeMode: null, systemCategory: '', funcCategory: '', priority: null, categoryId: null }
+  filter.value = { chainName: '', executeMode: null, priority: null, categoryIds: [] }
   pageNo.value = 1
   loadChains()
 }
@@ -211,7 +229,7 @@ const formatTime = (t) => {
 
 const showCreateDialog = () => {
   dialogTitle.value = '新增链路'
-  form.value = { chainName: '', executeMode: 1, description: '', systemCategory: '', funcCategory: '', priority: 2, isEdit: false }
+  form.value = { chainName: '', executeMode: 1, description: '', categoryId: null, priority: 2, isEdit: false }
   dialogVisible.value = true
 }
 
@@ -255,6 +273,16 @@ const executeChain = async (chainCode) => {
   ElMessage.success('执行已启动，执行ID: ' + res.data.executionId)
 }
 
+const onChainCommand = (cmd, row) => {
+  switch (cmd) {
+    case 'edit-flow': router.push('/chain/edit/' + row.chainCode); break
+    case 'execute': executeChain(row.chainCode); break
+    case 'copy': copyChain(row.chainCode); break
+    case 'edit': editChain(row); break
+    case 'delete': deleteChain(row.chainCode); break
+  }
+}
+
 const handleSelectionChange = (rows) => {
   selectedRows.value = rows
 }
@@ -278,32 +306,34 @@ const batchExecute = async () => {
   const chainCodes = selectedRows.value.map(r => r.chainCode)
   const res = await api.post('/execute/batchRun', { chainCodes })
   const results = res.data || []
-  const started = results.filter(r => r.status === 'started').length
-  const failed = results.filter(r => r.status === 'failed').length
-  ElMessage.success(`执行启动: ${started}条成功，${failed}条失败`)
+  const submitted = results.filter(r => r.status === 'started').length
+  const rejected = results.filter(r => r.status === 'failed').length
+  if (rejected > 0) {
+    ElMessage.warning(`已提交 ${submitted} 条执行任务，${rejected} 条启动失败（链路不存在或无节点配置）`)
+  } else {
+    ElMessage.success(`已提交 ${submitted} 条执行任务，最终结果请到「执行记录」中查看`)
+  }
   clearSelection()
 }
 
-onMounted(() => { loadCategories(); loadChains() })
+onMounted(() => { loadCategoryTreeMap(); loadChains() })
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+/* 统一字体走全局 Inter 令牌，不再单独 import */
 
 /* ── Card Wrapper ── */
 :deep(.el-card) {
-  border-radius: 16px;
+  border-radius: var(--sb-radius-lg, 12px);
   overflow: visible;
-  box-shadow:
-    0 4px 24px rgba(99, 102, 241, 0.08),
-    0 1px 3px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(99, 102, 241, 0.08);
+  box-shadow: var(--sb-shadow-2, 0 8px 24px rgba(0, 0, 0, 0.08));
+  border: 1px solid var(--sb-border, rgba(0, 0, 0, 0.10));
 }
 
 :deep(.el-card__header) {
-  padding: 20px 24px;
-  border-bottom: 1px solid rgba(99, 102, 241, 0.08);
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.03), rgba(129, 140, 248, 0.02));
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--sb-border, rgba(0, 0, 0, 0.10));
+  background: var(--sb-accent-bg, rgba(62, 207, 142, 0.06));
 }
 
 .card-header {
@@ -317,7 +347,7 @@ onMounted(() => { loadCategories(); loadChains() })
 .card-header > span:first-child {
   font-size: 18px;
   font-weight: 700;
-  color: #1e1b4b;
+  color: var(--sb-text, #1c1c1c);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -325,19 +355,20 @@ onMounted(() => { loadCategories(); loadChains() })
 
 /* ── Primary Button ── */
 :deep(.el-button--primary) {
-  background: linear-gradient(135deg, #6366f1, #818cf8);
+  background: linear-gradient(135deg, var(--sb-green, #3ecf8e), var(--sb-green-soft, #4ade80));
   border: none;
-  border-radius: 10px;
+  border-radius: var(--sb-radius-sm, 6px);
   font-weight: 600;
   font-size: 14px;
-  padding: 10px 20px;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+  color: var(--sb-text-on-green, #0a0a0a);
+  box-shadow: 0 2px 8px var(--sb-accent-bg-2, rgba(62, 207, 142, 0.18));
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 :deep(.el-button--primary:hover) {
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.45);
+  box-shadow: 0 4px 16px var(--sb-shadow-accent, rgba(62, 207, 142, 0.3));
   transform: translateY(-1px);
+  filter: brightness(1.05);
 }
 
 /* ── Filter Bar ── */
@@ -349,34 +380,94 @@ onMounted(() => { loadCategories(); loadChains() })
   flex-wrap: wrap;
 }
 
-.filter-bar :deep(.el-input__wrapper) {
-  border-radius: 10px;
-  background: #fff;
-  border: 1px solid #d0d5dd;
+.filter-bar :deep(.el-input__wrapper),
+.filter-bar :deep(.el-select .el-input__wrapper) {
+  border-radius: var(--sb-radius-sm, 6px);
+  background: var(--sb-surface, #ffffff);
+  border: 1px solid var(--sb-border-strong, rgba(0, 0, 0, 0.16));
   box-shadow: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.filter-bar :deep(.el-select .el-input__wrapper) {
-  border-radius: 10px;
+.filter-bar :deep(.el-input__wrapper:hover),
+.filter-bar :deep(.el-select .el-input__wrapper:hover) {
+  border-color: var(--sb-accent-soft-2, rgba(62, 207, 142, 0.55));
+}
+
+.filter-bar :deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 2px var(--sb-accent-bg-2, rgba(62, 207, 142, 0.16));
+  border-color: var(--sb-green, #3ecf8e);
 }
 
 .filter-bar :deep(.el-button) {
-  border-radius: 10px;
+  border-radius: var(--sb-radius-sm, 6px);
   font-weight: 500;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .filter-bar :deep(.el-button:hover) {
-  transform: translateY(-1px);
+  transform: translateY(-1px);}
+
+/* ── Category Popover (选择分类) ── */
+.cat-popover {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cat-popover-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.cat-popover-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sb-text, #1c1c1c);
+}
+.cat-selected {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--sb-border-strong, rgba(0, 0, 0, 0.1));
+}
+.cat-tag {
+  background: var(--sb-accent-bg, rgba(62, 207, 142, 0.12));
+  border-color: var(--sb-accent-border, rgba(62, 207, 142, 0.3));
+  color: var(--sb-green-deep, #047857);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.muted-text {
+  color: var(--sb-text-mute, #9ca3af);
+}
+
+.cat-form-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.cat-tree-box {
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--sb-border-strong, rgba(0, 0, 0, 0.16));
+  border-radius: var(--sb-radius-sm, 6px);
+  padding: 4px 8px;
+  background: var(--sb-surface, #ffffff);
 }
 
 /* ── Batch Bar ── */
 .batch-bar {
   margin-top: 16px;
   padding: 14px 20px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.06), rgba(16, 185, 129, 0.04));
-  border: 1px solid rgba(99, 102, 241, 0.15);
-  border-radius: 12px;
+  background: var(--sb-accent-bg, rgba(62, 207, 142, 0.06));
+  border: 1px solid var(--sb-accent-border, rgba(62, 207, 142, 0.20));
+  border-radius: var(--sb-radius-md, 8px);
   display: flex;
   align-items: center;
   gap: 12px;
@@ -390,47 +481,45 @@ onMounted(() => { loadCategories(); loadChains() })
 }
 
 .batch-bar span {
-  color: #6366f1;
+  color: var(--sb-green-deep, #24b47e);
   font-weight: 600;
   font-size: 14px;
 }
 
 /* ── Table ── */
 :deep(.el-table) {
-  border-radius: 0 0 12px 12px;
+  border-radius: 0 0 var(--sb-radius-lg, 12px) var(--sb-radius-lg, 12px);
   overflow: visible;
   font-size: 13px;
+  --el-table-border-color: var(--sb-border-subtle, rgba(0, 0, 0, 0.06));
+  --el-table-header-bg-color: var(--sb-accent-bg, rgba(62, 207, 142, 0.06));
+  --el-table-row-hover-bg-color: var(--sb-accent-bg-2, rgba(62, 207, 142, 0.10));
 }
 
-:deep(.el-table th) {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.06), rgba(129, 140, 248, 0.04)) !important;
-  color: #4338ca !important;
+:deep(.el-table th.el-table__cell) {
+  background: var(--sb-accent-bg, rgba(62, 207, 142, 0.06)) !important;
+  color: var(--sb-text-secondary, #3f3f46) !important;
   font-weight: 600;
   font-size: 13px;
-  border-bottom: 1px solid rgba(99, 102, 241, 0.1) !important;
-}
-
-:deep(.el-table td) {
-  border-bottom: 1px solid rgba(99, 102, 241, 0.06);
-  padding: 5px 0 !important;
-}
-
-:deep(.el-table th) {
+  border-bottom: 1px solid var(--sb-border, rgba(0, 0, 0, 0.10)) !important;
   padding: 7px 0 !important;
 }
 
-:deep(.el-table--striped .el-table__body tr.el-table__row--striped) {
-  background: rgba(99, 102, 241, 0.02);
+:deep(.el-table td.el-table__cell) {
+  border-bottom: 1px solid var(--sb-border-subtle, rgba(0, 0, 0, 0.06));
+  padding: 5px 0 !important;
+  color: var(--sb-text, #1c1c1c);
 }
 
-:deep(.el-table tbody tr:hover > td) {
-  background: rgba(99, 102, 241, 0.05) !important;
+:deep(.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell) {
+  background: var(--sb-accent-bg, rgba(62, 207, 142, 0.04));
 }
 
 /* ── Fixed Column - Action Column ── */
 :deep(.el-table .el-table__fixed-right) {
   z-index: 10 !important;
-  box-shadow: -4px 0 12px rgba(99, 102, 241, 0.1) !important;
+  box-shadow: -4px 0 12px var(--sb-shadow-accent, rgba(62, 207, 142, 0.12)) !important;
+  background: var(--sb-surface, #ffffff);
 }
 
 :deep(.el-table .el-table__fixed-right::before) {
@@ -438,128 +527,24 @@ onMounted(() => { loadCategories(); loadChains() })
 }
 
 :deep(.el-table .el-table__fixed-right-patch) {
-  background: #fff !important;
+  background: var(--sb-surface, #ffffff) !important;
 }
 
-/* Action column cells - force white background */
-:deep(.el-table .action-column) {
-  background: #fff !important;
-  padding: 8px 0 !important;
-}
-
+:deep(.el-table .action-column),
 :deep(.el-table td.action-column) {
-  background: #fff !important;
+  background: var(--sb-surface, #ffffff) !important;
   padding: 8px 0 !important;
   height: auto !important;
 }
 
 :deep(.el-table .el-table__fixed-right-wrapper .el-table__header th:last-child),
 :deep(.el-table .el-table__fixed-right-wrapper .el-table__header th.action-column) {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(129, 140, 248, 0.06)) !important;
-  color: #4338ca !important;
+  background: var(--sb-accent-bg, rgba(62, 207, 142, 0.06)) !important;
+  color: var(--sb-text-secondary, #3f3f46) !important;
 }
 
-/* Action column container */
 :deep(.el-table .el-table__fixed-right-wrapper) {
-  background: transparent !important;
-}
-
-/* ── Action Buttons ── */
-.action-btns {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #ffffff !important;
-  background-color: #ffffff !important;
-  width: 100%;
-}
-
-.action-btns :deep(.el-button) {
-  margin: 0;
-  padding: 7px 11px;
-  font-size: 12px;
-  border-radius: 8px;
-  font-weight: 500;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: visible;
-}
-
-.action-btns :deep(.el-button::after) {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.action-btns :deep(.el-button:hover::after) {
-  opacity: 1;
-}
-
-.action-btns :deep(.el-button:hover) {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.action-btns :deep(.el-button:active) {
-  transform: translateY(0) scale(0.98);
-}
-
-.action-btns :deep(.el-button--primary) {
-  background: linear-gradient(135deg, #6366f1, #818cf8);
-  border: none;
-  color: #fff;
-}
-
-.action-btns :deep(.el-button--primary:hover) {
-  background: linear-gradient(135deg, #4f46e5, #6366f1);
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
-}
-
-.action-btns :deep(.el-button--success) {
-  background: linear-gradient(135deg, #10b981, #34d399);
-  border: none;
-  color: #fff;
-}
-
-.action-btns :deep(.el-button--success:hover) {
-  background: linear-gradient(135deg, #059669, #10b981);
-  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
-}
-
-.action-btns :deep(.el-button--danger) {
-  background: linear-gradient(135deg, #ef4444, #f87171);
-  border: none;
-  color: #fff;
-}
-
-.action-btns :deep(.el-button--danger:hover) {
-  background: linear-gradient(135deg, #dc2626, #ef4444);
-  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
-}
-
-.action-btns :deep(.el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--danger)) {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  color: #475569;
-}
-
-.action-btns :deep(.el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--danger):hover) {
-  border-color: #6366f1;
-  color: #6366f1;
-  background: rgba(99, 102, 241, 0.05);
-}
-
-/* ── Table Row Animation ── */
-:deep(.el-table tbody tr) {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-:deep(.el-table tbody tr:hover) {
-  transform: scale(1.002);
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
+  background: var(--sb-surface, #ffffff) !important;
 }
 
 /* ── Tags ── */
@@ -572,46 +557,49 @@ onMounted(() => { loadCategories(); loadChains() })
 
 /* ── Dialog ── */
 :deep(.el-dialog) {
-  border-radius: 16px;
+  border-radius: var(--sb-radius-lg, 12px);
   overflow: hidden;
+  background: var(--sb-surface, #ffffff);
 }
 
 :deep(.el-dialog__header) {
-  padding: 20px 24px;
-  border-bottom: 1px solid rgba(99, 102, 241, 0.08);
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--sb-border, rgba(0, 0, 0, 0.10));
 }
 
 :deep(.el-dialog__body) {
   padding: 24px;
+  color: var(--sb-text, #1c1c1c);
 }
 
 :deep(.el-dialog__footer) {
   padding: 16px 24px;
-  border-top: 1px solid rgba(99, 102, 241, 0.08);
+  border-top: 1px solid var(--sb-border, rgba(0, 0, 0, 0.10));
 }
 
 :deep(.el-form-item__label) {
   font-weight: 500;
-  color: #4338ca;
+  color: var(--sb-text-secondary, #3f3f46);
 }
 
 :deep(.el-input__wrapper),
 :deep(.el-textarea__inner) {
-  border-radius: 10px;
-  background: #fff;
-  border: 1px solid #d0d5dd;
+  border-radius: var(--sb-radius-sm, 6px);
+  background: var(--sb-surface, #ffffff);
+  border: 1px solid var(--sb-border-strong, rgba(0, 0, 0, 0.16));
   box-shadow: none;
+  color: var(--sb-text, #1c1c1c);
 }
 
 :deep(.el-input__wrapper:hover),
 :deep(.el-textarea__inner:hover) {
-  border-color: #a5b4fc;
+  border-color: var(--sb-accent-soft-2, rgba(62, 207, 142, 0.55));
 }
 
 :deep(.el-input__wrapper.is-focus),
 :deep(.el-textarea__inner:focus) {
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
-  border-color: #6366f1;
+  box-shadow: 0 0 0 2px var(--sb-accent-bg-2, rgba(62, 207, 142, 0.16));
+  border-color: var(--sb-green, #3ecf8e);
 }
 
 /* ── Pagination ── */
@@ -622,13 +610,13 @@ onMounted(() => { loadCategories(); loadChains() })
 }
 
 :deep(.el-pagination) {
-  --el-pagination-button-bg-color: #fff;
-  --el-pagination-hover-color: #6366f1;
+  --el-pagination-button-bg-color: var(--sb-surface, #ffffff);
+  --el-pagination-hover-color: var(--sb-green-deep, #24b47e);
 }
 
 :deep(.el-pagination .el-pager li.is-active) {
-  background: linear-gradient(135deg, #6366f1, #818cf8);
-  color: #fff;
+  background: linear-gradient(135deg, var(--sb-green, #3ecf8e), var(--sb-green-soft, #4ade80));
+  color: var(--sb-text-on-green, #0a0a0a);
   border-radius: 8px;
 }
 

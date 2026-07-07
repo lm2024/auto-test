@@ -96,7 +96,7 @@ const downloadPlugin = () => {
 .card-header {
   font-size: 18px;
   font-weight: 700;
-  color: #1e1b4b;
+  color: var(--sb-text);
 }
 
 .plugin-hero {
@@ -115,25 +115,25 @@ const downloadPlugin = () => {
 .plugin-meta h2 {
   font-size: 24px;
   font-weight: 700;
-  color: #1e1b4b;
+  color: var(--sb-text);
   margin-bottom: 4px;
 }
 
 .version {
-  color: #6366f1;
+  color: var(--sb-green);
   font-weight: 600;
   margin-bottom: 8px;
 }
 
 .desc {
-  color: #6b7280;
+  color: var(--sb-text-mute);
   font-size: 14px;
 }
 
 .section h3 {
   font-size: 16px;
   font-weight: 600;
-  color: #1e1b4b;
+  color: var(--sb-text);
   margin-bottom: 12px;
 }
 
@@ -146,7 +146,7 @@ const downloadPlugin = () => {
 .install-steps {
   margin-top: 16px;
   padding: 16px;
-  background: #f9fafb;
+  background: var(--sb-surface-2);
   border-radius: 12px;
 }
 
@@ -158,12 +158,12 @@ const downloadPlugin = () => {
 
 .install-steps ol {
   padding-left: 20px;
-  color: #4b5563;
+  color: var(--sb-text-secondary);
   line-height: 2;
 }
 
 .install-steps code {
-  background: #e5e7eb;
+  background: var(--sb-border-strong);
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 13px;

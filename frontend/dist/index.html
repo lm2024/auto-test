@@ -4,10 +4,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>接口自动化测试平台</title>
-  <script type="module" crossorigin src="/assets/index-DoqDOrU5.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-C1Wq2MAR.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- 首屏前应用主题，避免闪烁；默认暗色 -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('theme');
+        if (t === 'light') document.documentElement.classList.remove('dark');
+        else document.documentElement.classList.add('dark');
+      } catch (e) {
+        document.documentElement.classList.add('dark');
+      }
+    })();
+  </script>
+  <script type="module" crossorigin src="/assets/index-2P8EED80.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-B8tJp_xS.css">
 </head>
 <body>
-  <div id="app"></div>
+  <div id="app"></div>
 </body>
 </html>

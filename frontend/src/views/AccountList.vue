@@ -37,12 +37,15 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right" align="center" class-name="action-column">
-          <template #default="{ row, $index }">
-            <div class="action-btns" :style="{ background: $index % 2 === 1 ? '#fafafe' : '#ffffff' }">
-              <el-button size="small" @click="editAccount(row)">编辑</el-button>
-              <el-button size="small" type="danger" @click="deleteAccount(row.id)">删除</el-button>
-            </div>
+        <el-table-column label="操作" width="80" fixed="right" align="center" class-name="action-column">
+          <template #default="{ row }">
+            <ActionMenu
+              :items="[
+                { label: '编辑', command: 'edit', icon: Edit },
+                { label: '删除', command: 'delete', icon: Delete, divided: true, danger: true }
+              ]"
+              @command="(cmd) => onAccountCommand(cmd, row)"
+            />
           </template>
         </el-table-column>
       </el-table>
@@ -99,7 +102,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Edit, Delete } from '@element-plus/icons-vue'
 import api from '../api'
+import ActionMenu from '../components/ActionMenu.vue'
 
 const accounts = ref([])
 const filter = ref({ systemName: '', status: null })
@@ -167,6 +172,13 @@ const deleteAccount = async (id) => {
   loadAccounts()
 }
 
+const onAccountCommand = (cmd, row) => {
+  switch (cmd) {
+    case 'edit': editAccount(row); break
+    case 'delete': deleteAccount(row.id); break
+  }
+}
+
 onMounted(loadAccounts)
 </script>
 
@@ -177,7 +189,7 @@ onMounted(loadAccounts)
   align-items: center;
   font-weight: 700;
   font-size: 16px;
-  color: #1e1b4b;
+  color: var(--sb-text);
 }
 .filter-bar {
   display: flex;
@@ -204,7 +216,7 @@ onMounted(loadAccounts)
 /* ── Fixed Column ── */
 :deep(.el-table .el-table__fixed-right) {
   z-index: 10 !important;
-  box-shadow: -4px 0 12px rgba(99, 102, 241, 0.1) !important;
+  box-shadow: -4px 0 12px rgba(62, 207, 142, 0.1) !important;
 }
 
 :deep(.el-table .el-table__fixed-right::before) {
@@ -212,47 +224,17 @@ onMounted(loadAccounts)
 }
 
 :deep(.el-table .el-table__fixed-right-patch) {
-  background: #fff !important;
+  background: var(--sb-surface) !important;
 }
 
 :deep(.el-table .action-column) {
-  background: #fff !important;
+  background: var(--sb-surface) !important;
   padding: 8px 0 !important;
 }
 
 :deep(.el-table td.action-column) {
-  background: #fff !important;
+  background: var(--sb-surface) !important;
   padding: 8px 0 !important;
   height: auto !important;
-}
-
-/* ── Action Buttons ── */
-.action-btns {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  flex-wrap: nowrap;
-  background: #ffffff !important;
-  background-color: #ffffff !important;
-  width: 100%;
-}
-
-.action-btns :deep(.el-button) {
-  margin: 0;
-  padding: 7px 11px;
-  font-size: 12px;
-  border-radius: 8px;
-  font-weight: 500;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.action-btns :deep(.el-button:hover) {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.action-btns :deep(.el-button:active) {
-  transform: translateY(0) scale(0.98);
 }
 </style>

@@ -103,9 +103,9 @@ public class ChainServiceImpl implements ChainService {
 
     @Override
     public List<ChainVO> listChainsByCategory(String chainName, Integer executeMode,
-                                               String systemCategory, String funcCategory, Integer priority,
-                                               Long categoryId, int offset, int pageSize) {
-        List<TestChain> chains = chainMapper.selectListByCategory(chainName, executeMode, systemCategory, funcCategory, priority, categoryId, offset, pageSize);
+                                               List<String> systemCategories, List<String> funcCategories, Integer priority,
+                                               List<Long> categoryIds, int offset, int pageSize) {
+        List<TestChain> chains = chainMapper.selectListByCategory(chainName, executeMode, systemCategories, funcCategories, priority, categoryIds, offset, pageSize);
         return chains.stream().map(chain -> {
             ChainVO vo = buildChainVO(chain);
             vo.setNodeCount(nodeConfigMapper.countByChainCode(chain.getChainCode()));
@@ -115,9 +115,9 @@ public class ChainServiceImpl implements ChainService {
 
     @Override
     public int countChainsByCategory(String chainName, Integer executeMode,
-                                      String systemCategory, String funcCategory, Integer priority,
-                                      Long categoryId) {
-        return chainMapper.countByCategory(chainName, executeMode, systemCategory, funcCategory, priority, categoryId);
+                                      List<String> systemCategories, List<String> funcCategories, Integer priority,
+                                      List<Long> categoryIds) {
+        return chainMapper.countByCategory(chainName, executeMode, systemCategories, funcCategories, priority, categoryIds);
     }
 
     @Override

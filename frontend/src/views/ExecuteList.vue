@@ -48,11 +48,12 @@
             <span class="skip-count">{{ row.skipCount || 0 }}跳过</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right" align="center" class-name="action-column">
-          <template #default="{ row, $index }">
-            <div class="action-btns" :style="{ background: $index % 2 === 1 ? '#fafafe' : '#ffffff' }">
-              <el-button size="small" @click="$router.push('/execute/detail/' + row.executionId)">详情</el-button>
-            </div>
+        <el-table-column label="操作" width="80" fixed="right" align="center" class-name="action-column">
+          <template #default="{ row }">
+            <ActionMenu
+              :items="[{ label: '详情', command: 'detail', icon: View }]"
+              @command="(cmd) => onRecordCommand(cmd, row)"
+            />
           </template>
         </el-table-column>
       </el-table>
@@ -74,8 +75,13 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { View } from '@element-plus/icons-vue'
 import api from '../api'
 import CategoryTree from '../components/CategoryTree.vue'
+import ActionMenu from '../components/ActionMenu.vue'
+
+const router = useRouter()
 
 const records = ref([])
 const filter = ref({ chainCode: '', status: '', categoryId: null })
@@ -100,31 +106,31 @@ const formatTime = (t) => t ? new Date(t).toLocaleString() : '-'
 const statusType = (s) => ({ RUNNING: 'warning', SUCCESS: 'success', FAILED: 'danger' }[s] || 'info')
 const statusText = (s) => ({ RUNNING: '运行中', SUCCESS: '成功', FAILED: '失败' }[s] || s)
 
+const onRecordCommand = (cmd, row) => {
+  if (cmd === 'detail') router.push('/execute/detail/' + row.executionId)
+}
+
 onMounted(loadRecords)
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
-
 /* ── Card ── */
 :deep(.el-card) {
-  border-radius: 16px;
-  box-shadow:
-    0 4px 24px rgba(99, 102, 241, 0.08),
-    0 1px 3px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(99, 102, 241, 0.08);
+  border-radius: var(--sb-radius-lg, 12px);
+  box-shadow: var(--sb-shadow-2, 0 8px 24px rgba(0, 0, 0, 0.08));
+  border: 1px solid var(--sb-border, rgba(0, 0, 0, 0.10));
 }
 
 :deep(.el-card__header) {
-  padding: 20px 24px;
-  border-bottom: 1px solid rgba(99, 102, 241, 0.08);
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.04), rgba(129, 140, 248, 0.02));
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--sb-border, rgba(0, 0, 0, 0.10));
+  background: var(--sb-accent-bg, rgba(62, 207, 142, 0.06));
 }
 
 .card-header > span {
   font-size: 18px;
   font-weight: 700;
-  color: #1e1b4b;
+  color: var(--sb-text, #1c1c1c);
 }
 
 /* ── Filter Bar ── */
@@ -139,53 +145,79 @@ onMounted(loadRecords)
 .filter-bar :deep(.el-input__wrapper),
 .filter-bar :deep(.el-select .el-input__wrapper),
 .filter-bar :deep(.el-date-editor) {
-  border-radius: 10px;
-  background: #fff;
-  border: 1px solid #d0d5dd;
+  border-radius: var(--sb-radius-sm, 6px);
+  background: var(--sb-surface, #ffffff);
+  border: 1px solid var(--sb-border-strong, rgba(0, 0, 0, 0.16));
   box-shadow: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.filter-bar :deep(.el-input__wrapper:hover),
+.filter-bar :deep(.el-select .el-input__wrapper:hover) {
+  border-color: var(--sb-accent-soft-2, rgba(62, 207, 142, 0.55));
+}
+
+.filter-bar :deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 2px var(--sb-accent-bg-2, rgba(62, 207, 142, 0.16));
+  border-color: var(--sb-green, #3ecf8e);
 }
 
 .filter-bar :deep(.el-button) {
-  border-radius: 10px;
+  border-radius: var(--sb-radius-sm, 6px);
   font-weight: 500;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .filter-bar :deep(.el-button--primary) {
-  background: linear-gradient(135deg, #6366f1, #818cf8);
+  background: linear-gradient(135deg, var(--sb-green, #3ecf8e), var(--sb-green-soft, #4ade80));
   border: none;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+  color: var(--sb-text-on-green, #0a0a0a);
+  box-shadow: 0 2px 8px var(--sb-accent-bg-2, rgba(62, 207, 142, 0.18));
 }
 
 .filter-bar :deep(.el-button:hover) {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+  box-shadow: 0 4px 12px var(--sb-shadow-accent, rgba(62, 207, 142, 0.3));
+  filter: brightness(1.05);
 }
 
 /* ── Table ── */
 :deep(.el-table) {
-  border-radius: 0 0 12px 12px;
+  border-radius: 0 0 var(--sb-radius-lg, 12px) var(--sb-radius-lg, 12px);
   font-size: 13px;
+  --el-table-border-color: var(--sb-border-subtle, rgba(0, 0, 0, 0.06));
+  --el-table-header-bg-color: var(--sb-accent-bg, rgba(62, 207, 142, 0.06));
+  --el-table-row-hover-bg-color: var(--sb-accent-bg-2, rgba(62, 207, 142, 0.10));
 }
 
-:deep(.el-table th) {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.06), rgba(129, 140, 248, 0.04)) !important;
-  color: #4338ca !important;
+:deep(.el-table th.el-table__cell) {
+  background: var(--sb-accent-bg, rgba(62, 207, 142, 0.06)) !important;
+  color: var(--sb-text-secondary, #3f3f46) !important;
   font-weight: 600;
   font-size: 13px;
-  border-bottom: 1px solid rgba(99, 102, 241, 0.1) !important;
+  border-bottom: 1px solid var(--sb-border, rgba(0, 0, 0, 0.10)) !important;
   padding: 7px 0 !important;
 }
 
-:deep(.el-table td) {
-  border-bottom: 1px solid rgba(99, 102, 241, 0.06);
+:deep(.el-table td.el-table__cell) {
+  border-bottom: 1px solid var(--sb-border-subtle, rgba(0, 0, 0, 0.06));
   padding: 5px 0 !important;
+  color: var(--sb-text, #1c1c1c);
+}
+
+:deep(.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell) {
+  background: var(--sb-accent-bg, rgba(62, 207, 142, 0.04));
+}
+
+:deep(.el-table tbody tr:hover > td.el-table__cell) {
+  background: var(--sb-accent-bg-2, rgba(62, 207, 142, 0.10)) !important;
 }
 
 /* ── Fixed Column ── */
 :deep(.el-table .el-table__fixed-right) {
   z-index: 10 !important;
-  box-shadow: -4px 0 12px rgba(99, 102, 241, 0.1) !important;
+  box-shadow: -4px 0 12px var(--sb-shadow-accent, rgba(62, 207, 142, 0.12)) !important;
+  background: var(--sb-surface, #ffffff);
 }
 
 :deep(.el-table .el-table__fixed-right::before) {
@@ -193,47 +225,14 @@ onMounted(loadRecords)
 }
 
 :deep(.el-table .el-table__fixed-right-patch) {
-  background: #fff !important;
+  background: var(--sb-surface, #ffffff) !important;
 }
 
-:deep(.el-table .action-column) {
-  background: #fff !important;
-  padding: 8px 0 !important;
-}
-
+:deep(.el-table .action-column),
 :deep(.el-table td.action-column) {
-  background: #fff !important;
+  background: var(--sb-surface, #ffffff) !important;
   padding: 8px 0 !important;
   height: auto !important;
-}
-
-/* ── Action Buttons ── */
-.action-btns {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  flex-wrap: nowrap;
-  background: #ffffff !important;
-  background-color: #ffffff !important;
-  width: 100%;
-}
-
-.action-btns :deep(.el-button) {
-  margin: 0;
-  padding: 7px 11px;
-  font-size: 12px;
-  border-radius: 8px;
-  font-weight: 500;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-:deep(.el-table--striped .el-table__body tr.el-table__row--striped) {
-  background: rgba(99, 102, 241, 0.02);
-}
-
-:deep(.el-table tbody tr:hover > td) {
-  background: rgba(99, 102, 241, 0.05) !important;
 }
 
 /* ── Pagination ── */
@@ -243,9 +242,14 @@ onMounted(loadRecords)
   padding: 16px 0 0;
 }
 
+:deep(.el-pagination) {
+  --el-pagination-button-bg-color: var(--sb-surface, #ffffff);
+  --el-pagination-hover-color: var(--sb-green-deep, #24b47e);
+}
+
 :deep(.el-pagination .el-pager li.is-active) {
-  background: linear-gradient(135deg, #6366f1, #818cf8);
-  color: #fff;
+  background: linear-gradient(135deg, var(--sb-green, #3ecf8e), var(--sb-green-soft, #4ade80));
+  color: var(--sb-text-on-green, #0a0a0a);
   border-radius: 8px;
 }
 
@@ -263,7 +267,7 @@ onMounted(loadRecords)
 }
 
 /* ── Node Stats ── */
-:deep(.el-table td .success-count) { color: #10b981; font-weight: 600; }
-:deep(.el-table td .fail-count) { color: #ef4444; font-weight: 600; }
-:deep(.el-table td .skip-count) { color: #6b7280; font-weight: 500; }
+:deep(.el-table td .success-count) { color: var(--sb-success, #10b981); font-weight: 600; }
+:deep(.el-table td .fail-count) { color: var(--sb-danger, #ef4444); font-weight: 600; }
+:deep(.el-table td .skip-count) { color: var(--sb-text-mute, #71717a); font-weight: 500; }
 </style>

@@ -22,8 +22,10 @@
       :expand-on-click-node="false"
       :draggable="mode === 'manage'"
       :allow-drop="allowDrop"
+      :show-checkbox="mode === 'select' && multiple"
       @node-drop="handleDrop"
       @current-change="handleNodeClick"
+      @check="handleCheck"
       highlight-current
     >
       <template #default="{ node, data }">
@@ -46,7 +48,8 @@ import api from '../api'
 
 const props = defineProps({
   mode: { type: String, default: 'select' },
-  modelValue: { type: [Number, String], default: null }
+  multiple: { type: Boolean, default: false },
+  modelValue: { type: [Number, String, Array], default: null }
 })
 
 const emit = defineEmits(['update:modelValue', 'addRoot', 'addChild', 'edit', 'delete', 'execute', 'refresh'])
@@ -82,7 +85,13 @@ const loadTree = async () => {
 }
 
 const handleNodeClick = (data) => {
+  if (props.multiple) return
   emit('update:modelValue', data.id)
+}
+
+const handleCheck = () => {
+  if (!treeRef.value) return
+  emit('update:modelValue', treeRef.value.getCheckedKeys())
 }
 
 const allowDrop = (draggingNode, dropNode, type) => {
@@ -105,13 +114,27 @@ const handleDrop = async (draggingNode, dropNode, dropType) => {
 const filterTree = () => {}
 
 watch(() => props.modelValue, (val) => {
-  if (val && treeRef.value) {
+  if (!treeRef.value) return
+  if (props.multiple) {
+    treeRef.value.setCheckedKeys(Array.isArray(val) ? val : (val ? [val] : []))
+  } else if (val) {
     treeRef.value.setCurrentKey(val)
   }
 })
 
-onMounted(() => {
-  loadTree()
+const applyModelValue = () => {
+  if (!treeRef.value) return
+  const val = props.modelValue
+  if (props.multiple) {
+    treeRef.value.setCheckedKeys(Array.isArray(val) ? val : (val ? [val] : []))
+  } else if (val) {
+    treeRef.value.setCurrentKey(val)
+  }
+}
+
+onMounted(async () => {
+  await loadTree()
+  applyModelValue()
 })
 
 defineExpose({ loadTree })
@@ -154,6 +177,10 @@ defineExpose({ loadTree })
 }
 
 :deep(.el-tree-node.is-current > .el-tree-node__content) {
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(62, 207, 142, 0.14);
+}
+
+:deep(.el-tree-node__content:hover) {
+  background: rgba(62, 207, 142, 0.08);
 }
 </style>
