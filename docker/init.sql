@@ -178,6 +178,8 @@ CREATE TABLE `test_node_execute_log` (
   `start_time` datetime DEFAULT NULL COMMENT '节点开始时间',
   `end_time` datetime DEFAULT NULL COMMENT '节点结束时间',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `biz_oper_trace_id` varchar(64) DEFAULT NULL COMMENT '业务操作TraceId(用于分组视图)',
+  `sort_no` int DEFAULT NULL COMMENT '节点排序号',
   PRIMARY KEY (`id`),
   KEY `idx_execution_id` (`execution_id`),
   KEY `idx_node_code` (`node_code`),

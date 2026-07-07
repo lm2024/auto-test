@@ -1,0 +1,16 @@
+{
+  "name": "auto-test-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Auto Test 平台 Playwright E2E 集成测试套件",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}

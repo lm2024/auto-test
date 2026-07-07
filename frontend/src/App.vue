@@ -83,7 +83,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { List, Document, Setting, User, Collection, Fold, Expand, Timer, Monitor } from '@element-plus/icons-vue'
 import { getUser, logout } from './utils/auth'
@@ -91,6 +91,10 @@ import { getUser, logout } from './utils/auth'
 const route = useRoute()
 const router = useRouter()
 const user = ref(getUser())
+// 登录后 localStorage 写入了最新的 user（含 role），但 App.vue 作为根布局只挂载一次，
+// 不会因登录重新执行 setup，因此需要监听路由变化重新读取，避免「用户管理/定时任务」等
+// 依赖 user.role 的菜单项与右上角用户下拉因 user 始终是 null 而被隐藏。
+watch(() => route.fullPath, () => { user.value = getUser() })
 const isLoginPage = computed(() => route.path === '/login')
 const asideRef = ref(null)
 
