@@ -1,0 +1,383 @@
+================================================================================
+  AutoTest 平台 - 内网生产环境部署文档
+  日期: 2026-07-09
+  适用: 纯内网环境（无互联网）
+================================================================================
+
+一、项目概述
+================================================================================
+
+本平台是一个 API 自动化测试系统，由后端 (Spring Boot) 和前端 (Vue) 组成。
+部署架构非常简单：1 个 MySQL 数据库 + 1 个 Java 后端进程 + 1 个 Nginx 前端
+
+注意：本项目没有 "Agent" 一说的独立进程。你说的 agent/server 概念
+可能来自其他项目。本项目就一个后端 jar、一个前端文件夹，没有其他。
+
+================================================================================
+
+二、你电脑上已准备好的物料
+================================================================================
+
+在开发机上已经为你准备完毕，直接拷贝到内网即可：
+
+  auto-test/auto-test/backend/
+    ├── local-repo/              ← 私有 Maven 仓库 (103MB，依赖都在里面)
+    ├── pom.xml                  ← 项目配置
+    ├── src/                     ← 后端源码
+    ├── build-offline.bat        ← Windows 离线构建脚本
+    ├── build-offline.sh         ← Linux 离线构建脚本
+    ├── settings-aliyun.xml      ← 阿里云镜像配置
+    ├── settings-tencent.xml     ← 腾讯云镜像配置
+    ├── settings-huawei.xml      ← 华为云镜像配置
+    ├── settings-ustc.xml        ← 中科大镜像配置
+    ├── settings-163.xml         ← 网易镜像配置
+    ├── settings-central.xml     ← 直连 Maven Central
+    └── target/
+          └── auto-test-backend-1.0.0.jar   ← 构建好的 jar (47MB)
+
+  auto-test/auto-test/frontend/
+    ├── node_modules/            ← 私有 npm 包（已安装，内有全部依赖）
+    ├── package.json
+    ├── vite.config.js
+    └── dist/                    ← 构建好的前端静态文件 (npm run build 后生成)
+
+  auto-test/docker/
+    ├── docker-compose.yml       ← MySQL 容器配置
+    └── init.sql                 ← 数据库初始化脚本 (280KB)
+
+================================================================================
+
+三、生产服务器上的目录结构（推荐规范）
+================================================================================
+
+建议在 Linux 服务器上创建如下目录：
+
+  /opt/autotest/                        ← 应用主目录
+    ├── backend/                        ← 后端
+    │   ├── auto-test-backend-1.0.0.jar ← 运行的 jar
+    │   ├── application.yml             ← ★ 配置文件（从 jar 中提取并修改）
+    │   ├── logs/                       ← 应用日志目录
+    │   └── uploads/                    ← 文件上传目录（插件文件等）
+    ├── frontend/                       ← 前端静态文件
+    │   └── dist/                       ← npm run build 产物，直接放这里
+    ├── nginx/                          ← Nginx 相关
+    │   ├── conf.d/
+    │   │   └── autotest.conf           ← Nginx 站点配置
+    │   └── logs/                       ← Nginx 日志
+    └── backup/                         ← 备份目录（数据库备份）
+
+================================================================================
+
+四、必须修改的配置（★★★ 重要）
+================================================================================
+
+4.1 后端配置 (application.yml)
+--------------------------------------------------------------------------------
+
+需要从 jar 中提取配置文件并修改以下内容：
+
+# 文件位置: /opt/autotest/backend/application.yml
+
+# ===== 数据库连接 =====
+# 改：数据库 IP、端口、用户名、密码
+spring:
+  datasource:
+    url: jdbc:mysql://你的数据库IP:3306/auto_test?useUnicode...
+    username: 你的数据库用户名
+    password: 你的数据库密码
+
+# ===== JWT 密钥 =====
+# 改：生产环境必须更换密钥，防止被破解
+jwt:
+  secret: 随便写一串长度 32 以上的随机字符串
+  expiration: 86400000
+
+# ===== AES 密钥 =====
+# 改：测试账号密码加密用，必须 16 字节
+account:
+  aes-key: 16个字符的新密钥!!
+
+# ===== AI 服务地址 =====
+# 改：如果内网有 AI 服务（如 Ollama），改这里
+# 改：如果没有 AI 服务，这个配置可以不管，AI 功能不可用而已
+ai:
+  base-url: http://你的AI服务IP:11434/v1
+  api-key: sk-placeholder
+  model: qwen-max
+
+# ===== SSO =====
+# 不改：默认已关闭 (enabled: false)，不需要操心
+
+# ===== 日志 =====
+# 建议改：生产环境改成 info 级别
+logging:
+  level:
+    com.autotest: info
+
+4.2 前端配置 (vite.config.js)
+--------------------------------------------------------------------------------
+
+# 文件位置: 开发机上的 frontend/vite.config.js
+# 生产部署时前端是编译好的静态文件，不需要 vite.config.js
+# 但构建前要确认 API 代理配置正确
+
+构建后的前端通过 Nginx 代理请求到后端，所以需要配置 Nginx，见第六节。
+
+----------------------------------------------------------------------
+
+以下是完整需要改动的内容汇总表：
+
+| 配置项                    | 文件              | 改什么                        |
+|--------------------------|-------------------|------------------------------|
+| 数据库 IP/端口/用户名/密码  | application.yml   | 改生产数据库连接信息            |
+| JWT 密钥                  | application.yml   | 改成随机字符串 (≥32字符)        |
+| AES 密钥                  | application.yml   | 改成新密钥 (16字节)            |
+| AI 服务地址               | application.yml   | 改内网 AI 服务地址 (没有就空着) |
+| 日志级别                  | application.yml   | 改成 info                     |
+
+总共就改这 5 个地方，都在 application.yml 一个文件里。
+
+================================================================================
+
+五、部署步骤（一步一步来）
+================================================================================
+
+第 1 步：拷贝物料到内网服务器
+--------------------------------------------------------------------------------
+
+把整个 auto-test 目录拷贝到内网服务器（U盘或局域网共享）。
+
+需要拷贝的内容：
+  - auto-test/auto-test/backend/    （整个目录）
+  - auto-test/auto-test/frontend/   （整个目录）
+  - auto-test/docker/               （数据库脚本）
+
+第 2 步：准备数据库
+--------------------------------------------------------------------------------
+
+方案 A：用 Docker（简单，推荐）
+
+  cd /opt/autotest
+  cp /你的拷贝路径/docker/docker-compose.yml ./
+  cp /你的拷贝路径/docker/init.sql ./
+  docker-compose up -d
+
+  数据库信息：
+    - 地址: localhost:3306
+    - 数据库名: auto_test
+    - 用户名: root
+    - 密码: autotest123
+
+方案 B：已有一个 MySQL 服务器
+
+  把 docker/init.sql 导入到你的 MySQL 中：
+    mysql -h 你的MySQL地址 -u 用户名 -p < init.sql
+
+第 3 步：构建后端 jar（如果需要重新编译）
+--------------------------------------------------------------------------------
+
+如果直接使用开发机已编译好的 jar，跳到第 4 步。
+
+如果需要在内网修改代码后重新编译：
+
+  cd /opt/autotest/backend
+
+  # 用离线模式构建（不需要外网）
+  # Windows:
+  build-offline.bat
+
+  # Linux:
+  chmod +x build-offline.sh
+  ./build-offline.sh
+
+  # 如果离线构建报缺少依赖，说明 local-repo 不完整
+  # 这时需要配镜像源增量下载，选一个能连上的：
+  # ./mvn -s ./settings-ustc.xml -Dmaven.repo.local=./local-repo package -DskipTests
+
+  构建成功后 jar 在 target/auto-test-backend-1.0.0.jar
+
+第 4 步：提取并修改配置文件
+--------------------------------------------------------------------------------
+
+  # 从 jar 中提取原始配置文件
+  cd /opt/autotest/backend
+  jar xf auto-test-backend-1.0.0.jar BOOT-INF/classes/application.yml
+  cp BOOT-INF/classes/application.yml ./application.yml
+  rm -rf BOOT-INF
+
+  # 编辑 application.yml，修改第四节列出的配置项
+  vim application.yml
+
+第 5 步：创建需要的目录
+--------------------------------------------------------------------------------
+
+  mkdir -p /opt/autotest/backend/logs
+  mkdir -p /opt/autotest/backend/uploads
+  mkdir -p /opt/autotest/nginx/logs
+  mkdir -p /opt/autotest/backup
+
+第 6 步：构建前端
+--------------------------------------------------------------------------------
+
+在开发机上：
+  cd frontend
+  npm run build
+
+  # 产物在 dist/ 目录
+  # 把 dist/ 整个目录拷贝到生产服务器
+
+在生产服务器上：
+  cp -r /你的拷贝路径/frontend/dist /opt/autotest/frontend/dist
+
+第 7 步：安装 Nginx 并配置
+--------------------------------------------------------------------------------
+
+安装 Nginx：
+  yum install nginx -y       # CentOS
+  apt install nginx -y       # Ubuntu
+
+创建配置 /opt/autotest/nginx/conf.d/autotest.conf：
+
+  server {
+      listen       80;
+      server_name  你的域名或IP;
+
+      # 前端静态文件
+      root   /opt/autotest/frontend/dist;
+      index  index.html;
+
+      # 前端页面
+      location / {
+          try_files $uri $uri/ /index.html;
+      }
+
+      # 后端 API 代理
+      location /api/ {
+          proxy_pass http://127.0.0.1:8080;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_read_timeout 300s;
+      }
+
+      # WebSocket 代理（执行日志实时推送用）
+      location /ws/ {
+          proxy_pass http://127.0.0.1:8080;
+          proxy_http_version 1.1;
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection "upgrade";
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_read_timeout 86400s;
+      }
+  }
+
+加载配置：
+  ln -sf /opt/autotest/nginx/conf.d/autotest.conf /etc/nginx/conf.d/autotest.conf
+  nginx -t
+  systemctl restart nginx
+
+第 8 步：启动后端
+--------------------------------------------------------------------------------
+
+  cd /opt/autotest/backend
+  java -jar auto-test-backend-1.0.0.jar --spring.config.location=./application.yml
+
+  # 后台运行:
+  nohup java -jar auto-test-backend-1.0.0.jar --spring.config.location=./application.yml > logs/app.log 2>&1 &
+
+  # 检查是否启动成功:
+  curl http://127.0.0.1:8080/api/user/login
+
+第 9 步：验证部署
+--------------------------------------------------------------------------------
+
+  在浏览器访问: http://你的服务器IP
+  登录用户: admin / admin123
+  如果能正常登录并看到页面，部署成功。
+
+================================================================================
+
+六、关于 "Token" 和 "Agent" 的说明
+================================================================================
+
+你问的几个问题：
+
+Q: Agent/Server 启动到底用不用 Token？
+A: 本项目没有 Agent 概念。只有一个 Spring Boot 后端 jar，启动不需要任何
+   token。直接用 java -jar 启动就行。简单得不能再简单了。
+
+Q: 我启动不用 Token 不行吗？
+A: 启动后端本身不需要 token。Token 是用户登录时系统自动生成的 (JWT)，
+   用户登录后浏览器自动保存和携带，你不需要手动处理。登录页输入用户名密码即可。
+
+Q: 为什么那么复杂？我要简单的部署。
+A: 实际上非常简单：
+    1. 准备好 MySQL（导入 init.sql）
+    2. 修改一个配置文件 application.yml
+    3. java -jar 启动后端
+    4. 把前端 dist 目录挂到 Nginx
+    搞定。没有其他复杂的步骤。Token 是自动的，不用你管。
+
+================================================================================
+
+七、常用管理命令
+================================================================================
+
+启动后端:
+  cd /opt/autotest/backend
+  nohup java -jar auto-test-backend-1.0.0.jar --spring.config.location=./application.yml > logs/app.log 2>&1 &
+
+停止后端:
+  # 找到进程并杀死
+  ps -ef | grep auto-test-backend | grep -v grep | awk '{print $2}' | xargs kill
+
+查看日志:
+  tail -f /opt/autotest/backend/logs/app.log
+
+重启 Nginx:
+  systemctl restart nginx
+
+数据库备份:
+  mysqldump -h 数据库IP -u 用户名 -p auto_test > /opt/autotest/backup/auto_test_$(date +%Y%m%d).sql
+
+================================================================================
+
+八、初次使用步骤
+================================================================================
+
+部署完成后，用浏览器打开 http://服务器IP，你会看到登录页面：
+
+  默认管理员账号：
+    用户名: admin
+    密码:   admin123
+
+登录后可以：
+  - 创建测试链路（在"链路管理"页面）
+  - 配置节点（HTTP 请求、断言等）
+  - 执行测试链路
+  - 查看执行结果
+
+================================================================================
+
+九、故障排查
+================================================================================
+
+问题: 页面打不开
+  推查: nginx 是否启动？80 端口是否被防火墙拦截？
+  命令: systemctl status nginx; netstat -tlnp | grep 80
+
+问题: 登录失败/API 报错
+  推查: 后端是否启动？数据库是否通？
+  命令: curl http://127.0.0.1:8080/api/user/login
+       tail -f /opt/autotest/backend/logs/app.log
+
+问题: 页面空白
+  推查: 浏览器 F12 看 Console 和 Network 面板
+
+问题: 构建时 local-repo 缺包
+  原因: Maven 插件版本不匹配。换个镜像源增量下载:
+    cd backend
+    ./mvn -s ./settings-huawei.xml -Dmaven.repo.local=./local-repo package -DskipTests
+
+================================================================================

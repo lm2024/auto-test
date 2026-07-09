@@ -5,3 +5,5 @@ backend/target/
 /logs/
 /.playwright-mcp/
 /.mimocode/node_modules
+auto-test/backend/local-repo/
+**/target/
