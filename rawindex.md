@@ -1,2 +1,0 @@
-# AdvWiki - Índice Principal
-
