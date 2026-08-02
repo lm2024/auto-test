@@ -1,0 +1,152 @@
+/**
+ * TDesign Vue 2 · Supabase 风格主题覆盖
+ * TDesign 原生支持 CSS 变量主题（--td-*），这里消费 --sb-* 设计令牌。
+ * 亮色为默认，html.dark 切换暗色。
+ */
+
+/* ════════════ 亮色（默认） ════════════ */
+:root {
+  /* 主色 emerald */
+  --td-brand-color: #3ecf8e;
+  --td-brand-color-hover: #4ade80;
+  --td-brand-color-active: #24b47e;
+  --td-brand-color-focus: rgba(62, 207, 142, 0.2);
+  --td-brand-color-light: rgba(62, 207, 142, 0.1);
+  --td-brand-color-light-hover: rgba(62, 207, 142, 0.16);
+  --td-brand-color-light-active: rgba(62, 207, 142, 0.08);
+  --td-brand-color-gradient: linear-gradient(135deg, #3ecf8e, #4ade80);
+
+  /* 危险色（保留 TDesign 默认红，微调） */
+  --td-error-color: #ef4444;
+  --td-warning-color: #f59e0b;
+  --td-success-color: #10b981;
+  --td-info-color: #6366f1;
+
+  /* 背景 */
+  --td-bg-color-page: #f7f8fa;
+  --td-bg-color-container: #ffffff;
+  --td-bg-color-container-hover: #f1f3f5;
+  --td-bg-color-container-active: #e9ebee;
+  --td-bg-color-container-select: #ffffff;
+  --td-bg-color-secondarycontainer: #f1f3f5;
+  --td-bg-color-component: #f1f3f5;
+  --td-bg-color-component-hover: #e9ebee;
+  --td-bg-color-component-active: #e9ebee;
+  --td-bg-color-special-component: #ffffff;
+
+  /* 文字 */
+  --td-text-color-primary: #1c1c1c;
+  --td-text-color-secondary: #3f3f46;
+  --td-text-color-placeholder: #a1a1aa;
+  --td-text-color-disabled: #a1a1aa;
+
+  /* 边框 */
+  --td-border-level-1-color: rgba(0, 0, 0, 0.08);
+  --td-border-level-2-color: rgba(0, 0, 0, 0.12);
+  --td-component-stroke: rgba(0, 0, 0, 0.08);
+  --td-component-border: rgba(0, 0, 0, 0.12);
+
+  /* 圆角 */
+  --td-radius-default: 6px;
+  --td-radius-medium: 8px;
+  --td-radius-large: 12px;
+
+  /* 阴影 */
+  --td-shadow-1: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --td-shadow-2: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --td-shadow-3: 0 16px 48px rgba(0, 0, 0, 0.12);
+
+  /* 字体 */
+  --td-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ════════════ 暗色 ════════════ */
+html.dark {
+  --td-brand-color: #3ecf8e;
+  --td-brand-color-hover: #4ade80;
+  --td-brand-color-active: #24b47e;
+  --td-brand-color-focus: rgba(62, 207, 142, 0.25);
+  --td-brand-color-light: rgba(62, 207, 142, 0.12);
+  --td-brand-color-light-hover: rgba(62, 207, 142, 0.2);
+  --td-brand-color-light-active: rgba(62, 207, 142, 0.08);
+  --td-brand-color-gradient: linear-gradient(135deg, #3ecf8e, #4ade80);
+
+  --td-error-color: #ef4444;
+  --td-warning-color: #f59e0b;
+  --td-success-color: #10b981;
+  --td-info-color: #818cf8;
+
+  --td-bg-color-page: #1c1c1c;
+  --td-bg-color-container: #202020;
+  --td-bg-color-container-hover: #262626;
+  --td-bg-color-container-active: #2c2c2c;
+  --td-bg-color-container-select: #262626;
+  --td-bg-color-secondarycontainer: #262626;
+  --td-bg-color-component: #2c2c2c;
+  --td-bg-color-component-hover: #343434;
+  --td-bg-color-component-active: #3a3a3a;
+  --td-bg-color-special-component: #202020;
+
+  --td-text-color-primary: #ededed;
+  --td-text-color-secondary: #b2b2b2;
+  --td-text-color-placeholder: #6b6b6b;
+  --td-text-color-disabled: #6b6b6b;
+
+  --td-border-level-1-color: rgba(255, 255, 255, 0.08);
+  --td-border-level-2-color: rgba(255, 255, 255, 0.14);
+  --td-component-stroke: rgba(255, 255, 255, 0.08);
+  --td-component-border: rgba(255, 255, 255, 0.14);
+
+  --td-shadow-1: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --td-shadow-2: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --td-shadow-3: 0 16px 48px rgba(0, 0, 0, 0.6);
+}
+
+/* ════════════ 全局基础 ════════════ */
+body {
+  background: var(--sb-bg, var(--td-bg-color-page));
+  color: var(--sb-text, var(--td-text-color-primary));
+  font-family: var(--td-font-family);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 滚动条 */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--sb-accent-soft, rgba(62, 207, 142, 0.3));
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--sb-accent-soft-2, rgba(62, 207, 142, 0.55));
+}
+
+/* 卡片：表面 + hairline */
+.t-card {
+  background-color: var(--td-bg-color-container);
+  border: 1px solid var(--td-component-stroke);
+  border-radius: var(--td-radius-large, 12px);
+}
+
+/* 主按钮：emerald 渐变 + 近黑字 */
+.t-button--theme-primary {
+  background: var(--td-brand-color-gradient);
+  color: #0a0a0a;
+  font-weight: 500;
+  border: none;
+}
+.t-button--theme-primary:hover {
+  filter: brightness(1.05);
+  color: #0a0a0a;
+}
+.t-button--theme-primary:active {
+  filter: brightness(0.95);
+  color: #0a0a0a;
+}
+
+/* 表格表头微染 */
+.t-table__header th {
+  background-color: var(--td-brand-color-light, rgba(62, 207, 142, 0.08)) !important;
+  font-weight: 600;
+}

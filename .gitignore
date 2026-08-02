@@ -7,3 +7,7 @@ backend/target/
 /.mimocode/node_modules
 auto-test/backend/local-repo/
 **/target/
+node_modules/
+.reasonix/
+/*.png
+fix-codex-web-search.sh

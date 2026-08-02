@@ -1,0 +1,82 @@
+import Vue from 'vue';
+import VueRouter from 'vue-router';
+import { isLoggedIn } from '@/utils/auth';
+
+Vue.use(VueRouter);
+
+const routes = [
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('../views/Login.vue'),
+    meta: { public: true }
+  },
+  { path: '/', redirect: '/chain/list' },
+  {
+    path: '/chain/list',
+    name: 'ChainList',
+    component: () => import('../views/ChainList.vue')
+  },
+  {
+    path: '/chain/edit/:chainCode',
+    name: 'ChainEdit',
+    component: () => import('../views/ChainEdit.vue')
+  },
+  {
+    path: '/execute/list',
+    name: 'ExecuteList',
+    component: () => import('../views/ExecuteList.vue')
+  },
+  {
+    path: '/execute/detail/:executionId',
+    name: 'ExecuteDetail',
+    component: () => import('../views/ExecuteDetail.vue')
+  },
+  {
+    path: '/system/config',
+    name: 'SystemConfig',
+    component: () => import('../views/SystemConfig.vue')
+  },
+  {
+    path: '/account/list',
+    name: 'AccountList',
+    component: () => import('../views/AccountList.vue')
+  },
+  {
+    path: '/dict/category',
+    name: 'DictCategory',
+    component: () => import('../views/DictCategory.vue')
+  },
+  {
+    path: '/plugin/download',
+    name: 'PluginDownload',
+    component: () => import('../views/PluginDownload.vue')
+  },
+  {
+    path: '/user/list',
+    name: 'UserList',
+    component: () => import('../views/UserList.vue')
+  },
+  {
+    path: '/scheduled-task',
+    name: 'ScheduledTask',
+    component: () => import('../views/ScheduledTask.vue')
+  }
+]
+
+const router = new VueRouter({
+  mode: 'history',
+  routes
+})
+
+router.beforeEach((to, from, next) => {
+  if (to.meta.public) {
+    next()
+  } else if (!isLoggedIn()) {
+    next('/login')
+  } else {
+    next()
+  }
+})
+
+export default router
