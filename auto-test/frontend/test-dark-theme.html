@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>暗色主题测试</title>
+    <style>
+        :root {
+            --bg: #f8f9fa;
+            --surface: #ffffff;
+            --text: #2c3e50;
+            --text-secondary: #5a6c7d;
+            --text-mute: #8494a7;
+        }
+        
+        html.dark {
+            --bg: #1a1f2e;
+            --surface: #232938;
+            --text: #e8edf3;
+            --text-secondary: #b0b8c4;
+            --text-mute: #7d8694;
+        }
+        
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            margin-bottom: 30px;
+        }
+        
+        .test-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            background: var(--surface);
+            border-radius: 12px;
+        }
+        
+        .test-item {
+            margin-bottom: 15px;
+            padding: 15px;
+            border: 1px solid rgba(128, 128, 128, 0.2);
+            border-radius: 8px;
+        }
+        
+        .test-label {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .text-primary {
+            color: var(--text);
+        }
+        
+        .text-secondary {
+            color: var(--text-secondary);
+        }
+        
+        .text-muted {
+            color: var(--text-mute);
+        }
+        
+        .toggle-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: #4a9e8e;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            z-index: 1000;
+        }
+        
+        .color-sample {
+            width: 100%;
+            height: 60px;
+            margin: 10px 0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .sample-text {
+            background: #2c3e50;
+            color: #ffffff;
+        }
+        
+        .sample-text-dark {
+            background: #e8edf3;
+            color: #1a1f2e;
+        }
+        
+        .sample-secondary {
+            background: #5a6c7d;
+            color: #ffffff;
+        }
+        
+        .sample-muted {
+            background: #8494a7;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+    <button class="toggle-btn" onclick="toggleTheme()">切换主题</button>
+    
+    <div class="container">
+        <h1>暗色主题文本颜色测试</h1>
+        
+        <div class="test-section">
+            <h2>文本颜色测试</h2>
+            
+            <div class="test-item">
+                <div class="test-label">主文本 (text)</div>
+                <div class="text-primary">这是主文本颜色，在暗色模式下应该是浅色</div>
+                <div class="color-sample sample-text">背景: #2c3e50 | 文本: #ffffff</div>
+            </div>
+            
+            <div class="test-item">
+                <div class="test-label">次级文本 (text-secondary)</div>
+                <div class="text-secondary">这是次级文本颜色，在暗色模式下应该是浅灰色</div>
+                <div class="color-sample sample-secondary">背景: #5a6c7d | 文本: #ffffff</div>
+            </div>
+            
+            <div class="test-item">
+                <div class="test-label">辅助文本 (text-mute)</div>
+                <div class="text-muted">这是辅助文本颜色，在暗色模式下应该是中灰色</div>
+                <div class="color-sample sample-muted">背景: #8494a7 | 文本: #ffffff</div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>颜色变量值</h2>
+            <div class="test-item">
+                <div class="test-label">当前主题颜色值：</div>
+                <div id="colorValues">加载中...</div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>测试说明</h2>
+            <div class="test-item">
+                <p>1. 点击右上角按钮切换亮色/暗色主题</p>
+                <p>2. 在暗色主题下，所有文本应该是浅色（白色或浅灰色）</p>
+                <p>3. 背景应该是深色（深蓝灰色）</p>
+                <p>4. 不应该有黑色或深色文本出现在深色背景上</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+            updateColorValues();
+        }
+        
+        function updateColorValues() {
+            const styles = getComputedStyle(document.documentElement);
+            const colorValues = document.getElementById('colorValues');
+            
+            if (colorValues) {
+                colorValues.innerHTML = `
+                    <div><strong>背景色 (bg):</strong> ${styles.getPropertyValue('--bg')}</div>
+                    <div><strong>表面色 (surface):</strong> ${styles.getPropertyValue('--surface')}</div>
+                    <div><strong>主文本 (text):</strong> ${styles.getPropertyValue('--text')}</div>
+                    <div><strong>次级文本 (text-secondary):</strong> ${styles.getPropertyValue('--text-secondary')}</div>
+                    <div><strong>辅助文本 (text-mute):</strong> ${styles.getPropertyValue('--text-mute')}</div>
+                `;
+            }
+        }
+        
+        // 初始化
+        if (localStorage.getItem('theme') === 'dark' || 
+            (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+        
+        updateColorValues();
+    </script>
+</body>
+</html>

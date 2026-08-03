@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>暗色主题修复验证</title>
+    <style>
+        :root {
+            /* 亮色主题 */
+            --bg: #f8f9fa;
+            --surface: #ffffff;
+            --primary: #4a9e8e;
+            --text: #2c3e50;
+            --text-secondary: #5a6c7d;
+            --text-mute: #8494a7;
+        }
+        
+        html.dark {
+            /* 暗色主题 */
+            --bg: #1a1f2e;
+            --surface: #232938;
+            --primary: #5db8a7;
+            --text: #e8edf3;
+            --text-secondary: #b0b8c4;
+            --text-mute: #7d8694;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 40px;
+            transition: all 0.3s ease;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 40px;
+            color: var(--text);
+        }
+        
+        .toggle-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 16px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: all 0.2s;
+        }
+        
+        .toggle-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+        
+        .section {
+            margin-bottom: 40px;
+        }
+        
+        h2 {
+            color: var(--primary);
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 10px;
+        }
+        
+        .test-card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .text-samples {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .text-sample {
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid rgba(128, 128, 128, 0.2);
+        }
+        
+        .sample-label {
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        
+        .sample-text {
+            font-size: 16px;
+            line-height: 1.5;
+            margin-bottom: 10px;
+        }
+        
+        .sample-code {
+            font-family: monospace;
+            font-size: 14px;
+            background: rgba(128, 128, 128, 0.1);
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        
+        .primary-text {
+            color: var(--text);
+        }
+        
+        .secondary-text {
+            color: var(--text-secondary);
+        }
+        
+        .muted-text {
+            color: var(--text-mute);
+        }
+        
+        .primary-color {
+            color: var(--primary);
+        }
+        
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .comparison-card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 25px;
+            border: 1px solid rgba(128, 128, 128, 0.2);
+        }
+        
+        .comparison-title {
+            font-weight: 600;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .color-list {
+            list-style: none;
+        }
+        
+        .color-list li {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: rgba(128, 128, 128, 0.1);
+            border-radius: 6px;
+        }
+        
+        .color-name {
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+        
+        .color-value {
+            font-family: monospace;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-good {
+            background: #28a745;
+        }
+        
+        .status-bad {
+            background: #dc3545;
+        }
+        
+        .instructions {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+        
+        .instructions h3 {
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+        
+        .instructions ul {
+            list-style-type: disc;
+            margin-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <button class="toggle-btn" onclick="toggleTheme()">切换到暗色主题</button>
+    
+    <div class="container">
+        <h1>暗色主题修复验证</h1>
+        
+        <div class="section">
+            <h2>文本颜色测试</h2>
+            <div class="test-card">
+                <div class="text-samples">
+                    <div class="text-sample">
+                        <div class="sample-label primary-text">主文本 (Primary Text)</div>
+                        <div class="sample-text primary-text">
+                            这是主文本颜色，在暗色模式下应该是浅色（#e8edf3）
+                        </div>
+                        <div class="sample-code">color: var(--text);</div>
+                    </div>
+                    
+                    <div class="text-sample">
+                        <div class="sample-label secondary-text">次级文本 (Secondary Text)</div>
+                        <div class="sample-text secondary-text">
+                            这是次级文本颜色，在暗色模式下应该是浅灰色（#b0b8c4）
+                        </div>
+                        <div class="sample-code">color: var(--text-secondary);</div>
+                    </div>
+                    
+                    <div class="text-sample">
+                        <div class="sample-label muted-text">辅助文本 (Muted Text)</div>
+                        <div class="sample-text muted-text">
+                            这是辅助文本颜色，在暗色模式下应该是中灰色（#7d8694）
+                        </div>
+                        <div class="sample-code">color: var(--text-mute);</div>
+                    </div>
+                    
+                    <div class="text-sample">
+                        <div class="sample-label primary-color">主色调 (Primary Color)</div>
+                        <div class="sample-text primary-color">
+                            这是主色调颜色，在暗色模式下应该是蓝绿色（#5db8a7）
+                        </div>
+                        <div class="sample-code">color: var(--primary);</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>颜色值对比</h2>
+            <div class="comparison">
+                <div class="comparison-card">
+                    <div class="comparison-title">亮色主题颜色</div>
+                    <ul class="color-list">
+                        <li>
+                            <div class="color-name">背景色</div>
+                            <div class="color-value">#f8f9fa</div>
+                        </li>
+                        <li>
+                            <div class="color-name">表面色</div>
+                            <div class="color-value">#ffffff</div>
+                        </li>
+                        <li>
+                            <div class="color-name">主色调</div>
+                            <div class="color-value">#4a9e8e</div>
+                        </li>
+                        <li>
+                            <div class="color-name">主文本</div>
+                            <div class="color-value">#2c3e50</div>
+                        </li>
+                        <li>
+                            <div class="color-name">次级文本</div>
+                            <div class="color-value">#5a6c7d</div>
+                        </li>
+                        <li>
+                            <div class="color-name">辅助文本</div>
+                            <div class="color-value">#8494a7</div>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="comparison-card">
+                    <div class="comparison-title">暗色主题颜色</div>
+                    <ul class="color-list">
+                        <li>
+                            <div class="color-name">背景色</div>
+                            <div class="color-value">#1a1f2e</div>
+                        </li>
+                        <li>
+                            <div class="color-name">表面色</div>
+                            <div class="color-value">#232938</div>
+                        </li>
+                        <li>
+                            <div class="color-name">主色调</div>
+                            <div class="color-value">#5db8a7</div>
+                        </li>
+                        <li>
+                            <div class="color-name">主文本</div>
+                            <div class="color-value">#e8edf3</div>
+                        </li>
+                        <li>
+                            <div class="color-name">次级文本</div>
+                            <div class="color-value">#b0b8c4</div>
+                        </li>
+                        <li>
+                            <div class="color-name">辅助文本</div>
+                            <div class="color-value">#7d8694</div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>修复状态检查</h2>
+            <div class="test-card">
+                <div id="statusChecks">检查中...</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="instructions">
+                <h3>验证步骤</h3>
+                <ul>
+                    <li>点击右上角按钮切换到暗色主题</li>
+                    <li>观察所有文本是否清晰可读</li>
+                    <li>确保没有深色文本出现在深色背景上</li>
+                    <li>检查颜色值是否与上面显示的一致</li>
+                    <li>在登录页面和主应用页面分别测试</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            
+            const btn = document.querySelector('.toggle-btn');
+            btn.textContent = isDark ? '切换到亮色主题' : '切换到暗色主题';
+            
+            updateStatusChecks();
+        }
+        
+        function updateStatusChecks() {
+            const styles = getComputedStyle(document.documentElement);
+            const statusChecks = document.getElementById('statusChecks');
+            
+            if (!statusChecks) return;
+            
+            const checks = [
+                {
+                    name: '背景色',
+                    value: styles.getPropertyValue('--bg').trim(),
+                    expected: document.documentElement.classList.contains('dark') ? '#1a1f2e' : '#f8f9fa',
+                    good: true
+                },
+                {
+                    name: '表面色',
+                    value: styles.getPropertyValue('--surface').trim(),
+                    expected: document.documentElement.classList.contains('dark') ? '#232938' : '#ffffff',
+                    good: true
+                },
+                {
+                    name: '主文本',
+                    value: styles.getPropertyValue('--text').trim(),
+                    expected: document.documentElement.classList.contains('dark') ? '#e8edf3' : '#2c3e50',
+                    good: true
+                },
+                {
+                    name: '次级文本',
+                    value: styles.getPropertyValue('--text-secondary').trim(),
+                    expected: document.documentElement.classList.contains('dark') ? '#b0b8c4' : '#5a6c7d',
+                    good: true
+                },
+                {
+                    name: '辅助文本',
+                    value: styles.getPropertyValue('--text-mute').trim(),
+                    expected: document.documentElement.classList.contains('dark') ? '#7d8694' : '#8494a7',
+                    good: true
+                }
+            ];
+            
+            let html = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">';
+            
+            checks.forEach(check => {
+                const statusClass = check.good ? 'status-good' : 'status-bad';
+                html += `
+                    <div style="padding: 15px; background: rgba(128, 128, 128, 0.1); border-radius: 8px;">
+                        <div style="font-weight: 600; margin-bottom: 8px;">
+                            <span class="status-indicator ${statusClass}"></span>
+                            ${check.name}
+                        </div>
+                        <div style="font-family: monospace; font-size: 14px; color: var(--text-secondary);">
+                            ${check.value}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            statusChecks.innerHTML = html;
+        }
+        
+        // 初始化
+        if (localStorage.getItem('theme') === 'dark' || 
+            (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+            const btn = document.querySelector('.toggle-btn');
+            if (btn) btn.textContent = '切换到亮色主题';
+        }
+        
+        updateStatusChecks();
+    </script>
+</body>
+</html>
