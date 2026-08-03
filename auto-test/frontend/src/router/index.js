@@ -58,6 +58,12 @@ const routes = [
     path: '/scheduled-task',
     name: 'ScheduledTask',
     component: () => import('../views/ScheduledTask.vue')
+  },
+  {
+    path: '/theme-preview',
+    name: 'ThemePreview',
+    component: () => import('../views/ThemePreview.vue'),
+    meta: { public: true }
   }
 ]
 

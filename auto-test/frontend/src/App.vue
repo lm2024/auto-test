@@ -110,7 +110,11 @@ const isResizing = ref(false)
 
 const toggleCollapse = () => {
   isCollapsed.value = !isCollapsed.value
-  localStorage.setItem('menuCollapsed', isCollapsed.value)
+  // 延迟写入localStorage，避免阻塞动画
+  setTimeout(() => {
+    localStorage.setItem('menuCollapsed', isCollapsed.value)
+  }, 0)
+  
   if (isCollapsed.value) {
     asideWidth.value = 64
   } else {
@@ -122,18 +126,30 @@ const startResize = (e) => {
   isResizing.value = true
   const startX = e.clientX
   const startWidth = asideWidth.value
+  let animationFrameId = null
 
   const onMouseMove = (e) => {
     if (!isResizing.value) return
-    const diff = e.clientX - startX
-    let newWidth = startWidth + diff
-    if (newWidth < 64) newWidth = 64
-    if (newWidth > 400) newWidth = 400
-    asideWidth.value = newWidth
+    
+    // 使用requestAnimationFrame优化性能
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId)
+    }
+    
+    animationFrameId = requestAnimationFrame(() => {
+      const diff = e.clientX - startX
+      let newWidth = startWidth + diff
+      if (newWidth < 64) newWidth = 64
+      if (newWidth > 400) newWidth = 400
+      asideWidth.value = newWidth
+    })
   }
 
   const onMouseUp = () => {
     isResizing.value = false
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId)
+    }
     localStorage.setItem('menuWidth', asideWidth.value)
     document.removeEventListener('mousemove', onMouseMove)
     document.removeEventListener('mouseup', onMouseUp)
@@ -148,6 +164,12 @@ onMounted(() => {
     asideWidth.value = 64
   }
   user.value = getUser()
+})
+
+onUnmounted(() => {
+  // 清理可能存在的事件监听器
+  document.removeEventListener('mousemove', onMouseMove)
+  document.removeEventListener('mouseup', onMouseUp)
 })
 
 const handleLogout = () => {
@@ -175,9 +197,9 @@ const toggleTheme = () => {
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body, #app {
   height: 100%;
-  font-family: var(--sb-font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
-  background: var(--sb-bg, #1c1c1c);
-  color: var(--sb-text, #ededed);
+  font-family: var(--font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  background: var(--bg, #f8f9fa);
+  color: var(--text, #2c3e50);
 }
 
 .login-wrapper {
@@ -188,7 +210,7 @@ html, body, #app {
 .app-container {
   height: 100vh;
   display: flex;
-  background: var(--sb-bg, #1c1c1c);
+  background: var(--bg, #f8f9fa);
 }
 
 /* ── Sidebar ── */
@@ -196,11 +218,12 @@ html, body, #app {
   min-width: 64px;
   display: flex;
   flex-direction: column;
-  background: var(--sb-surface, #202020);
-  border-right: 1px solid var(--sb-border, rgba(255, 255, 255, 0.08));
+  background: var(--surface, #ffffff);
+  border-right: 1px solid var(--border, rgba(0, 0, 0, 0.08));
   z-index: 10;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width 0.2s ease-out;
   overflow: hidden;
+  will-change: width;
 }
 
 /* ── Resize Handle ── */
@@ -214,7 +237,7 @@ html, body, #app {
 }
 
 .resize-handle:hover {
-  background: rgba(62, 207, 142, 0.4);
+  background: rgba(74, 158, 142, 0.4);
 }
 
 /* ── Logo Area ── */
@@ -225,7 +248,7 @@ html, body, #app {
   justify-content: center;
   gap: 10px;
   padding: 0 20px;
-  border-bottom: 1px solid var(--sb-border, rgba(255, 255, 255, 0.08));
+  border-bottom: 1px solid var(--border, rgba(0, 0, 0, 0.08));
   position: relative;
   overflow: hidden;
   white-space: nowrap;
@@ -238,14 +261,14 @@ html, body, #app {
   width: 10px;
   height: 10px;
   border-radius: 3px;
-  background: var(--sb-green, #3ecf8e);
-  box-shadow: 0 0 12px rgba(62, 207, 142, 0.5);
+  background: var(--primary, #4a9e8e);
+  box-shadow: 0 0 12px rgba(74, 158, 142, 0.5);
 }
 
 .logo span {
   font-size: 18px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text, #2c3e50);
   letter-spacing: 0.5px;
   padding-left: 16px;
 }
@@ -257,14 +280,14 @@ html, body, #app {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--sb-text-mute, #8b8b8b);
-  border-top: 1px solid var(--sb-border, rgba(255, 255, 255, 0.08));
+  color: var(--text-mute, #8494a7);
+  border-top: 1px solid var(--border, rgba(0, 0, 0, 0.08));
   transition: all 0.25s;
 }
 
 .collapse-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--sb-text, #ededed);
+  background: var(--accent-bg, rgba(74, 158, 142, 0.08));
+  color: var(--text, #2c3e50);
 }
 
 /* ── Theme Toggle ── */
@@ -274,20 +297,20 @@ html, body, #app {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--sb-text-mute, #8b8b8b);
-  border-top: 1px solid var(--sb-border, rgba(255, 255, 255, 0.08));
+  color: var(--text-mute, #8494a7);
+  border-top: 1px solid var(--border, rgba(0, 0, 0, 0.08));
   transition: all 0.25s;
 }
 
 .theme-toggle:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--sb-green, #3ecf8e);
+  background: var(--accent-bg, rgba(74, 158, 142, 0.08));
+  color: var(--primary, #4a9e8e);
 }
 
 /* ── User Info ── */
 .user-info {
   padding: 12px 16px;
-  border-top: 1px solid var(--sb-border, rgba(255, 255, 255, 0.08));
+  border-top: 1px solid var(--border, rgba(0, 0, 0, 0.08));
   cursor: pointer;
 }
 
@@ -295,7 +318,7 @@ html, body, #app {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--sb-text-secondary, #b2b2b2);
+  color: var(--text-secondary, #5a6c7d);
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
@@ -304,7 +327,7 @@ html, body, #app {
 }
 
 .user-name:hover {
-  color: var(--sb-text, #ededed);
+  color: var(--text, #2c3e50);
 }
 
 /* ── Navigation Menu ── */
@@ -316,7 +339,7 @@ html, body, #app {
 }
 
 .el-menu-item {
-  color: var(--sb-text-mute, #8b8b8b);
+  color: var(--text-mute, #8494a7);
   margin: 4px 0;
   border-radius: 6px;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -336,19 +359,19 @@ html, body, #app {
   transform: translateY(-50%);
   width: 3px;
   height: 0;
-  background: var(--sb-green, #3ecf8e);
+  background: var(--primary, #4a9e8e);
   border-radius: 0 2px 2px 0;
   transition: height 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .el-menu-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--sb-text, #ededed);
+  background: var(--accent-bg, rgba(74, 158, 142, 0.08));
+  color: var(--text, #2c3e50);
 }
 
 .el-menu-item.is-active {
-  color: var(--sb-green-soft, #4ade80);
-  background: rgba(62, 207, 142, 0.12);
+  color: var(--primary, #4a9e8e);
+  background: var(--primary-soft, rgba(74, 158, 142, 0.1));
 }
 
 .el-menu-item.is-active::before {
@@ -358,7 +381,7 @@ html, body, #app {
 /* ── Main Content ── */
 .app-main {
   flex: 1;
-  background: var(--sb-bg, #1c1c1c);
+  background: var(--bg, #f8f9fa);
   padding: 24px;
   overflow-y: auto;
   position: relative;
@@ -373,11 +396,11 @@ html, body, #app {
 .app-main::-webkit-scrollbar { width: 8px; }
 .app-main::-webkit-scrollbar-track { background: transparent; }
 .app-main::-webkit-scrollbar-thumb {
-  background: rgba(62, 207, 142, 0.3);
+  background: var(--accent-soft, rgba(74, 158, 142, 0.4));
   border-radius: 4px;
 }
 .app-main::-webkit-scrollbar-thumb:hover {
-  background: rgba(62, 207, 142, 0.5);
+  background: var(--accent-medium, rgba(74, 158, 142, 0.6));
 }
 
 /* ── Element Plus Overrides ── */
@@ -392,5 +415,57 @@ html, body, #app {
 }
 :deep(.el-menu--collapse .el-menu-item span) {
   display: none;
+}
+:deep(.el-menu--collapse .el-menu-item .el-icon) {
+  margin: 0;
+  font-size: 18px;
+}
+:deep(.el-menu--collapse .el-menu-item:hover) {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* ── 暗色模式覆盖 ── */
+html.dark .logo span {
+  color: var(--text, #e8edf3);
+}
+
+html.dark .collapse-btn {
+  color: var(--text-mute, #7d8694);
+}
+
+html.dark .collapse-btn:hover {
+  background: var(--accent-bg, rgba(93, 184, 167, 0.1));
+  color: var(--text, #e8edf3);
+}
+
+html.dark .theme-toggle {
+  color: var(--text-mute, #7d8694);
+}
+
+html.dark .theme-toggle:hover {
+  background: var(--accent-bg, rgba(93, 184, 167, 0.1));
+  color: var(--primary, #5db8a7);
+}
+
+html.dark .user-name {
+  color: var(--text-secondary, #b0b8c4);
+}
+
+html.dark .user-name:hover {
+  color: var(--text, #e8edf3);
+}
+
+html.dark .el-menu-item {
+  color: var(--text-mute, #7d8694);
+}
+
+html.dark .el-menu-item:hover {
+  background: var(--accent-bg, rgba(93, 184, 167, 0.1));
+  color: var(--text, #e8edf3);
+}
+
+html.dark .el-menu-item.is-active {
+  color: var(--primary, #5db8a7);
+  background: var(--primary-soft, rgba(93, 184, 167, 0.1));
 }
 </style>

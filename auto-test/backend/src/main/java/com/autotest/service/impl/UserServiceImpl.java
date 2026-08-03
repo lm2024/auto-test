@@ -6,6 +6,7 @@ import com.autotest.model.entity.SysUser;
 import com.autotest.model.vo.UserVO;
 import com.autotest.service.UserService;
 import com.autotest.util.JwtUtil;
+import com.autotest.util.PasswordValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,13 @@ public class UserServiceImpl implements UserService {
         if (userMapper.selectByUsername(username) != null) {
             throw new BusinessException(409, "用户名已存在: " + username);
         }
+        
+        // 验证密码强度
+        PasswordValidator.PasswordStrengthResult result = PasswordValidator.validatePassword(password);
+        if (!result.isValid()) {
+            throw new BusinessException(400, result.getMessage());
+        }
+        
         SysUser user = new SysUser();
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(password));
@@ -48,6 +56,15 @@ public class UserServiceImpl implements UserService {
         if (existing == null) {
             throw new BusinessException(404, "用户不存在");
         }
+        
+        // 如果提供了新密码，验证密码强度
+        if (password != null && !password.isEmpty()) {
+            PasswordValidator.PasswordStrengthResult result = PasswordValidator.validatePassword(password);
+            if (!result.isValid()) {
+                throw new BusinessException(400, result.getMessage());
+            }
+        }
+        
         SysUser user = new SysUser();
         user.setId(id);
         if (displayName != null) user.setDisplayName(displayName);

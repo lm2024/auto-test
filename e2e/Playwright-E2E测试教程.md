@@ -11,7 +11,7 @@
 
 - **单元测试**：测一个函数对不对（开发者写得多）。
 - **E2E（端到端）测试**：**像真人一样打开浏览器，点按钮、填表单、看页面变化**，验证"整个系统连在一起能不能跑通"。
-- 我们这次就是：用程序自动打开 `http://localhost:3001`（前端），登录、新建链路、点编排、执行、看结果……把你能手动点的功能**全部自动点一遍**，确保上生产前没有 bug。
+- 我们这次就是：用程序自动打开 `http://localhost:9094`（前端），登录、新建链路、点编排、执行、看结果……把你能手动点的功能**全部自动点一遍**，确保上生产前没有 bug。
 
 工具用的是 **Playwright**（微软出品的浏览器自动化神器）。
 
@@ -28,7 +28,7 @@
 | Docker | 20+ | 起 MySQL 数据库 |
 | 浏览器 | Chromium | Playwright 自动驱动（它会自己装） |
 
-> 本项目是「前后端 + 数据库」一体，所以想跑 E2E，得先把整套服务起来（前端 :3001、后端 :8080、MySQL :3306）。
+> 本项目是「前后端 + 数据库」一体，所以想跑 E2E，得先把整套服务起来（前端 :9094、后端 :9093、MySQL :3306）。
 
 ### 2. 需要什么 **Skill**？
 **不需要特殊 Skill。** 本项目没有要求装任何 AI Skill。
@@ -60,12 +60,12 @@ cd docker && docker compose up -d
 # 2) 起后端（用 Java 8）
 cd ../backend
 export JAVA_HOME=/你的/jdk8路径
-mvn spring-boot:run        # 监听 http://localhost:8080
+mvn spring-boot:run        # 监听 http://localhost:9093
 
 # 3) 起前端
 cd ../frontend
 npm install                # 首次需要
-npm run dev                # 监听 http://localhost:3001
+npm run dev                # 监听 http://localhost:9094
 ```
 
 > 默认管理员账号：`admin / admin123`
@@ -160,7 +160,7 @@ Playwright 默认要求"唯一匹配"，否则报 `strict mode violation`。对�
 test('插件创建链路（核心接口）', async ({ request }) => {
   const token = await apiLogin()
   const api = await request.newContext({
-    baseURL: 'http://localhost:8080',
+    baseURL: 'http://localhost:9093',
     extraHTTPHeaders: { Authorization: `Bearer ${token}` },
   })
   const res = await api.post('/api/plugin/chain/create', {
@@ -178,7 +178,7 @@ test('插件创建链路（核心接口）', async ({ request }) => {
 
 如果你不想写代码，想让 AI 助手"帮我去页面点一下看看"，就靠 Playwright MCP：
 1. 在 WorkBuddy 连接器里启用 Playwright MCP。
-2. 直接对助手说："用浏览器打开 http://localhost:3001，登录 admin/admin123，点开链路管理，看看新增按钮能不能用。"
+2. 直接对助手说："用浏览器打开 http://localhost:9094，登录 admin/admin123，点开链路管理，看看新增按钮能不能用。"
 3. 助手会通过 MCP 真实操作浏览器并回报结果（带截图）。
 
 **脚本测试（CI/回归）vs MCP（临时探查）** 的区别：
@@ -189,7 +189,7 @@ test('插件创建链路（核心接口）', async ({ request }) => {
 
 ## 九、测试结果
 
-> 跑测时间：2026-07-07 · 环境：前端 :3001 / 后端 :8080 / MySQL :3306 全起 · 浏览器：Chromium（1 worker）
+> 跑测时间：2026-07-07 · 环境：前端 :9094 / 后端 :9093 / MySQL :3306 全起 · 浏览器：Chromium（1 worker）
 
 **总览：29 个用例，通过 29 个，失败 0 个 ✅（耗时约 2.2 分钟）**
 
@@ -230,7 +230,7 @@ test('插件创建链路（核心接口）', async ({ request }) => {
 
 ## 十、踩坑记录（都是真金白银换来的）
 
-1. **环境变量劫持端口**：shell 里若有 `SERVER__PORT=xxxx`，Spring 会把它当成 `server.port`，后端可能绑到别的端口。启动后端时显式 `export SERVER__PORT=8080`。
+1. **环境变量劫持端口**：shell 里若有 `SERVER__PORT=xxxx`，Spring 会把它当成 `server.port`，后端可能绑到别的端口。启动后端时显式 `export SERVER__PORT=9093`。
 2. **数据库旧卷缺表**：Docker 只在空卷时跑 `init.sql`。换了表结构后必须 `docker compose down -v` 重建。
 3. **登录失败提示**：后端登录失败返回 `HTTP 200 + code:401`，前端因 HTTP 200 走成功分支反而抛错被 catch，最终只显示笼统的"登录失败"（没显示后端给的"用户名或密码错误"）。功能上能挡住错误登录，但提示不友好——已在第九节测试结果中记录，建议改进。
 4. **测试结果目录被安全护栏拦截**：Playwright 默认清理 `test-results`，文件多了会触发批量删除保护而报错。已把 `outputDir` 改到 `/tmp` 解决。

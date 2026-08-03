@@ -66,9 +66,19 @@
         </el-form-item>
         <el-form-item label="密码" v-if="!isEdit">
           <el-input v-model="form.password" type="password" show-password />
+          <PasswordStrength 
+            v-if="form.password" 
+            :password="form.password" 
+            :show-requirements="true"
+          />
         </el-form-item>
         <el-form-item label="密码" v-else>
           <el-input v-model="form.password" type="password" show-password placeholder="留空不修改" />
+          <PasswordStrength 
+            v-if="form.password" 
+            :password="form.password" 
+            :show-requirements="true"
+          />
         </el-form-item>
         <el-form-item label="显示名称">
           <el-input v-model="form.displayName" />
@@ -97,6 +107,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Edit, Delete } from '@element-plus/icons-vue'
 import api from '../api'
 import ActionMenu from '../components/ActionMenu.vue'
+import PasswordStrength from '../components/PasswordStrength.vue'
 
 const users = ref([])
 const filter = ref({ keyword: '' })
@@ -150,6 +161,21 @@ const submitForm = async () => {
     ElMessage.warning('请输入密码')
     return
   }
+  
+  // 验证密码强度
+  if (form.value.password) {
+    try {
+      const res = await api.post('/user/validate-password', { password: form.value.password })
+      if (!res.data.valid) {
+        ElMessage.error(res.data.message)
+        return
+      }
+    } catch (e) {
+      ElMessage.error('密码验证失败')
+      return
+    }
+  }
+  
   if (isEdit.value) {
     await api.put('/user/update?id=' + editId.value, form.value)
     ElMessage.success('编辑成功')
@@ -185,7 +211,7 @@ onMounted(loadUsers)
   align-items: center;
   font-weight: 700;
   font-size: 16px;
-  color: var(--sb-text);
+  color: var(--text);
 }
 .filter-bar {
   display: flex;
@@ -201,12 +227,12 @@ onMounted(loadUsers)
 }
 :deep(.el-table .action-column),
 :deep(.el-table td.action-column) {
-  background: var(--sb-surface, #ffffff) !important;
+  background: var(--surface, #ffffff) !important;
   padding: 8px 0 !important;
   height: auto !important;
 }
 :deep(.el-table .el-table__fixed-right-wrapper) {
-  background: var(--sb-surface, #ffffff) !important;
+  background: var(--surface, #ffffff) !important;
 }
 :deep(.el-table .el-table__fixed-right::before) {
   display: none !important;

@@ -130,7 +130,7 @@ onMounted(loadRecords)
 .card-header > span {
   font-size: 18px;
   font-weight: 700;
-  color: var(--sb-text, #1c1c1c);
+  color: var(--text, #1c1c1c);
 }
 
 /* ── Filter Bar ── */
@@ -146,7 +146,7 @@ onMounted(loadRecords)
 .filter-bar :deep(.el-select .el-input__wrapper),
 .filter-bar :deep(.el-date-editor) {
   border-radius: var(--sb-radius-sm, 6px);
-  background: var(--sb-surface, #ffffff);
+  background: var(--surface, #ffffff);
   border: 1px solid var(--sb-border-strong, rgba(0, 0, 0, 0.16));
   box-shadow: none;
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -159,7 +159,7 @@ onMounted(loadRecords)
 
 .filter-bar :deep(.el-input__wrapper.is-focus) {
   box-shadow: 0 0 0 2px var(--sb-accent-bg-2, rgba(62, 207, 142, 0.16));
-  border-color: var(--sb-green, #3ecf8e);
+  border-color: var(--primary, #3ecf8e);
 }
 
 .filter-bar :deep(.el-button) {
@@ -169,9 +169,9 @@ onMounted(loadRecords)
 }
 
 .filter-bar :deep(.el-button--primary) {
-  background: linear-gradient(135deg, var(--sb-green, #3ecf8e), var(--sb-green-soft, #4ade80));
+  background: linear-gradient(135deg, var(--primary, #3ecf8e), var(--primary-soft, #4ade80));
   border: none;
-  color: var(--sb-text-on-green, #0a0a0a);
+  color: var(--text-on-green, #0a0a0a);
   box-shadow: 0 2px 8px var(--sb-accent-bg-2, rgba(62, 207, 142, 0.18));
 }
 
@@ -192,7 +192,7 @@ onMounted(loadRecords)
 
 :deep(.el-table th.el-table__cell) {
   background: var(--sb-accent-bg, rgba(62, 207, 142, 0.06)) !important;
-  color: var(--sb-text-secondary, #3f3f46) !important;
+  color: var(--text-secondary, #3f3f46) !important;
   font-weight: 600;
   font-size: 13px;
   border-bottom: 1px solid var(--sb-border, rgba(0, 0, 0, 0.10)) !important;
@@ -202,7 +202,7 @@ onMounted(loadRecords)
 :deep(.el-table td.el-table__cell) {
   border-bottom: 1px solid var(--sb-border-subtle, rgba(0, 0, 0, 0.06));
   padding: 5px 0 !important;
-  color: var(--sb-text, #1c1c1c);
+  color: var(--text, #1c1c1c);
 }
 
 :deep(.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell) {
@@ -217,7 +217,7 @@ onMounted(loadRecords)
 :deep(.el-table .el-table__fixed-right) {
   z-index: 10 !important;
   box-shadow: -4px 0 12px var(--sb-shadow-accent, rgba(62, 207, 142, 0.12)) !important;
-  background: var(--sb-surface, #ffffff);
+  background: var(--surface, #ffffff);
 }
 
 :deep(.el-table .el-table__fixed-right::before) {
@@ -225,12 +225,12 @@ onMounted(loadRecords)
 }
 
 :deep(.el-table .el-table__fixed-right-patch) {
-  background: var(--sb-surface, #ffffff) !important;
+  background: var(--surface, #ffffff) !important;
 }
 
 :deep(.el-table .action-column),
 :deep(.el-table td.action-column) {
-  background: var(--sb-surface, #ffffff) !important;
+  background: var(--surface, #ffffff) !important;
   padding: 8px 0 !important;
   height: auto !important;
 }
@@ -243,13 +243,13 @@ onMounted(loadRecords)
 }
 
 :deep(.el-pagination) {
-  --el-pagination-button-bg-color: var(--sb-surface, #ffffff);
-  --el-pagination-hover-color: var(--sb-green-deep, #24b47e);
+  --el-pagination-button-bg-color: var(--surface, #ffffff);
+  --el-pagination-hover-color: var(--primary-deep, #24b47e);
 }
 
 :deep(.el-pagination .el-pager li.is-active) {
-  background: linear-gradient(135deg, var(--sb-green, #3ecf8e), var(--sb-green-soft, #4ade80));
-  color: var(--sb-text-on-green, #0a0a0a);
+  background: linear-gradient(135deg, var(--primary, #3ecf8e), var(--primary-soft, #4ade80));
+  color: var(--text-on-green, #0a0a0a);
   border-radius: 8px;
 }
 
@@ -269,5 +269,5 @@ onMounted(loadRecords)
 /* ── Node Stats ── */
 :deep(.el-table td .success-count) { color: var(--sb-success, #10b981); font-weight: 600; }
 :deep(.el-table td .fail-count) { color: var(--sb-danger, #ef4444); font-weight: 600; }
-:deep(.el-table td .skip-count) { color: var(--sb-text-mute, #71717a); font-weight: 500; }
+:deep(.el-table td .skip-count) { color: var(--text-mute, #71717a); font-weight: 500; }
 </style>

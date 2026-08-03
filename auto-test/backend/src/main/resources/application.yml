@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 9093
   servlet:
     context-path: /
   servlet.encoding:
@@ -20,7 +20,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/auto_test?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
     username: root
-    password: autotest123
+    password: "AutoTest2026Kp9&Xz*"
     druid:
       initial-size: 5
       min-idle: 5
@@ -69,4 +69,4 @@ sso:
   authorize-url: https://sso.company.com/oauth2/authorize
   token-url: https://sso.company.com/oauth2/token
   user-info-url: https://sso.company.com/oauth2/userinfo
-  redirect-uri: http://localhost:3001/api/sso/callback
+  redirect-uri: http://localhost:9094/api/sso/callback

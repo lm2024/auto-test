@@ -60,7 +60,7 @@ docker-compose up -d
 - Host: `localhost:3306`
 - Database: `auto_test`
 - Username: `root`
-- Password: `autotest123`
+- Password: `AutoTest2026Kp9&Xz*`
 
 ### 2. 启动后端
 
@@ -69,7 +69,7 @@ cd backend
 mvn spring-boot:run
 ```
 
-- 端口: `8080`
+- 端口: `9093`
 - 上下文路径: `/`
 
 或者使用批处理脚本：
@@ -85,9 +85,9 @@ npm install   # 首次需要安装依赖
 npm run dev
 ```
 
-- 端口: `3001`
-- API 代理: `/api` -> `http://localhost:8080`
-- WebSocket 代理: `/ws` -> `ws://localhost:8080`
+- 端口: `9094`
+- API 代理: `/api` -> `http://localhost:9093`
+- WebSocket 代理: `/ws` -> `ws://localhost:9093`
 
 或者使用批处理脚本：
 ```bash
@@ -112,12 +112,12 @@ start.bat
 stop.bat
 ```
 
-此脚本会终止占用 8080（后端）和 3001（前端）端口的进程。
+此脚本会终止占用 9093（后端）和 9094（前端）端口的进程。
 
 ### 手动关闭
 
-- 关闭后端：终止占用 8080 端口的 Java 进程
-- 关闭前端：在终端按 `Ctrl+C` 或终止占用 3001 端口的进程
+- 关闭后端：终止占用 9093 端口的 Java 进程
+- 关闭前端：在终端按 `Ctrl+C` 或终止占用 9094 端口的进程
 - 关闭数据库：`cd docker && docker-compose down`
 
 ---
@@ -140,7 +140,7 @@ restart.bat
 # 数据库
 spring.datasource.url: jdbc:mysql://localhost:3306/auto_test
 spring.datasource.username: root
-spring.datasource.password: autotest123
+spring.datasource.password: AutoTest2026Kp9&Xz*
 
 # AI 服务（OpenAI 兼容）
 ai.base-url: http://localhost:11434/v1
@@ -155,9 +155,9 @@ account.aes-key: autotest_key_16!
 ### 前端配置 (frontend/vite.config.js)
 
 ```javascript
-server.port: 3001
-server.proxy./api -> http://localhost:8080
-server.proxy./ws  -> ws://localhost:8080
+server.port: 9094
+server.proxy./api -> http://localhost:9093
+server.proxy./ws  -> ws://localhost:9093
 ```
 
 ---

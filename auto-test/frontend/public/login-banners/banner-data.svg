@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 460" font-family="'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <linearGradient id="bg3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7fafc"/>
+      <stop offset="1" stop-color="#eef4f3"/>
+    </linearGradient>
+    <linearGradient id="teal3" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#3a8576"/>
+      <stop offset="1" stop-color="#4a9e8e"/>
+    </linearGradient>
+    <filter id="sh3" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#1f2d3d" flood-opacity="0.14"/>
+    </filter>
+  </defs>
+
+  <rect x="0" y="0" width="720" height="460" rx="22" fill="url(#bg3)"/>
+  <circle cx="44" cy="46" r="11" fill="url(#teal3)"/>
+  <text x="64" y="52" font-size="20" font-weight="700" fill="#1f2d3d">数据驱动测试</text>
+  <text x="64" y="74" font-size="13" fill="#64748b">一份数据，跑出多组场景，覆盖更全</text>
+
+  <!-- 数据文件 -->
+  <g filter="url(#sh3)">
+    <rect x="48" y="130" width="210" height="250" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+    <rect x="48" y="130" width="210" height="40" rx="14" fill="#0f1729"/>
+    <rect x="48" y="156" width="210" height="14" fill="#0f1729"/>
+    <text x="68" y="156" font-size="13" font-weight="600" fill="#e2e8f0">cases.csv</text>
+    <!-- 表头 -->
+    <text x="66" y="196" font-size="12" font-weight="700" fill="#64748b">user</text>
+    <text x="160" y="196" font-size="12" font-weight="700" fill="#64748b">pwd</text>
+    <text x="248" y="196" font-size="12" font-weight="700" fill="#64748b">role</text>
+    <line x1="60" y1="206" x2="246" y2="206" stroke="#eef2f4"/>
+    <g font-size="12" fill="#475569">
+      <text x="66" y="228">alice</text><text x="160" y="228">A@1</text><text x="248" y="228">admin</text>
+      <text x="66" y="252">bob</text><text x="160" y="252">B@2</text><text x="248" y="252">user</text>
+      <text x="66" y="276">carol</text><text x="160" y="276">C@3</text><text x="248" y="276">user</text>
+      <text x="66" y="300">dave</text><text x="160" y="300">D@4</text><text x="248" y="300">guest</text>
+    </g>
+    <text x="66" y="340" font-size="12" fill="#94a3b8">… 共 1,024 行</text>
+    <rect x="66" y="352" width="174" height="14" rx="7" fill="#eef2f4"/>
+  </g>
+
+  <!-- 发散连线 -->
+  <g stroke="#4a9e8e" stroke-width="2.5" fill="none" opacity="0.55">
+    <path d="M270 190 C340 190 360 170 410 170"/>
+    <path d="M270 230 C340 230 360 230 410 230"/>
+    <path d="M270 270 C340 270 360 290 410 290"/>
+  </g>
+  <g fill="#4a9e8e">
+    <circle cx="408" cy="170" r="4"/>
+    <circle cx="408" cy="230" r="4"/>
+    <circle cx="408" cy="290" r="4"/>
+  </g>
+
+  <!-- 三组用例卡片 -->
+  <g filter="url(#sh3)">
+    <rect x="430" y="138" width="240" height="56" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+    <rect x="430" y="138" width="6" height="56" rx="3" fill="#22c55e"/>
+    <text x="452" y="162" font-size="14" font-weight="600" fill="#1f2d3d">用例 #1 · alice</text>
+    <text x="452" y="182" font-size="12" fill="#64748b">登录成功 ✓</text>
+  </g>
+  <g filter="url(#sh3)">
+    <rect x="430" y="210" width="240" height="56" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+    <rect x="430" y="210" width="6" height="56" rx="3" fill="#22c55e"/>
+    <text x="452" y="234" font-size="14" font-weight="600" fill="#1f2d3d">用例 #2 · bob</text>
+    <text x="452" y="254" font-size="12" fill="#64748b">登录成功 ✓</text>
+  </g>
+  <g filter="url(#sh3)">
+    <rect x="430" y="282" width="240" height="56" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+    <rect x="430" y="282" width="6" height="56" rx="3" fill="#ef4444"/>
+    <text x="452" y="306" font-size="14" font-weight="600" fill="#1f2d3d">用例 #3 · carol</text>
+    <text x="452" y="326" font-size="12" fill="#ef4444">权限不足 ✗</text>
+  </g>
+
+  <!-- 底部 -->
+  <rect x="48" y="398" width="622" height="34" rx="10" fill="#e6f4f1"/>
+  <text x="68" y="420" font-size="13" fill="#3a8576">● 参数化 + 数据文件，一键批量执行，缺陷无处遁形</text>
+</svg>

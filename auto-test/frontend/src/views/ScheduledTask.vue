@@ -205,7 +205,7 @@ onMounted(async () => {
   align-items: center;
   font-weight: 700;
   font-size: 16px;
-  color: var(--sb-text);
+  color: var(--text);
 }
 .pagination-bar {
   display: flex;
@@ -214,19 +214,19 @@ onMounted(async () => {
 }
 :deep(.el-table .action-column),
 :deep(.el-table td.action-column) {
-  background: var(--sb-surface, #ffffff) !important;
+  background: var(--surface, #ffffff) !important;
   padding: 8px 0 !important;
   height: auto !important;
 }
 :deep(.el-table .el-table__fixed-right-wrapper) {
-  background: var(--sb-surface, #ffffff) !important;
+  background: var(--surface, #ffffff) !important;
 }
 :deep(.el-table .el-table__fixed-right::before) {
   display: none !important;
 }
 .form-hint {
   font-size: 12px;
-  color: var(--sb-text-mute);
+  color: var(--text-mute);
   margin-top: 4px;
 }
 </style>

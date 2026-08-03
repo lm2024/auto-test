@@ -13,16 +13,16 @@
   color-scheme: light;
 
   /* ── Brand · emerald（两态一致，唯一彩色事件）── */
-  --sb-green: #3ecf8e;          /* primary   */
-  --sb-green-deep: #24b47e;     /* pressed   */
-  --sb-green-soft: #4ade80;     /* chart / hover / gradient end */
+  --primary: #5db8a7;          /* primary   */
+  --primary-deep: #4a9e8e;     /* pressed   */
+  --primary-soft: #6dc4b4;     /* chart / hover / gradient end */
 
   /* ── Surfaces（亮色：近白）── */
-  --sb-bg: #f7f8fa;             /* 页面底 */
-  --sb-surface: #ffffff;        /* 卡片/侧栏/面板 */
-  --sb-surface-2: #f1f3f5;      /* 嵌套 chrome */
-  --sb-surface-3: #e9ebee;      /* 更深嵌套 */
-  --sb-overlay: #ffffff;
+  --bg: #f7f8fa;             /* 页面底 */
+  --surface: #232938;        /* 卡片/侧栏/面板 */
+  --surface-2: #f1f3f5;      /* 嵌套 chrome */
+  --surface-3: #e9ebee;      /* 更深嵌套 */
+  --sb-overlay: #232938;
 
   /* ── Hairlines（亮色：暗淡线）── */
   --sb-border: rgba(0, 0, 0, 0.10);
@@ -30,11 +30,11 @@
   --sb-border-subtle: rgba(0, 0, 0, 0.06);
 
   /* ── Text ladder（on-light）── */
-  --sb-text: #1c1c1c;           /* 主文本 */
-  --sb-text-secondary: #3f3f46; /* 次级 */
-  --sb-text-mute: #71717a;      /* 辅助 */
-  --sb-text-disabled: #a1a1aa;
-  --sb-text-on-green: #0a0a0a;  /* 绿底上的近黑字 */
+  --text: #e8edf3;           /* 主文本 */
+  --text-secondary: #b0b8c4; /* 次级 */
+  --text-mute: #71717a;      /* 辅助 */
+  --text-disabled: #a1a1aa;
+  --text-on-green: #232938;  /* 绿底上的近黑字 */
 
   /* ── Accent tints（emerald 语义化底色/边框）── */
   --sb-accent-bg: rgba(62, 207, 142, 0.06);
@@ -86,21 +86,21 @@
 html.dark {
   color-scheme: dark;
 
-  --sb-bg: #1c1c1c;             /* canvas-night · 页面底 */
-  --sb-surface: #202020;        /* canvas-night-soft · 侧栏/卡片 */
-  --sb-surface-2: #262626;      /* 嵌套 chrome */
-  --sb-surface-3: #2c2c2c;
+  --bg: #e8edf3;             /* canvas-night · 页面底 */
+  --surface: #202020;        /* canvas-night-soft · 侧栏/卡片 */
+  --surface-2: #262626;      /* 嵌套 chrome */
+  --surface-3: #2c2c2c;
   --sb-overlay: #262626;
 
   --sb-border: rgba(255, 255, 255, 0.08);
   --sb-border-strong: rgba(255, 255, 255, 0.14);
   --sb-border-subtle: rgba(255, 255, 255, 0.05);
 
-  --sb-text: #ededed;           /* on-dark · 主文本 */
-  --sb-text-secondary: #b2b2b2; /* ink-faint · 次级 */
-  --sb-text-mute: #8b8b8b;      /* ink-mute · 辅助 */
-  --sb-text-disabled: #6b6b6b;
-  --sb-text-on-green: #171717;  /* on-primary · 绿底上的近黑字 */
+  --text: #ededed;           /* on-dark · 主文本 */
+  --text-secondary: #b2b2b2; /* ink-faint · 次级 */
+  --text-mute: #8b8b8b;      /* ink-mute · 辅助 */
+  --text-disabled: #6b6b6b;
+  --text-on-green: #171717;  /* on-primary · 绿底上的近黑字 */
 
   --sb-accent-bg: rgba(62, 207, 142, 0.10);
   --sb-accent-bg-2: rgba(62, 207, 142, 0.16);

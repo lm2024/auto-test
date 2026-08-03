@@ -43,10 +43,10 @@ public class AutoTestApplication implements CommandLineRunner {
             SysUser admin = userMapper.selectByUsername("admin");
             if (admin != null) {
                 BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-                if (!encoder.matches("admin123", admin.getPassword())) {
+                if (!encoder.matches("Admin@123", admin.getPassword())) {
                     SysUser update = new SysUser();
                     update.setId(admin.getId());
-                    update.setPassword(encoder.encode("admin123"));
+                    update.setPassword(encoder.encode("Admin@123"));
                     userMapper.update(update);
                     log.info("Admin user password initialized");
                 }

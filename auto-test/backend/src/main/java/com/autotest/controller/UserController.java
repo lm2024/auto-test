@@ -2,7 +2,9 @@ package com.autotest.controller;
 
 import com.autotest.model.vo.Result;
 import com.autotest.model.vo.UserVO;
+import com.autotest.service.CaptchaService;
 import com.autotest.service.UserService;
+import com.autotest.util.PasswordValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,6 +16,9 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private CaptchaService captchaService;
 
     @PostMapping("/create")
     public Result<?> createUser(@RequestBody Map<String, Object> params) {
@@ -62,7 +67,19 @@ public class UserController {
     public Result<?> login(@RequestBody Map<String, String> params) {
         String username = params.get("username");
         String password = params.get("password");
+        String captcha = params.get("captcha");
+        String captchaToken = params.get("captchaToken");
+        if (!captchaService.validate(captchaToken, captcha)) {
+            return Result.error(400, "验证码错误或已过期，请重新输入");
+        }
         Map<String, Object> result = userService.login(username, password);
+        return Result.success(result);
+    }
+    
+    @PostMapping("/validate-password")
+    public Result<?> validatePassword(@RequestBody Map<String, String> params) {
+        String password = params.get("password");
+        PasswordValidator.PasswordStrengthResult result = PasswordValidator.validatePassword(password);
         return Result.success(result);
     }
 }

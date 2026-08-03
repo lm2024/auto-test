@@ -19,6 +19,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/**")
                 .excludePathPatterns(
                         "/api/user/login",
+                        "/api/captcha",
                         "/api/sso/login",
                         "/api/sso/callback",
                         "/api/sso/providers"

@@ -1,6 +1,6 @@
 // Playwright 配置文件
-// 说明：测试通过前端的 Vite 开发服务器（:3001）访问，
-// 前端已把 /api 代理到后端（:8080），因此这是真正的「前后端一体化」集成测试。
+// 说明：测试通过前端的 Vite 开发服务器（:9094）访问，
+// 前端已把 /api 代理到后端（:9093），因此这是真正的「前后端一体化」集成测试。
 import { defineConfig, devices } from '@playwright/test'
 
 export default defineConfig({
@@ -19,7 +19,7 @@ export default defineConfig({
     ['json', { outputFile: '/tmp/auto-test-e2e/report/results.json' }],
   ],
   use: {
-    baseURL: 'http://localhost:3001',
+    baseURL: 'http://localhost:9094',
     headless: true,
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',

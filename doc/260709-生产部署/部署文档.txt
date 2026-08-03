@@ -166,7 +166,7 @@ logging:
     - 地址: localhost:3306
     - 数据库名: auto_test
     - 用户名: root
-    - 密码: autotest123
+    - 密码: AutoTest2026Kp9&Xz*
 
 方案 B：已有一个 MySQL 服务器
 
@@ -253,7 +253,7 @@ logging:
 
       # 后端 API 代理
       location /api/ {
-          proxy_pass http://127.0.0.1:8080;
+          proxy_pass http://127.0.0.1:9093;
           proxy_set_header Host $host;
           proxy_set_header X-Real-IP $remote_addr;
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -262,7 +262,7 @@ logging:
 
       # WebSocket 代理（执行日志实时推送用）
       location /ws/ {
-          proxy_pass http://127.0.0.1:8080;
+          proxy_pass http://127.0.0.1:9093;
           proxy_http_version 1.1;
           proxy_set_header Upgrade $http_upgrade;
           proxy_set_header Connection "upgrade";
@@ -287,7 +287,7 @@ logging:
   nohup java -jar auto-test-backend-1.0.0.jar --spring.config.location=./application.yml > logs/app.log 2>&1 &
 
   # 检查是否启动成功:
-  curl http://127.0.0.1:8080/api/user/login
+  curl http://127.0.0.1:9093/api/user/login
 
 第 9 步：验证部署
 --------------------------------------------------------------------------------
@@ -369,7 +369,7 @@ A: 实际上非常简单：
 
 问题: 登录失败/API 报错
   推查: 后端是否启动？数据库是否通？
-  命令: curl http://127.0.0.1:8080/api/user/login
+  命令: curl http://127.0.0.1:9093/api/user/login
        tail -f /opt/autotest/backend/logs/app.log
 
 问题: 页面空白

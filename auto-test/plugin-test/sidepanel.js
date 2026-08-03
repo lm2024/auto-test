@@ -152,7 +152,7 @@
     el('settingsClose').addEventListener('click', function() { closeP('settings'); });
     el('settingsBtn').addEventListener('click', openSettings);
     el('goPlatformBtn').addEventListener('click', function() {
-      var url = (settings.frontendUrl || 'http://localhost:3001') + '/chain/list';
+      var url = (settings.frontendUrl || 'http://localhost:9094') + '/chain/list';
       window.open(url, '_blank');
     });
     el('saveSettingsBtn').addEventListener('click', saveSettings);
@@ -408,7 +408,7 @@
 
   // ========== Tab: 链路管理 ==========
   function loadChainList() {
-    var baseUrl = settings.platformUrl || 'http://localhost:8080';
+    var baseUrl = settings.platformUrl || 'http://localhost:9093';
     var search = el('chainSearch') ? el('chainSearch').value.trim() : '';
     var method = el('chainMethodFilter') ? el('chainMethodFilter').value : '';
     var url = baseUrl + '/api/plugin/chain/list?pageSize=100';
@@ -477,7 +477,7 @@
   }
 
   function loadChainVersions(chainCode) {
-    var baseUrl = settings.platformUrl || 'http://localhost:8080';
+    var baseUrl = settings.platformUrl || 'http://localhost:9093';
     var url = baseUrl + '/api/chain/versions?chainCode=' + encodeURIComponent(chainCode) + '&all=true';
     fetch(url).then(function(r) { return r.json(); }).then(function(d) {
       if (d.code === 200 && d.data && d.data.list) {
@@ -559,7 +559,7 @@
   // ========== 回放引擎 ==========
   function startReplay(mode) {
     if (!selectedChain) { alert('请先选择一个链路'); return; }
-    var baseUrl = settings.platformUrl || 'http://localhost:8080';
+    var baseUrl = settings.platformUrl || 'http://localhost:9093';
 
     // 加载链路详情
     fetch(baseUrl + '/api/plugin/chain/detail?chainCode=' + encodeURIComponent(selectedChain.chainCode))
@@ -688,7 +688,7 @@
   }
 
   function browserReplay(chain) {
-    var baseUrl = settings.platformUrl || 'http://localhost:8080';
+    var baseUrl = settings.platformUrl || 'http://localhost:9093';
     var url = baseUrl + '/api/plugin/chain/detail?chainCode=' + encodeURIComponent(chain.chainCode);
 
     fetch(url).then(function(r) { return r.json(); }).then(function(d) {
@@ -1077,7 +1077,7 @@
       }
 
       function pushGroup(ifList, chainName) {
-        var url = (settings.platformUrl || 'http://localhost:8080') + '/api/plugin/chain/' + (mode === 'create' ? 'create' : 'append');
+        var url = (settings.platformUrl || 'http://localhost:9093') + '/api/plugin/chain/' + (mode === 'create' ? 'create' : 'append');
         var body = mode === 'create'
           ? JSON.stringify({ chainName: chainName, interfaceList: ifList })
           : JSON.stringify({ chainCode: code, interfaceList: ifList });
@@ -1104,7 +1104,7 @@
           if (d.code === 200) {
             var chainCode = d.data.chainCode || code;
             el('pushDialog').classList.remove('open');
-            var platformUrl = (settings.frontendUrl || 'http://localhost:3001') + '/chain/edit/' + chainCode;
+            var platformUrl = (settings.frontendUrl || 'http://localhost:9094') + '/chain/edit/' + chainCode;
             if (confirm('推送成功！链路编码: ' + chainCode + '\n\n是否跳转到平台查看？')) {
               window.open(platformUrl, '_blank');
             }
@@ -1158,7 +1158,7 @@
               if (failed > 0) msg += '，失败 ' + failed + ' 条';
               msg += '\n链路编码: ' + allCodes.join(', ');
               if (confirm(msg + '\n\n是否跳转到平台查看？')) {
-                window.open((settings.frontendUrl || 'http://localhost:3001') + '/chain/list', '_blank');
+                window.open((settings.frontendUrl || 'http://localhost:9094') + '/chain/list', '_blank');
               }
             } else {
               alert('全部推送失败');

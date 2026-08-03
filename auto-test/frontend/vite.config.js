@@ -5,14 +5,14 @@ export default defineConfig({
   plugins: [vue()],
   server: {
     host: true,
-    port: 3001,
+    port: 9094,
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:9093',
         changeOrigin: true
       },
       '/ws': {
-        target: 'ws://localhost:8080',
+        target: 'ws://localhost:9093',
         ws: true
       }
     }

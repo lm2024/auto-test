@@ -1,0 +1,152 @@
+/**
+ * Element Plus · 舒适主题覆盖
+ * 基于新的设计令牌，提供视觉舒适的UI组件样式
+ */
+
+/* ════════════ 基础层：亮色 EP 变量 ════════════ */
+:root {
+  /* ── 主色 蓝绿色 ── */
+  --el-color-primary: #4a9e8e;
+  --el-color-primary-light-3: #5db8a7;
+  --el-color-primary-light-5: rgba(74, 158, 142, 0.6);
+  --el-color-primary-light-7: rgba(74, 158, 142, 0.35);
+  --el-color-primary-light-8: rgba(74, 158, 142, 0.22);
+  --el-color-primary-light-9: rgba(74, 158, 142, 0.12);
+  --el-color-primary-dark-2: #3a8576;
+
+  /* ── 表面 ── */
+  --el-bg-color: #ffffff;
+  --el-bg-color-page: #f8f9fa;
+  --el-bg-color-overlay: #ffffff;
+
+  /* ── 文字 ── */
+  --el-text-color-primary: #2c3e50;
+  --el-text-color-regular: #5a6c7d;
+  --el-text-color-secondary: #8494a7;
+  --el-text-color-placeholder: #b0bec5;
+  --el-text-color-disabled: #b0bec5;
+
+  /* ── 边框 ── */
+  --el-border-color: rgba(0, 0, 0, 0.08);
+  --el-border-color-light: rgba(0, 0, 0, 0.06);
+  --el-border-color-lighter: rgba(0, 0, 0, 0.04);
+  --el-border-color-extra-light: rgba(0, 0, 0, 0.03);
+  --el-border-color-dark: rgba(0, 0, 0, 0.12);
+  --el-border-color-darker: rgba(0, 0, 0, 0.16);
+
+  /* ── 填充 ── */
+  --el-fill-color: rgba(0, 0, 0, 0.04);
+  --el-fill-color-light: rgba(0, 0, 0, 0.03);
+  --el-fill-color-lighter: rgba(0, 0, 0, 0.02);
+  --el-fill-color-blank: #ffffff;
+  --el-fill-color-dark: rgba(0, 0, 0, 0.06);
+  --el-fill-color-darker: rgba(0, 0, 0, 0.08);
+
+  /* ── 圆角 ── */
+  --el-border-radius-base: 6px;
+  --el-border-radius-small: 4px;
+  --el-border-radius-round: 9999px;
+
+  /* ── 字体 ── */
+  --el-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --el-font-family-mono: ui-monospace, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+}
+
+/* ════════════ 暗色 EP 变量覆盖 ════════════ */
+html.dark {
+  /* ── 主色 蓝绿色（暗色模式）── */
+  --el-color-primary: #5db8a7;
+  --el-color-primary-light-3: #6dc4b4;
+  --el-color-primary-light-5: rgba(93, 184, 167, 0.6);
+  --el-color-primary-light-7: rgba(93, 184, 167, 0.35);
+  --el-color-primary-light-8: rgba(93, 184, 167, 0.22);
+  --el-color-primary-light-9: rgba(93, 184, 167, 0.12);
+  --el-color-primary-dark-2: #4a9e8e;
+
+  /* ── 表面 ── */
+  --el-bg-color: #232938;
+  --el-bg-color-page: #1a1f2e;
+  --el-bg-color-overlay: #2c3344;
+
+  /* ── 文字 ── */
+  --el-text-color-primary: #e8edf3;
+  --el-text-color-regular: #b0b8c4;
+  --el-text-color-secondary: #7d8694;
+  --el-text-color-placeholder: #565f6b;
+  --el-text-color-disabled: #565f6b;
+
+  /* ── 边框 ── */
+  --el-border-color: rgba(255, 255, 255, 0.06);
+  --el-border-color-light: rgba(255, 255, 255, 0.08);
+  --el-border-color-lighter: rgba(255, 255, 255, 0.05);
+  --el-border-color-extra-light: rgba(255, 255, 255, 0.03);
+  --el-border-color-dark: rgba(255, 255, 255, 0.1);
+  --el-border-color-darker: rgba(255, 255, 255, 0.14);
+
+  /* ── 填充 ── */
+  --el-fill-color: rgba(255, 255, 255, 0.06);
+  --el-fill-color-light: rgba(255, 255, 255, 0.05);
+  --el-fill-color-lighter: rgba(255, 255, 255, 0.03);
+  --el-fill-color-blank: #232938;
+  --el-fill-color-dark: rgba(255, 255, 255, 0.08);
+  --el-fill-color-darker: rgba(255, 255, 255, 0.1);
+
+  /* ── 圆角 ── */
+  --el-border-radius-base: 6px;
+  --el-border-radius-small: 4px;
+  --el-border-radius-round: 9999px;
+
+  /* ── 字体 ── */
+  --el-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --el-font-family-mono: ui-monospace, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+}
+
+/* ════════════ 全局基础 ════════════ */
+body {
+  background: var(--bg, #1a1f2e);
+  color: var(--text, #e8edf3);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 全局滚动条（主色点缀，双态通用） */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--accent-soft, rgba(74, 158, 142, 0.4));
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--accent-medium, rgba(74, 158, 142, 0.6)); }
+
+/* 链接：主色，hover 加深（双态通用） */
+.el-link {
+  --el-link-text-color: var(--primary, #4a9e8e);
+  --el-link-hover-text-color: var(--primary-light, #5db8a7);
+}
+
+/* 主按钮：主色填充 + 白色字（舒适配色） */
+.el-button--primary {
+  --el-button-text-color: var(--text-on-primary, #232938);
+  --el-button-hover-text-color: var(--text-on-primary, #232938);
+  --el-button-active-text-color: var(--text-on-primary, #232938);
+  --el-button-disabled-text-color: var(--text-on-primary, #232938);
+  font-weight: 500;
+}
+
+/* 表格：默认透明底融入页面，hover 用主色微染（双态通用） */
+.el-table,
+.el-table tr,
+.el-table th.el-table__cell {
+  background-color: transparent;
+}
+.el-table--enable-row-hover .el-table__body tr:hover > td.el-table__cell {
+  background-color: var(--accent-bg-2, rgba(74, 158, 142, 0.15));
+}
+
+/* 卡片：表面 + 1px hairline，圆角 12px（双态通用） */
+.el-card {
+  background-color: var(--surface, #232938);
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.08));
+  border-radius: var(--radius-lg, 12px);
+}

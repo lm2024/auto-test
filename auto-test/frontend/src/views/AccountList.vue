@@ -189,7 +189,7 @@ onMounted(loadAccounts)
   align-items: center;
   font-weight: 700;
   font-size: 16px;
-  color: var(--sb-text);
+  color: var(--text);
 }
 .filter-bar {
   display: flex;
@@ -224,16 +224,16 @@ onMounted(loadAccounts)
 }
 
 :deep(.el-table .el-table__fixed-right-patch) {
-  background: var(--sb-surface) !important;
+  background: var(--surface) !important;
 }
 
 :deep(.el-table .action-column) {
-  background: var(--sb-surface) !important;
+  background: var(--surface) !important;
   padding: 8px 0 !important;
 }
 
 :deep(.el-table td.action-column) {
-  background: var(--sb-surface) !important;
+  background: var(--surface) !important;
   padding: 8px 0 !important;
   height: auto !important;
 }

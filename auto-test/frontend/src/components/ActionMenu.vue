@@ -32,15 +32,15 @@ const onCommand = (command) => emit('command', command)
 <style scoped>
 /* 统一的「三个点」触发器：默认中性灰，hover 时点亮 emerald */
 .action-trigger {
-  color: var(--sb-text-mute);
+  color: var(--text-mute);
   border-color: var(--sb-border);
   background: transparent;
   transition: color .18s ease, border-color .18s ease, background-color .18s ease;
 }
 .action-trigger:hover,
 .action-trigger:focus {
-  color: var(--sb-green);
-  border-color: var(--sb-green);
+  color: var(--primary);
+  border-color: var(--primary);
   background: var(--sb-accent-bg);
 }
 

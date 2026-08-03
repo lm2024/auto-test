@@ -4,10 +4,10 @@
 --        原种子/历史链路的 system_category / func_category / category_id
 --        大量为 NULL，导致前端筛选恒为空。
 -- 使用：
---   1) 进入 MySQL 容器：  docker exec -i auto-test-mysql mysql -uroot -pautotest123 auto_test
+--   1) 进入 MySQL 容器：  docker exec -i auto-test-mysql mysql -uroot -pAutoTest2026Kp9&Xz* auto_test
 --   2) 执行本文件：        source /path/to/backfill_chain_categories.sql;
 --   或直接：
---   docker exec -i auto-test-mysql mysql -uroot -pautotest123 auto_test < backfill_chain_categories.sql
+--   docker exec -i auto-test-mysql mysql -uroot -pAutoTest2026Kp9&Xz* auto_test < backfill_chain_categories.sql
 -- 说明：
 --   - system_category / func_category 轮询取自 dict_category 中已存在的合法编码
 --   - category_id 轮询取自 sys_category 的 1~13 号节点

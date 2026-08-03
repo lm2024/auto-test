@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>登录页 redesign · 可视化预览</title>
+<style>
+  :root{
+    --bg:#f8f9fa; --surface:#ffffff; --text:#2c3e50; --text-mute:#8494a7;
+    --border-strong:rgba(0,0,0,.12); --primary:#4a9e8e; --primary-light:#5db8a7;
+    --radius-lg:12px;
+  }
+  html.dark{
+    --bg:#1a1f2e; --surface:#232938; --text:#e8edf3; --text-mute:#7d8694;
+    --border-strong:rgba(255,255,255,.1);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+       background:var(--bg);color:var(--text);height:100vh;overflow:hidden}
+  .login-container{display:flex;height:100vh;overflow:hidden}
+
+  /* 左侧 */
+  .login-left{flex:1;position:relative;display:flex;align-items:center;justify-content:center;
+    color:#fff;background:linear-gradient(135deg,#1f2d3d 0%,#2c3e50 55%,#1a3a34 100%);overflow:hidden}
+  .left-inner{position:relative;z-index:2;width:100%;max-width:560px;padding:0 48px;
+    animation:fadeUp .8s cubic-bezier(.22,1,.36,1) both}
+  .brand{display:flex;align-items:center;gap:16px;margin-bottom:36px}
+  .brand .mark{width:56px;height:56px;border-radius:16px;
+    background:linear-gradient(135deg,#4a9e8e,#3a8576);box-shadow:0 8px 24px rgba(74,158,142,.4);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;
+    font-size:22px;letter-spacing:.5px;animation:floaty 4s ease-in-out infinite}
+  .brand-text h1{font-size:30px;font-weight:700;letter-spacing:-.5px;margin-bottom:4px}
+  .brand-text p{font-size:14px;color:rgba(255,255,255,.6);letter-spacing:.5px}
+  .showcase{margin-bottom:28px}
+  .showcase-frame{position:relative;border-radius:var(--radius-lg);overflow:hidden;
+    box-shadow:0 20px 50px rgba(0,0,0,.35);background:#0f1729;aspect-ratio:720/460}
+  .showcase-img{width:100%;height:100%;object-fit:cover;display:block}
+  .showcase-tag{position:absolute;top:14px;right:14px;background:rgba(74,158,142,.92);color:#fff;
+    font-size:12px;font-weight:600;padding:4px 12px;border-radius:999px;backdrop-filter:blur(4px)}
+  .showcase-caption{margin-top:18px;min-height:64px;transition:.5s}
+  .showcase-caption h3{font-size:19px;font-weight:700;margin-bottom:6px;color:#fff}
+  .showcase-caption p{font-size:14px;line-height:1.6;color:rgba(255,255,255,.7)}
+  .dots{display:flex;gap:8px;margin-top:16px}
+  .dot{width:26px;height:5px;border:none;border-radius:999px;background:rgba(255,255,255,.25);
+    cursor:pointer;padding:0;transition:.3s}
+  .dot.active{width:40px;background:var(--primary-light)}
+  .left-foot{font-size:13px;color:rgba(255,255,255,.45);letter-spacing:.5px}
+  .blob{position:absolute;border-radius:50%;filter:blur(60px);opacity:.5;z-index:1}
+  .blob-1{width:320px;height:320px;background:#4a9e8e;top:-80px;left:-60px;animation:drift1 14s ease-in-out infinite}
+  .blob-2{width:260px;height:260px;background:#2c7a6b;bottom:-60px;right:10%;animation:drift2 18s ease-in-out infinite}
+  .blob-3{width:200px;height:200px;background:#3a8576;top:40%;right:-40px;animation:drift1 20s ease-in-out infinite reverse}
+
+  /* 右侧 */
+  .login-right{width:480px;display:flex;align-items:center;justify-content:center;
+    background:var(--surface);position:relative}
+  .login-right::before{content:'';position:absolute;left:0;top:0;bottom:0;width:80px;
+    background:linear-gradient(90deg,rgba(31,45,61,.06),transparent);pointer-events:none}
+  .login-card{width:360px;padding:8px 4px;position:relative;
+    animation:fadeUp .9s cubic-bezier(.22,1,.36,1) .1s both}
+  .login-card h2{font-size:26px;font-weight:700;color:var(--text);margin-bottom:28px;
+    text-align:center;letter-spacing:-.3px}
+  .field{margin-bottom:18px}
+  .field input{width:100%;height:46px;padding:0 14px;font-size:15px;border-radius:8px;
+    border:1px solid var(--border-strong);background:var(--bg);color:var(--text);outline:none;
+    transition:.2s}
+  .field input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(74,158,142,.18)}
+  .captcha-row{display:flex;gap:12px}
+  .captcha-row .field{flex:1;margin-bottom:0}
+  .captcha-box{position:relative;width:124px;height:46px;border-radius:8px;overflow:hidden;
+    cursor:pointer;border:1px solid var(--border-strong);background:var(--bg);flex-shrink:0;
+    transition:transform .2s}
+  .captcha-box:hover{transform:scale(1.03)}
+  .captcha-box canvas{width:100%;height:100%;display:block}
+  .captcha-ring{position:absolute;top:3px;right:3px;width:20px;height:20px;transform:rotate(-90deg);pointer-events:none}
+  .ring-bg{fill:none;stroke:rgba(0,0,0,.08);stroke-width:3}
+  html.dark .ring-bg{stroke:rgba(255,255,255,.12)}
+  .ring-fg{fill:none;stroke:var(--primary);stroke-width:3;stroke-linecap:round;transition:stroke-dashoffset 1s linear}
+  .captcha-count{position:absolute;top:5px;right:5px;width:16px;height:16px;display:flex;
+    align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--primary);pointer-events:none}
+  .login-btn{width:100%;height:46px;font-size:15px;font-weight:600;border-radius:8px;
+    letter-spacing:2px;border:none;color:#fff;cursor:pointer;margin-top:6px;
+    background:linear-gradient(135deg,#4a9e8e,#3a8576);box-shadow:0 8px 20px rgba(74,158,142,.3);
+    transition:transform .2s,box-shadow .2s}
+  .login-btn:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(74,158,142,.42)}
+  .login-hint{text-align:center;margin-top:18px;color:var(--text-mute);font-size:13px}
+
+  /* 成功动效 */
+  .success-mask{position:absolute;inset:0;z-index:5;background:var(--surface);border-radius:16px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+    animation:fadeUp .3s ease both}
+  .success-mask p{color:var(--primary);font-weight:600}
+  .check{width:64px;height:64px}
+  .check-circle{stroke:var(--primary);stroke-width:3;stroke-dasharray:151;stroke-dashoffset:151;animation:drawCircle .5s ease forwards}
+  .check-path{stroke:var(--primary);stroke-width:4;stroke-linecap:round;stroke-linejoin:round;
+    stroke-dasharray:48;stroke-dashoffset:48;animation:drawCheck .4s .45s ease forwards}
+
+  .theme-toggle{position:absolute;top:18px;right:18px;z-index:20;width:40px;height:40px;border-radius:50%;
+    border:1px solid var(--border-strong);background:var(--surface);color:var(--text);cursor:pointer;font-size:18px}
+  .note{position:absolute;bottom:14px;left:0;right:0;text-align:center;color:var(--text-mute);
+    font-size:12px;z-index:20}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+  @keyframes drift1{0%,100%{transform:translate(0,0)}50%{transform:translate(40px,30px)}}
+  @keyframes drift2{0%,100%{transform:translate(0,0)}50%{transform:translate(-30px,-40px)}}
+  @keyframes drawCircle{to{stroke-dashoffset:0}}
+  @keyframes drawCheck{to{stroke-dashoffset:0}}
+  .kb-fade{animation:kb 8s ease both}
+  @keyframes kb{from{transform:scale(1.08);opacity:.85}to{transform:scale(1);opacity:1}}
+
+  @media(max-width:880px){.login-left{display:none}.login-right{width:100%}}
+</style>
+</head>
+<body>
+<div class="login-container">
+  <button class="theme-toggle" id="themeBtn" title="切换暗色/亮色">🌙</button>
+
+  <!-- 左侧：品牌 + 图解轮播 -->
+  <div class="login-left">
+    <span class="blob blob-1"></span><span class="blob blob-2"></span><span class="blob blob-3"></span>
+    <div class="left-inner">
+      <div class="brand">
+        <div class="mark">AT</div>
+        <div class="brand-text">
+          <h1>接口测试平台</h1>
+          <p>API Automation Test Platform</p>
+        </div>
+      </div>
+      <div class="showcase" id="showcase">
+        <div class="showcase-frame">
+          <img class="showcase-img kb-fade" id="bannerImg" src="/login-banners/banner-pipeline.svg" alt="图解" />
+          <span class="showcase-tag" id="bannerTag">核心能力</span>
+        </div>
+        <div class="showcase-caption">
+          <h3 id="bannerTitle">自动化测试流水线</h3>
+          <p id="bannerDesc">从用例编写、调度执行、断言校验到报告分析，一键跑通质量闭环。</p>
+        </div>
+        <div class="dots" id="dots"></div>
+      </div>
+      <p class="left-foot">让每一次接口变更，都被自动化守护 ✦</p>
+    </div>
+  </div>
+
+  <!-- 右侧：登录卡片 -->
+  <div class="login-right">
+    <div class="login-card" id="card">
+      <div class="success-mask" id="successMask" style="display:none">
+        <svg class="check" viewBox="0 0 52 52">
+          <circle class="check-circle" cx="26" cy="26" r="24" fill="none"/>
+          <path class="check-path" fill="none" d="M14 27 l8 8 l16 -18"/>
+        </svg>
+        <p>登录成功，正在进入…</p>
+      </div>
+
+      <h2>欢迎登录</h2>
+      <div class="field"><input id="user" placeholder="用户名" value="admin" /></div>
+      <div class="field"><input id="pwd" type="password" placeholder="密码" value="Admin@123" /></div>
+      <div class="field captcha-row">
+        <input id="cap" placeholder="请输入验证码" maxlength="4" style="text-transform:uppercase" />
+        <div class="captcha-box" id="capBox" title="点击刷新验证码">
+          <canvas id="capCanvas" width="124" height="46"></canvas>
+          <svg class="captcha-ring" viewBox="0 0 44 44">
+            <circle class="ring-bg" cx="22" cy="22" r="20"/>
+            <circle class="ring-fg" id="ringFg" cx="22" cy="22" r="20"/>
+          </svg>
+          <span class="captcha-count" id="capCount">60</span>
+        </div>
+      </div>
+      <button class="login-btn" id="loginBtn">登 录</button>
+      <div class="login-hint">默认账号: admin / Admin@123</div>
+    </div>
+    <div class="note">可视化预览 · 真实图解 + 验证码倒计时/刷新动效（后端连通后即为真实接口）</div>
+  </div>
+</div>
+
+<script>
+/* ── 图解轮播 ── */
+const banners = [
+  {src:'/login-banners/banner-pipeline.svg',tag:'核心能力',title:'自动化测试流水线',desc:'从用例编写、调度执行、断言校验到报告分析，一键跑通质量闭环。'},
+  {src:'/login-banners/banner-flow.svg',tag:'可视化',title:'拖拽式流程编排',desc:'像搭积木一样把 HTTP、数据库、断言等节点组合成测试链路。'},
+  {src:'/login-banners/banner-data.svg',tag:'数据驱动',title:'一份数据，多组场景',desc:'参数化 + 数据文件，批量执行，让边界与异常场景覆盖更全面。'},
+  {src:'/login-banners/banner-ai.svg',tag:'AI 加持',title:'AI 智能生成用例',desc:'用自然语言描述需求，AI 自动生成测试用例与断言，效率提升 10 倍。'},
+  {src:'/login-banners/banner-start.svg',tag:'新手引导',title:'三步即可上手',desc:'创建链路 → 编排节点 → 一键执行，零代码也能做接口自动化。'}
+];
+let cur=0, timer=null;
+const img=document.getElementById('bannerImg'), tag=document.getElementById('bannerTag'),
+      title=document.getElementById('bannerTitle'), desc=document.getElementById('bannerDesc'),
+      dotsEl=document.getElementById('dots');
+banners.forEach((b,i)=>{const d=document.createElement('button');d.className='dot'+(i===0?' active':'');
+  d.onclick=()=>go(i);dotsEl.appendChild(d);});
+function render(){const b=banners[cur];
+  img.src=b.src;img.classList.remove('kb-fade');void img.offsetWidth;img.classList.add('kb-fade');
+  tag.textContent=b.tag;title.textContent=b.title;desc.textContent=b.desc;
+  [...dotsEl.children].forEach((d,i)=>d.classList.toggle('active',i===cur));}
+function go(i){cur=i;render();restart();}
+function restart(){clearInterval(timer);timer=setInterval(()=>{cur=(cur+1)%banners.length;render();},5000);}
+document.getElementById('showcase').onmouseenter=()=>clearInterval(timer);
+document.getElementById('showcase').onmouseleave=restart;
+render();restart();
+
+/* ── 验证码：canvas 生成 + 倒计时环 + 过期自动刷新 ── */
+const cv=document.getElementById('capCanvas'),cx=cv.getContext('2d');
+const CHARS='ABCDEFGHJKMNPQRSTUVWXYZ23456789';let code='';
+function drawCap(){code='';cx.fillStyle='#f3f7fa';cx.fillRect(0,0,124,46);
+  for(let i=0;i<5;i++){cx.strokeStyle=`rgb(${Math.random()*150|0},${Math.random()*150|0},${Math.random()*150|0})`;
+    cx.beginPath();cx.moveTo(Math.random()*124,Math.random()*46);cx.lineTo(Math.random()*124,Math.random()*46);cx.stroke();}
+  cx.font='bold 28px Consolas';const step=124/5;
+  for(let i=0;i<4;i++){const a=Math.random()*34-17,x=step*(i+1),y=23+(Math.random()*6-3);
+    cx.save();cx.translate(x,y);cx.rotate(a*Math.PI/180);cx.fillStyle='rgb(40,130,116)';
+    const ch=CHARS[Math.random()*CHARS.length|0];code+=ch;cx.fillText(ch,-8,10);cx.restore();}}
+drawCap();
+const ringCirc=2*Math.PI*20;const ringFg=document.getElementById('ringFg');ringFg.setAttribute('stroke-dasharray',ringCirc);
+let expire=60,count=60,ct=null;
+function startCount(){clearInterval(ct);count=expire;updateRing();
+  ct=setInterval(()=>{count--;updateRing();if(count<=0)drawCap();},1000);}
+function updateRing(){document.getElementById('capCount').textContent=count;
+  ringFg.setAttribute('stroke-dashoffset',ringCirc*(1-count/expire));}
+document.getElementById('capBox').onclick=()=>{drawCap();startCount();};
+startCount();
+
+/* ── 登录成功动效（仅演示）── */
+document.getElementById('loginBtn').onclick=()=>{
+  if((document.getElementById('cap').value||'').toUpperCase()!==code){alert('验证码错误（预览环境，正确码为：'+code+'）');drawCap();startCount();document.getElementById('cap').value='';return;}
+  document.getElementById('successMask').style.display='flex';
+  setTimeout(()=>{document.getElementById('successMask').style.display='none';},1600);
+};
+
+/* ── 暗色/亮色切换 ── */
+const btn=document.getElementById('themeBtn');
+btn.onclick=()=>{document.documentElement.classList.toggle('dark');
+  btn.textContent=document.documentElement.classList.contains('dark')?'☀️':'🌙';};
+</script>
+</body>
+</html>

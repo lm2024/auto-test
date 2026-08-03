@@ -197,7 +197,7 @@ onMounted(loadTree)
   align-items: center;
   font-weight: 700;
   font-size: 16px;
-  color: var(--sb-text);
+  color: var(--text);
 }
 
 .category-layout {
@@ -237,6 +237,6 @@ onMounted(loadTree)
 .chain-header h4 {
   font-size: 15px;
   font-weight: 600;
-  color: var(--sb-text);
+  color: var(--text);
 }
 </style>

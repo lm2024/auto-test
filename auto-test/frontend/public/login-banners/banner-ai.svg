@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 460" font-family="'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <linearGradient id="bg4" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7fafc"/>
+      <stop offset="1" stop-color="#eef4f3"/>
+    </linearGradient>
+    <linearGradient id="teal4" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#3a8576"/>
+      <stop offset="1" stop-color="#4a9e8e"/>
+    </linearGradient>
+    <radialGradient id="aiGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#4a9e8e" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="#4a9e8e" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="sh4" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#1f2d3d" flood-opacity="0.14"/>
+    </filter>
+  </defs>
+
+  <rect x="0" y="0" width="720" height="460" rx="22" fill="url(#bg4)"/>
+  <circle cx="44" cy="46" r="11" fill="url(#teal4)"/>
+  <text x="64" y="52" font-size="20" font-weight="700" fill="#1f2d3d">AI 智能生成用例</text>
+  <text x="64" y="74" font-size="13" fill="#64748b">说一句话，AI 帮你把需求变成测试用例</text>
+
+  <!-- 左侧对话气泡 -->
+  <g filter="url(#sh4)">
+    <rect x="48" y="150" width="250" height="90" rx="16" fill="#ffffff" stroke="#e2e8f0"/>
+    <path d="M70 240 L70 262 L96 240 Z" fill="#ffffff" stroke="#e2e8f0"/>
+    <text x="68" y="184" font-size="14" font-weight="600" fill="#1f2d3d">你：</text>
+    <text x="68" y="208" font-size="13" fill="#475569">帮我测一下登录接口，</text>
+    <text x="68" y="228" font-size="13" fill="#475569">覆盖正确与错误密码。</text>
+  </g>
+
+  <!-- 中央 AI 光环 -->
+  <circle cx="360" cy="225" r="80" fill="url(#aiGlow)"/>
+  <g filter="url(#sh4)">
+    <circle cx="360" cy="225" r="46" fill="#0f1729"/>
+    <circle cx="345" cy="218" r="7" fill="#4a9e8e"/>
+    <circle cx="375" cy="218" r="7" fill="#4a9e8e"/>
+    <rect x="344" y="236" width="32" height="6" rx="3" fill="#334155"/>
+    <path d="M360 175 L360 179 M360 271 L360 267 M310 225 L314 225 M406 225 L402 225" stroke="#4a9e8e" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <!-- 火花 -->
+  <g fill="#f59e0b">
+    <path d="M360 150 l3 8 l8 3 l-8 3 l-3 8 l-3 -8 l-8 -3 l8 -3 Z"/>
+    <path d="M420 200 l2 5 l5 2 l-5 2 l-2 5 l-2 -5 l-5 -2 l5 -2 Z"/>
+  </g>
+
+  <!-- 右侧生成的用例 -->
+  <g filter="url(#sh4)">
+    <rect x="452" y="120" width="220" height="46" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+    <rect x="452" y="120" width="6" height="46" rx="3" fill="#4a9e8e"/>
+    <text x="472" y="148" font-size="13" font-weight="600" fill="#1f2d3d">TC-01 正常登录</text>
+  </g>
+  <g filter="url(#sh4)">
+    <rect x="452" y="178" width="220" height="46" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+    <rect x="452" y="178" width="6" height="46" rx="3" fill="#4a9e8e"/>
+    <text x="472" y="206" font-size="13" font-weight="600" fill="#1f2d3d">TC-02 错误密码</text>
+  </g>
+  <g filter="url(#sh4)">
+    <rect x="452" y="236" width="220" height="46" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+    <rect x="452" y="236" width="6" height="46" rx="3" fill="#4a9e8e"/>
+    <text x="472" y="264" font-size="13" font-weight="600" fill="#1f2d3d">TC-03 空密码校验</text>
+  </g>
+  <g filter="url(#sh4)">
+    <rect x="452" y="294" width="220" height="46" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+    <rect x="452" y="294" width="6" height="46" rx="3" fill="#4a9e8e"/>
+    <text x="472" y="322" font-size="13" font-weight="600" fill="#1f2d3d">TC-04 锁定策略</text>
+  </g>
+
+  <rect x="48" y="398" width="622" height="34" rx="10" fill="#e6f4f1"/>
+  <text x="68" y="420" font-size="13" fill="#3a8576">● 结合接口文档自动生成断言，测试效率提升 10 倍</text>
+</svg>

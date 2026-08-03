@@ -5,7 +5,7 @@
 import { chromium } from '@playwright/test'
 import { mkdirSync } from 'fs'
 
-const BASE_URL = 'http://localhost:3001'
+const BASE_URL = 'http://localhost:9094'
 const AUTH_DIR = new URL('./.auth', import.meta.url).pathname
 const AUTH_FILE = new URL('./.auth/user.json', import.meta.url).pathname
 

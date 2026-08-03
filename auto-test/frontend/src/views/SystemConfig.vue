@@ -118,7 +118,7 @@ const saveConfig = async () => {
 :deep(.el-card__header .el-card__body > p) {
   font-size: 18px;
   font-weight: 700;
-  color: var(--sb-text);
+  color: var(--text);
   margin: 0;
 }
 
@@ -130,7 +130,7 @@ const saveConfig = async () => {
 :deep(.el-divider__text) {
   font-weight: 600;
   font-size: 15px;
-  color: var(--sb-green-deep);
+  color: var(--primary-deep);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -138,7 +138,7 @@ const saveConfig = async () => {
 
 :deep(.el-form-item__label) {
   font-weight: 500;
-  color: var(--sb-green-deep);
+  color: var(--primary-deep);
   font-size: 14px;
 }
 
@@ -146,7 +146,7 @@ const saveConfig = async () => {
 :deep(.el-select .el-input__wrapper),
 :deep(.el-input-number) {
   border-radius: 10px;
-  background: var(--sb-surface);
+  background: var(--surface);
   border: 1px solid var(--sb-border-strong);
   box-shadow: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -160,12 +160,12 @@ const saveConfig = async () => {
 
 :deep(.el-input__wrapper.is-focus) {
   box-shadow: 0 0 0 2px rgba(62, 207, 142, 0.15);
-  border-color: var(--sb-green);
+  border-color: var(--primary);
 }
 
 /* ── Buttons ── */
 :deep(.el-button--primary) {
-  background: linear-gradient(135deg, var(--sb-green), var(--sb-green-soft));
+  background: linear-gradient(135deg, var(--primary), var(--primary-soft));
   border: none;
   border-radius: 10px;
   font-weight: 600;

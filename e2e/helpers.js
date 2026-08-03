@@ -3,7 +3,7 @@
 // 用来在测试前准备数据（比如先造一条链路），属于「接口层」的辅助。
 import { request } from '@playwright/test'
 
-export const BASE_API = 'http://localhost:8080'
+export const BASE_API = 'http://localhost:9093'
 
 // 调登录接口拿 token（后端返回 {code:200, data:{token}}）
 export async function apiLogin(username = 'admin', password = 'admin123') {

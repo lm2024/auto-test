@@ -12,22 +12,22 @@
 /* ════════════ 基础层：亮色 EP 变量 ════════════ */
 :root {
   /* ── 主色 emerald ── */
-  --el-color-primary: #3ecf8e;
-  --el-color-primary-light-3: #4ade80;
+  --el-color-primary: #5db8a7;
+  --el-color-primary-light-3: #6dc4b4;
   --el-color-primary-light-5: rgba(62, 207, 142, 0.6);
   --el-color-primary-light-7: rgba(62, 207, 142, 0.35);
   --el-color-primary-light-8: rgba(62, 207, 142, 0.22);
   --el-color-primary-light-9: rgba(62, 207, 142, 0.12);
-  --el-color-primary-dark-2: #24b47e;
+  --el-color-primary-dark-2: #4a9e8e;
 
   /* ── 表面 ── */
-  --el-bg-color: #ffffff;
+  --el-bg-color: #232938;
   --el-bg-color-page: #f7f8fa;
-  --el-bg-color-overlay: #ffffff;
+  --el-bg-color-overlay: #232938;
 
   /* ── 文字 ── */
-  --el-text-color-primary: #1c1c1c;
-  --el-text-color-regular: #3f3f46;
+  --el-text-color-primary: #e8edf3;
+  --el-text-color-regular: #b0b8c4;
   --el-text-color-secondary: #71717a;
   --el-text-color-placeholder: #a1a1aa;
   --el-text-color-disabled: #a1a1aa;
@@ -44,7 +44,7 @@
   --el-fill-color: rgba(0, 0, 0, 0.04);
   --el-fill-color-light: rgba(0, 0, 0, 0.03);
   --el-fill-color-lighter: rgba(0, 0, 0, 0.02);
-  --el-fill-color-blank: #ffffff;
+  --el-fill-color-blank: #232938;
   --el-fill-color-dark: rgba(0, 0, 0, 0.08);
   --el-fill-color-darker: rgba(0, 0, 0, 0.12);
 
@@ -60,16 +60,16 @@
 
 /* ════════════ 暗色 EP 变量覆盖 ════════════ */
 html.dark {
-  --el-color-primary: #3ecf8e;
-  --el-color-primary-light-3: #4ade80;
+  --el-color-primary: #5db8a7;
+  --el-color-primary-light-3: #6dc4b4;
   --el-color-primary-light-5: rgba(62, 207, 142, 0.6);
   --el-color-primary-light-7: rgba(62, 207, 142, 0.35);
   --el-color-primary-light-8: rgba(62, 207, 142, 0.22);
   --el-color-primary-light-9: rgba(62, 207, 142, 0.12);
-  --el-color-primary-dark-2: #24b47e;
+  --el-color-primary-dark-2: #4a9e8e;
 
   --el-bg-color: #202020;
-  --el-bg-color-page: #1c1c1c;
+  --el-bg-color-page: #e8edf3;
   --el-bg-color-overlay: #262626;
 
   --el-text-color-primary: #ededed;
@@ -102,8 +102,8 @@ html.dark {
 
 /* ════════════ 全局基础 ════════════ */
 body {
-  background: var(--sb-bg, #f7f8fa);
-  color: var(--sb-text, #1c1c1c);
+  background: var(--bg, #f7f8fa);
+  color: var(--text, #e8edf3);
   font-family: var(--sb-font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -120,16 +120,16 @@ body {
 
 /* 链接：emerald，hover 加深（双态通用） */
 .el-link {
-  --el-link-text-color: var(--sb-green, #3ecf8e);
-  --el-link-hover-text-color: var(--sb-green-soft, #4ade80);
+  --el-link-text-color: var(--primary, #5db8a7);
+  --el-link-hover-text-color: var(--primary-soft, #6dc4b4);
 }
 
 /* 主按钮：emerald 填充 + 近黑字（Supabase 签名） */
 .el-button--primary {
-  --el-button-text-color: var(--sb-text-on-green, #0a0a0a);
-  --el-button-hover-text-color: var(--sb-text-on-green, #0a0a0a);
-  --el-button-active-text-color: var(--sb-text-on-green, #0a0a0a);
-  --el-button-disabled-text-color: var(--sb-text-on-green, #0a0a0a);
+  --el-button-text-color: var(--text-on-green, #232938);
+  --el-button-hover-text-color: var(--text-on-green, #232938);
+  --el-button-active-text-color: var(--text-on-green, #232938);
+  --el-button-disabled-text-color: var(--text-on-green, #232938);
   font-weight: 500;
 }
 
@@ -145,7 +145,7 @@ body {
 
 /* 卡片：表面 + 1px hairline，圆角 12px（双态通用） */
 .el-card {
-  background-color: var(--sb-surface, #ffffff);
+  background-color: var(--surface, #232938);
   border: 1px solid var(--sb-border, rgba(0, 0, 0, 0.10));
   border-radius: var(--sb-radius-lg, 12px);
 }

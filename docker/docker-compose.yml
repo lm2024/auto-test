@@ -6,7 +6,7 @@ services:
     ports:
       - "3306:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: autotest123
+      MYSQL_ROOT_PASSWORD: "AutoTest2026Kp9&Xz*"
       MYSQL_DATABASE: auto_test
       MYSQL_CHARSET: utf8mb4
       TZ: Asia/Shanghai
