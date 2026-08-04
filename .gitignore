@@ -18,3 +18,5 @@ fix-codex-web-search.sh
 *.crx
 
 .workbuddy/
+
+.mimocode/.cron-lock
