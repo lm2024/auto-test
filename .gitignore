@@ -13,3 +13,8 @@ node_modules/
 fix-codex-web-search.sh
 **/dist/
 **/node_modules/
+*.pem
+
+*.crx
+
+.workbuddy/
