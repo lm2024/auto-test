@@ -1,160 +1,154 @@
 <template>
   <div>
-    <el-card>
+    <t-card>
       <template #header>
         <div class="card-header">
           <span>测试链路管理</span>
-          <el-button type="primary" @click="showCreateDialog">新增链路</el-button>
+          <t-button theme="primary" @click="showCreateDialog">新增链路</t-button>
         </div>
       </template>
 
       <div class="filter-bar">
-        <el-input v-model="filter.chainName" placeholder="链路名称" clearable style="width:180px" />
-        <el-select v-model="filter.executeMode" placeholder="执行模式" clearable style="width:130px;margin-left:10px">
-          <el-option label="全串行" :value="1" />
-          <el-option label="分组并行" :value="2" />
-        </el-select>
-        <el-select v-model="filter.priority" placeholder="优先级" clearable style="width:120px;margin-left:10px">
-          <el-option label="P0 核心回归" :value="0" />
-          <el-option label="P1 常规回归" :value="1" />
-          <el-option label="P2 低频验证" :value="2" />
-        </el-select>
-        <el-popover trigger="click" :width="320" placement="bottom">
-          <template #reference>
-            <el-button style="margin-left:10px">
-              <span v-if="selectedCategoryNames.length === 0">选择分类</span>
-              <span v-else>已选分类 {{ selectedCategoryNames.length }} 项</span>
-            </el-button>
+        <t-input v-model="filter.chainName" placeholder="链路名称" clearable style="width:180px" />
+        <t-select v-model="filter.executeMode" placeholder="执行模式" clearable style="width:130px;margin-left:10px">
+          <t-option label="全串行" :value="1" />
+          <t-option label="分组并行" :value="2" />
+        </t-select>
+        <t-select v-model="filter.priority" placeholder="优先级" clearable style="width:120px;margin-left:10px">
+          <t-option label="P0 核心回归" :value="0" />
+          <t-option label="P1 常规回归" :value="1" />
+          <t-option label="P2 低频验证" :value="2" />
+        </t-select>
+        <t-popup trigger="click" placement="bottom" :overlay-inner-style="{ width: '320px' }">
+          <t-button style="margin-left:10px">
+            <span v-if="selectedCategoryNames.length === 0">选择分类</span>
+            <span v-else>已选分类 {{ selectedCategoryNames.length }} 项</span>
+          </t-button>
+          <template #content>
+            <div class="cat-popover">
+              <div class="cat-popover-head">
+                <span class="cat-popover-title">选择分类（可多选）</span>
+                <t-button v-if="filter.categoryIds.length" variant="text" theme="primary" size="small" @click="clearCategoryFilter">清除</t-button>
+              </div>
+              <CategoryTree mode="select" multiple v-model="filter.categoryIds" />
+              <div v-if="selectedCategoryNames.length" class="cat-selected">
+                <t-tag v-for="name in selectedCategoryNames" :key="name" size="small" closable
+                  @close="removeCategoryByName(name)" class="cat-tag">{{ name }}</t-tag>
+              </div>
+            </div>
           </template>
-          <div class="cat-popover">
-            <div class="cat-popover-head">
-              <span class="cat-popover-title">选择分类（可多选）</span>
-              <el-button v-if="filter.categoryIds.length" link type="primary" size="small" @click="clearCategoryFilter">清除</el-button>
-            </div>
-            <CategoryTree mode="select" multiple v-model="filter.categoryIds" />
-            <div v-if="selectedCategoryNames.length" class="cat-selected">
-              <el-tag v-for="name in selectedCategoryNames" :key="name" size="small" closable
-                @close="removeCategoryByName(name)" class="cat-tag">{{ name }}</el-tag>
-            </div>
-          </div>
-        </el-popover>
-        <el-button type="primary" style="margin-left:10px" @click="loadChains">查询</el-button>
-        <el-button @click="resetFilter">重置</el-button>
+        </t-popup>
+        <t-button theme="primary" style="margin-left:10px" @click="loadChains">查询</t-button>
+        <t-button @click="resetFilter">重置</t-button>
       </div>
 
       <div v-if="selectedRows.length > 0" class="batch-bar">
         <span>已选 {{ selectedRows.length }} 条</span>
-        <el-button type="success" size="small" @click="batchExecute">批量执行</el-button>
-        <el-button type="danger" size="small" @click="batchDelete">批量删除</el-button>
-        <el-button size="small" @click="clearSelection">取消选择</el-button>
+        <t-button theme="success" size="small" @click="batchExecute">批量执行</t-button>
+        <t-button theme="danger" size="small" @click="batchDelete">批量删除</t-button>
+        <t-button size="small" @click="clearSelection">取消选择</t-button>
       </div>
 
-      <el-table :data="chains" border stripe style="margin-top:15px" @selection-change="handleSelectionChange" ref="tableRef">
-        <el-table-column type="selection" width="50" />
-        <el-table-column prop="chainCode" label="链路编码" width="200" />
-        <el-table-column prop="chainName" label="链路名称" width="200" />
-        <el-table-column label="执行模式" width="120">
-          <template #default="{ row }">
-            <el-tag :type="row.executeMode === 1 ? 'primary' : 'warning'">
-              {{ row.executeMode === 1 ? '全串行' : '分组并行' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="nodeCount" label="节点数" width="80" />
-        <el-table-column label="分类" min-width="180">
-          <template #default="{ row }">
-            <el-tag v-if="row.categoryId != null" size="small" class="cat-tag">{{ getCategoryPath(row.categoryId) }}</el-tag>
-            <span v-else class="muted-text">-</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="优先级" width="100">
-          <template #default="{ row }">
-            <el-tag v-if="row.priority === 0" type="danger" size="small">P0</el-tag>
-            <el-tag v-else-if="row.priority === 1" type="warning" size="small">P1</el-tag>
-            <el-tag v-else type="info" size="small">P2</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="创建时间" width="180">
-          <template #default="{ row }">
-            {{ formatTime(row.createTime) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="80" fixed="right" align="center" class-name="action-column">
-          <template #default="{ row }">
-            <ActionMenu
-              :items="[
-                { label: '编排', command: 'edit-flow', icon: Edit },
-                { label: '执行', command: 'execute', icon: VideoPlay, divided: true },
-                { label: '复制', command: 'copy', icon: CopyDocument },
-                { label: '编辑', command: 'edit', icon: Setting },
-                { label: '删除', command: 'delete', icon: Delete, divided: true, danger: true }
-              ]"
-              @command="(cmd) => onChainCommand(cmd, row)"
-            />
-          </template>
-        </el-table-column>
-      </el-table>
+      <t-table
+        :data="chains"
+        :columns="chainColumns"
+        row-key="chainCode"
+        bordered
+        stripe
+        style="margin-top:15px"
+        :selected-row-keys="selectedRowKeys"
+        @select-change="handleSelectionChange"
+      >
+        <template #executeMode="{ row }">
+          <t-tag :theme="row.executeMode === 1 ? 'primary' : 'warning'">
+            {{ row.executeMode === 1 ? '全串行' : '分组并行' }}
+          </t-tag>
+        </template>
+        <template #categoryId="{ row }">
+          <t-tag v-if="row.categoryId != null" size="small" class="cat-tag">{{ getCategoryPath(row.categoryId) }}</t-tag>
+          <span v-else class="muted-text">-</span>
+        </template>
+        <template #priority="{ row }">
+          <t-tag v-if="row.priority === 0" theme="danger" size="small">P0</t-tag>
+          <t-tag v-else-if="row.priority === 1" theme="warning" size="small">P1</t-tag>
+          <t-tag v-else theme="default" size="small">P2</t-tag>
+        </template>
+        <template #createTime="{ row }">
+          {{ formatTime(row.createTime) }}
+        </template>
+        <template #operate="{ row }">
+          <ActionMenu
+            :items="[
+              { label: '编排', command: 'edit-flow', icon: EditIcon },
+              { label: '执行', command: 'execute', icon: PlayCircleIcon, divided: true },
+              { label: '复制', command: 'copy', icon: FileCopyIcon },
+              { label: '编辑', command: 'edit', icon: SettingIcon },
+              { label: '删除', command: 'delete', icon: DeleteIcon, divided: true, danger: true }
+            ]"
+            @command="(cmd) => onChainCommand(cmd, row)"
+          />
+        </template>
+      </t-table>
 
       <div class="pagination-bar">
-        <el-pagination
-          v-model:current-page="pageNo"
-          v-model:page-size="pageSize"
-          :page-sizes="[10, 20, 50, 100]"
+        <t-pagination
+          :current="pageNo"
+          :page-size="pageSize"
+          :page-size-options="[10, 20, 50, 100]"
           :total="total"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="loadChains"
-          @current-change="loadChains"
+          show-jumper
+          @change="onPageChange"
         />
       </div>
-    </el-card>
+    </t-card>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
-      <el-form :model="form" label-width="100px">
-        <el-form-item label="链路名称">
-          <el-input v-model="form.chainName" />
-        </el-form-item>
-        <el-form-item label="执行模式">
-          <el-select v-model="form.executeMode">
-            <el-option label="全串行" :value="1" />
-            <el-option label="分组并行" :value="2" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="描述">
-          <el-input v-model="form.description" type="textarea" :rows="3" />
-        </el-form-item>
-        <el-form-item label="分类">
+    <t-dialog v-model:visible="dialogVisible" :header="dialogTitle" width="500px">
+      <t-form :data="form" label-width="100px">
+        <t-form-item label="链路名称" name="chainName">
+          <t-input v-model="form.chainName" />
+        </t-form-item>
+        <t-form-item label="执行模式" name="executeMode">
+          <t-select v-model="form.executeMode">
+            <t-option label="全串行" :value="1" />
+            <t-option label="分组并行" :value="2" />
+          </t-select>
+        </t-form-item>
+        <t-form-item label="描述" name="description">
+          <t-textarea v-model="form.description" :autosize="{ minRows: 3, maxRows: 3 }" />
+        </t-form-item>
+        <t-form-item label="分类" name="categoryId">
           <div class="cat-form-item">
-            <el-tag v-if="form.categoryId != null" size="small" class="cat-tag">
+            <t-tag v-if="form.categoryId != null" size="small" class="cat-tag">
               {{ categoryTreeMap[form.categoryId] || '已选择' }}
-            </el-tag>
+            </t-tag>
             <span v-else class="muted-text">未选择分类</span>
-            <el-button v-if="form.categoryId != null" link type="primary" size="small" @click="form.categoryId = null">清除</el-button>
+            <t-button v-if="form.categoryId != null" variant="text" theme="primary" size="small" @click="form.categoryId = null">清除</t-button>
           </div>
           <div class="cat-tree-box">
             <CategoryTree mode="select" :key="dialogVisible" v-model="form.categoryId" />
           </div>
-        </el-form-item>
-        <el-form-item label="优先级">
-          <el-select v-model="form.priority" clearable placeholder="选择优先级">
-            <el-option label="P0 核心回归" :value="0" />
-            <el-option label="P1 常规回归" :value="1" />
-            <el-option label="P2 低频验证" :value="2" />
-          </el-select>
-        </el-form-item>
-      </el-form>
+        </t-form-item>
+        <t-form-item label="优先级" name="priority">
+          <t-select v-model="form.priority" clearable placeholder="选择优先级">
+            <t-option label="P0 核心回归" :value="0" />
+            <t-option label="P1 常规回归" :value="1" />
+            <t-option label="P2 低频验证" :value="2" />
+          </t-select>
+        </t-form-item>
+      </t-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitForm">确定</el-button>
+        <t-button @click="dialogVisible = false">取消</t-button>
+        <t-button theme="primary" @click="submitForm">确定</t-button>
       </template>
-    </el-dialog>
+    </t-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Edit, VideoPlay, CopyDocument, Setting, Delete } from '@element-plus/icons-vue'
+import { MessagePlugin, DialogPlugin } from 'tdesign-vue-next'
+import { EditIcon, PlayCircleIcon, FileCopyIcon, SettingIcon, DeleteIcon } from 'tdesign-icons-vue-next'
 import api from '../api'
 import CategoryTree from '../components/CategoryTree.vue'
 import ActionMenu from '../components/ActionMenu.vue'
@@ -170,7 +164,19 @@ const dialogVisible = ref(false)
 const dialogTitle = ref('新增链路')
 const form = ref({ chainName: '', executeMode: 1, description: '', categoryId: null, priority: 2, isEdit: false })
 const selectedRows = ref([])
-const tableRef = ref(null)
+const selectedRowKeys = ref([])
+
+const chainColumns = [
+  { colKey: 'row-select', type: 'multiple', width: 50 },
+  { colKey: 'chainCode', title: '链路编码', width: 200 },
+  { colKey: 'chainName', title: '链路名称', width: 200 },
+  { colKey: 'executeMode', title: '执行模式', width: 120 },
+  { colKey: 'nodeCount', title: '节点数', width: 80 },
+  { colKey: 'categoryId', title: '分类', minWidth: 180 },
+  { colKey: 'priority', title: '优先级', width: 100 },
+  { colKey: 'createTime', title: '创建时间', width: 180 },
+  { colKey: 'operate', title: '操作', width: 80, fixed: 'right', align: 'center', className: 'action-column' }
+]
 const categoryTreeMap = ref({})      // id -> name
 const categoryPathMap = ref({})      // id -> "父 / 子"
 const loadCategoryTreeMap = async () => {
@@ -216,6 +222,12 @@ const loadChains = async () => {
   total.value = res.data?.total || 0
 }
 
+const onPageChange = (pageInfo) => {
+  pageNo.value = pageInfo.current
+  pageSize.value = pageInfo.pageSize
+  loadChains()
+}
+
 const resetFilter = () => {
   filter.value = { chainName: '', executeMode: null, priority: null, categoryIds: [] }
   pageNo.value = 1
@@ -241,15 +253,15 @@ const editChain = (row) => {
 
 const submitForm = async () => {
   if (!form.value.chainName) {
-    ElMessage.warning('请输入链路名称')
+    MessagePlugin.warning('请输入链路名称')
     return
   }
   if (form.value.isEdit) {
     await api.post('/chain/edit', form.value)
-    ElMessage.success('编辑成功')
+    MessagePlugin.success('编辑成功')
   } else {
     await api.post('/chain/create', form.value)
-    ElMessage.success('创建成功')
+    MessagePlugin.success('创建成功')
   }
   dialogVisible.value = false
   loadChains()
@@ -257,20 +269,29 @@ const submitForm = async () => {
 
 const copyChain = async (chainCode) => {
   await api.post('/chain/copy', { chainCode })
-  ElMessage.success('复制成功')
+  MessagePlugin.success('复制成功')
   loadChains()
 }
 
-const deleteChain = async (chainCode) => {
-  await ElMessageBox.confirm('确定删除该链路？关联节点将同步删除。', '提示', { type: 'warning' })
-  await api.post('/chain/delete', null, { params: { chainCode } })
-  ElMessage.success('删除成功')
-  loadChains()
+const deleteChain = (chainCode) => {
+  const dialog = DialogPlugin.confirm({
+    header: '提示',
+    body: '确定删除该链路？关联节点将同步删除。',
+    theme: 'warning',
+    confirmBtn: '确定',
+    cancelBtn: '取消',
+    onConfirm: async () => {
+      dialog.hide()
+      await api.post('/chain/delete', null, { params: { chainCode } })
+      MessagePlugin.success('删除成功')
+      loadChains()
+    }
+  })
 }
 
 const executeChain = async (chainCode) => {
   const res = await api.post('/execute/run', { chainCode })
-  ElMessage.success('执行已启动，执行ID: ' + res.data.executionId)
+  MessagePlugin.success('执行已启动，执行ID: ' + res.data.executionId)
 }
 
 const onChainCommand = (cmd, row) => {
@@ -283,22 +304,34 @@ const onChainCommand = (cmd, row) => {
   }
 }
 
-const handleSelectionChange = (rows) => {
-  selectedRows.value = rows
+const handleSelectionChange = (keys, ctx) => {
+  selectedRowKeys.value = keys
+  selectedRows.value = ctx?.selectedRowData || []
 }
 
 const clearSelection = () => {
-  tableRef.value?.clearSelection()
+  selectedRowKeys.value = []
+  selectedRows.value = []
 }
 
-const batchDelete = async () => {
+const batchDelete = () => {
   if (!selectedRows.value.length) return
-  await ElMessageBox.confirm(`确定删除选中的 ${selectedRows.value.length} 条链路？关联节点将同步删除。`, '批量删除', { type: 'warning' })
-  const chainCodes = selectedRows.value.map(r => r.chainCode)
-  const res = await api.post('/chain/batchDelete', { chainCodes })
-  ElMessage.success(`删除完成: 成功${res.data.successCount}条，失败${res.data.failCount}条`)
-  clearSelection()
-  loadChains()
+  const count = selectedRows.value.length
+  const dialog = DialogPlugin.confirm({
+    header: '批量删除',
+    body: `确定删除选中的 ${count} 条链路？关联节点将同步删除。`,
+    theme: 'warning',
+    confirmBtn: '确定',
+    cancelBtn: '取消',
+    onConfirm: async () => {
+      dialog.hide()
+      const chainCodes = selectedRows.value.map(r => r.chainCode)
+      const res = await api.post('/chain/batchDelete', { chainCodes })
+      MessagePlugin.success(`删除完成: 成功${res.data.successCount}条，失败${res.data.failCount}条`)
+      clearSelection()
+      loadChains()
+    }
+  })
 }
 
 const batchExecute = async () => {
@@ -309,9 +342,9 @@ const batchExecute = async () => {
   const submitted = results.filter(r => r.status === 'started').length
   const rejected = results.filter(r => r.status === 'failed').length
   if (rejected > 0) {
-    ElMessage.warning(`已提交 ${submitted} 条执行任务，${rejected} 条启动失败（链路不存在或无节点配置）`)
+    MessagePlugin.warning(`已提交 ${submitted} 条执行任务，${rejected} 条启动失败（链路不存在或无节点配置）`)
   } else {
-    ElMessage.success(`已提交 ${submitted} 条执行任务，最终结果请到「执行记录」中查看`)
+    MessagePlugin.success(`已提交 ${submitted} 条执行任务，最终结果请到「执行记录」中查看`)
   }
   clearSelection()
 }

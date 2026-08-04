@@ -1,108 +1,96 @@
 <template>
   <div>
-    <el-card>
+    <t-card>
       <template #header>
         <div class="card-header">
           <span>测试账号管理</span>
-          <el-button type="primary" @click="showCreateDialog">新增账号</el-button>
+          <t-button theme="primary" @click="showCreateDialog">新增账号</t-button>
         </div>
       </template>
 
       <div class="filter-bar">
-        <el-input v-model="filter.systemName" placeholder="所属系统" clearable style="width:200px" />
-        <el-select v-model="filter.status" placeholder="状态" clearable style="width:150px;margin-left:10px">
-          <el-option label="可用" :value="1" />
-          <el-option label="锁定" :value="2" />
-          <el-option label="禁用" :value="0" />
-        </el-select>
-        <el-button type="primary" style="margin-left:10px" @click="loadAccounts">查询</el-button>
-        <el-button @click="resetFilter">重置</el-button>
+        <t-input v-model="filter.systemName" placeholder="所属系统" clearable style="width:200px" />
+        <t-select v-model="filter.status" placeholder="状态" clearable style="width:150px;margin-left:10px">
+          <t-option label="可用" :value="1" />
+          <t-option label="锁定" :value="2" />
+          <t-option label="禁用" :value="0" />
+        </t-select>
+        <t-button theme="primary" style="margin-left:10px" @click="loadAccounts">查询</t-button>
+        <t-button @click="resetFilter">重置</t-button>
       </div>
 
-      <el-table :data="accounts" border stripe style="margin-top:15px">
-        <el-table-column prop="accountCode" label="账号编码" width="140" />
-        <el-table-column prop="accountName" label="显示名称" width="150" />
-        <el-table-column prop="systemName" label="所属系统" width="120" />
-        <el-table-column prop="username" label="用户名" width="120" />
-        <el-table-column label="密码" width="120">
-          <template #default="{ row }">
-            <span style="color:#999">••••••</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="authType" label="认证类型" width="100" />
-        <el-table-column label="状态" width="90">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : row.status === 2 ? 'warning' : 'info'">
-              {{ row.status === 1 ? '可用' : row.status === 2 ? '锁定' : '禁用' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="80" fixed="right" align="center" class-name="action-column">
-          <template #default="{ row }">
-            <ActionMenu
-              :items="[
-                { label: '编辑', command: 'edit', icon: Edit },
-                { label: '删除', command: 'delete', icon: Delete, divided: true, danger: true }
-              ]"
-              @command="(cmd) => onAccountCommand(cmd, row)"
-            />
-          </template>
-        </el-table-column>
-      </el-table>
+      <t-table :data="accounts" :columns="accountColumns" row-key="id" bordered stripe style="margin-top:15px">
+        <template #password>
+          <span style="color:#999">••••••</span>
+        </template>
+        <template #status="{ row }">
+          <t-tag :theme="row.status === 1 ? 'success' : row.status === 2 ? 'warning' : 'default'">
+            {{ row.status === 1 ? '可用' : row.status === 2 ? '锁定' : '禁用' }}
+          </t-tag>
+        </template>
+        <template #operate="{ row }">
+          <ActionMenu
+            :items="[
+              { label: '编辑', command: 'edit', icon: EditIcon },
+              { label: '删除', command: 'delete', icon: DeleteIcon, divided: true, danger: true }
+            ]"
+            @command="(cmd) => onAccountCommand(cmd, row)"
+          />
+        </template>
+      </t-table>
 
       <div class="pagination-bar">
-        <el-pagination
-          v-model:current-page="pageNo"
-          v-model:page-size="pageSize"
-          :page-sizes="[10, 20, 50, 100]"
+        <t-pagination
+          :current="pageNo"
+          :page-size="pageSize"
+          :page-size-options="[10, 20, 50, 100]"
           :total="total"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="loadAccounts"
-          @current-change="loadAccounts"
+          show-jumper
+          @change="onPageChange"
         />
       </div>
-    </el-card>
+    </t-card>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
-      <el-form :model="form" label-width="100px">
-        <el-form-item label="账号编码">
-          <el-input v-model="form.accountCode" :disabled="isEdit" />
-        </el-form-item>
-        <el-form-item label="显示名称">
-          <el-input v-model="form.accountName" />
-        </el-form-item>
-        <el-form-item label="所属系统">
-          <el-input v-model="form.systemName" />
-        </el-form-item>
-        <el-form-item label="用户名">
-          <el-input v-model="form.username" />
-        </el-form-item>
-        <el-form-item label="密码">
-          <el-input v-model="form.password" type="password" :placeholder="isEdit ? '留空不修改' : ''" />
-        </el-form-item>
-        <el-form-item label="认证类型">
-          <el-select v-model="form.authType">
-            <el-option label="PASSWORD" value="PASSWORD" />
-            <el-option label="SSO" value="SSO" />
-            <el-option label="TOKEN" value="TOKEN" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="认证配置">
-          <el-input v-model="form.authConfig" type="textarea" :rows="3" placeholder="JSON格式，如SSO登录地址" />
-        </el-form-item>
-      </el-form>
+    <t-dialog v-model:visible="dialogVisible" :header="dialogTitle" width="500px">
+      <t-form :data="form" label-width="100px">
+        <t-form-item label="账号编码" name="accountCode">
+          <t-input v-model="form.accountCode" :disabled="isEdit" />
+        </t-form-item>
+        <t-form-item label="显示名称" name="accountName">
+          <t-input v-model="form.accountName" />
+        </t-form-item>
+        <t-form-item label="所属系统" name="systemName">
+          <t-input v-model="form.systemName" />
+        </t-form-item>
+        <t-form-item label="用户名" name="username">
+          <t-input v-model="form.username" />
+        </t-form-item>
+        <t-form-item label="密码" name="password">
+          <t-input v-model="form.password" type="password" :placeholder="isEdit ? '留空不修改' : ''" />
+        </t-form-item>
+        <t-form-item label="认证类型" name="authType">
+          <t-select v-model="form.authType">
+            <t-option label="PASSWORD" value="PASSWORD" />
+            <t-option label="SSO" value="SSO" />
+            <t-option label="TOKEN" value="TOKEN" />
+          </t-select>
+        </t-form-item>
+        <t-form-item label="认证配置" name="authConfig">
+          <t-textarea v-model="form.authConfig" :autosize="{ minRows: 3, maxRows: 3 }" placeholder="JSON格式，如SSO登录地址" />
+        </t-form-item>
+      </t-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitForm">确定</el-button>
+        <t-button @click="dialogVisible = false">取消</t-button>
+        <t-button theme="primary" @click="submitForm">确定</t-button>
       </template>
-    </el-dialog>
+    </t-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Edit, Delete } from '@element-plus/icons-vue'
+import { MessagePlugin, DialogPlugin } from 'tdesign-vue-next'
+import { EditIcon, DeleteIcon } from 'tdesign-icons-vue-next'
 import api from '../api'
 import ActionMenu from '../components/ActionMenu.vue'
 
@@ -118,11 +106,28 @@ const form = ref({
   accountCode: '', accountName: '', systemName: '', username: '', password: '', authType: 'PASSWORD', authConfig: ''
 })
 
+const accountColumns = [
+  { colKey: 'accountCode', title: '账号编码', width: 140 },
+  { colKey: 'accountName', title: '显示名称', width: 150 },
+  { colKey: 'systemName', title: '所属系统', width: 120 },
+  { colKey: 'username', title: '用户名', width: 120 },
+  { colKey: 'password', title: '密码', width: 120 },
+  { colKey: 'authType', title: '认证类型', width: 100 },
+  { colKey: 'status', title: '状态', width: 90 },
+  { colKey: 'operate', title: '操作', width: 80, fixed: 'right', align: 'center', className: 'action-column' }
+]
+
 const loadAccounts = async () => {
   const params = { ...filter.value, pageNo: pageNo.value, pageSize: pageSize.value }
   const res = await api.get('/account/list', { params })
   accounts.value = res.data?.list || []
   total.value = res.data?.total || 0
+}
+
+const onPageChange = (pageInfo) => {
+  pageNo.value = pageInfo.current
+  pageSize.value = pageInfo.pageSize
+  loadAccounts()
 }
 
 const resetFilter = () => {
@@ -147,29 +152,38 @@ const editAccount = (row) => {
 
 const submitForm = async () => {
   if (!form.value.accountCode || !form.value.accountName || !form.value.username) {
-    ElMessage.warning('请填写必填字段')
+    MessagePlugin.warning('请填写必填字段')
     return
   }
   if (isEdit.value) {
     await api.put('/account/update?id=' + form.value.id, form.value)
-    ElMessage.success('编辑成功')
+    MessagePlugin.success('编辑成功')
   } else {
     if (!form.value.password) {
-      ElMessage.warning('请输入密码')
+      MessagePlugin.warning('请输入密码')
       return
     }
     await api.post('/account/create', form.value)
-    ElMessage.success('创建成功')
+    MessagePlugin.success('创建成功')
   }
   dialogVisible.value = false
   loadAccounts()
 }
 
-const deleteAccount = async (id) => {
-  await ElMessageBox.confirm('确定删除该账号？', '提示', { type: 'warning' })
-  await api.delete('/account/delete', { params: { id } })
-  ElMessage.success('删除成功')
-  loadAccounts()
+const deleteAccount = (id) => {
+  const dialog = DialogPlugin.confirm({
+    header: '提示',
+    body: '确定删除该账号？',
+    theme: 'warning',
+    confirmBtn: '确定',
+    cancelBtn: '取消',
+    onConfirm: async () => {
+      dialog.hide()
+      await api.delete('/account/delete', { params: { id } })
+      MessagePlugin.success('删除成功')
+      loadAccounts()
+    }
+  })
 }
 
 const onAccountCommand = (cmd, row) => {

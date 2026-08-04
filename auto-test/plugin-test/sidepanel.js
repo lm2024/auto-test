@@ -22,6 +22,10 @@
     bindAll();
     loadData();
     pollWindowState();
+    // 注册登录面板处理器 + 登录态变化监听 + 启动探活
+    if (window.PlatformApi) PlatformApi.setLoginHandler(openAuthPanel);
+    if (window.PlatformAuth) PlatformAuth.onChange(function() { updateAuthBadge(); });
+    probeLogin();
     chrome.storage.onChanged.addListener(function(changes, area) {
       if (area === 'local' && changes.recordedApis) {
         var n = (changes.recordedApis.newValue || []).length;
@@ -151,6 +155,7 @@
     el('settingsOverlay').addEventListener('click', function() { closeP('settings'); });
     el('settingsClose').addEventListener('click', function() { closeP('settings'); });
     el('settingsBtn').addEventListener('click', openSettings);
+    el('authBtn').addEventListener('click', openAuthPanel);
     el('goPlatformBtn').addEventListener('click', function() {
       var url = (settings.frontendUrl || 'http://localhost:9094') + '/chain/list';
       window.open(url, '_blank');
@@ -411,18 +416,19 @@
     var baseUrl = settings.platformUrl || 'http://localhost:9093';
     var search = el('chainSearch') ? el('chainSearch').value.trim() : '';
     var method = el('chainMethodFilter') ? el('chainMethodFilter').value : '';
-    var url = baseUrl + '/api/plugin/chain/list?pageSize=100';
-    if (search) url += '&keyword=' + encodeURIComponent(search);
-    if (method) url += '&method=' + encodeURIComponent(method);
+    var query = { pageSize: 100 };
+    if (search) query.keyword = search;
+    if (method) query.method = method;
 
-    fetch(url).then(function(r) { return r.json(); }).then(function(d) {
-      if (d.code === 200) {
-        chainList = d.data.list || [];
-        renderChainList();
-      }
-    }).catch(function(e) {
-      console.error('加载链路列表失败:', e);
-    });
+    window.PlatformApi.apiFetch('/api/plugin/chain/list', { query: query })
+      .then(function(d) {
+        if (d.code === 200) {
+          chainList = d.data.list || [];
+          renderChainList();
+        }
+      }).catch(function(e) {
+        console.error('加载链路列表失败:', e);
+      });
   }
 
   function renderChainList() {
@@ -477,15 +483,14 @@
   }
 
   function loadChainVersions(chainCode) {
-    var baseUrl = settings.platformUrl || 'http://localhost:9093';
-    var url = baseUrl + '/api/chain/versions?chainCode=' + encodeURIComponent(chainCode) + '&all=true';
-    fetch(url).then(function(r) { return r.json(); }).then(function(d) {
-      if (d.code === 200 && d.data && d.data.list) {
-        renderChainVersions(chainCode, d.data.list);
-      }
-    }).catch(function(e) {
-      console.error('加载版本失败:', e);
-    });
+    window.PlatformApi.apiFetch('/api/chain/versions', { query: { chainCode: chainCode, all: true } })
+      .then(function(d) {
+        if (d.code === 200 && d.data && d.data.list) {
+          renderChainVersions(chainCode, d.data.list);
+        }
+      }).catch(function(e) {
+        console.error('加载版本失败:', e);
+      });
   }
 
   function renderChainVersions(chainCode, versions) {
@@ -562,8 +567,7 @@
     var baseUrl = settings.platformUrl || 'http://localhost:9093';
 
     // 加载链路详情
-    fetch(baseUrl + '/api/plugin/chain/detail?chainCode=' + encodeURIComponent(selectedChain.chainCode))
-      .then(function(r) { return r.json(); })
+    window.PlatformApi.apiFetch('/api/plugin/chain/detail', { query: { chainCode: selectedChain.chainCode } })
       .then(function(d) {
         if (d.code !== 200) { alert('加载链路详情失败: ' + d.message); return; }
         var chain = d.data;
@@ -688,10 +692,8 @@
   }
 
   function browserReplay(chain) {
-    var baseUrl = settings.platformUrl || 'http://localhost:9093';
-    var url = baseUrl + '/api/plugin/chain/detail?chainCode=' + encodeURIComponent(chain.chainCode);
-
-    fetch(url).then(function(r) { return r.json(); }).then(function(d) {
+    window.PlatformApi.apiFetch('/api/plugin/chain/detail', { query: { chainCode: chain.chainCode } })
+      .then(function(d) {
       if (d.code !== 200 || !d.data || !d.data.nodeList) {
         addReplayLog('error', '加载链路详情失败');
         return;
@@ -1022,6 +1024,180 @@
     });
   }
 
+  // ========== 平台登录鉴权 ==========
+  // 依赖 window.PlatformAuth (auth.js) 与 window.PlatformApi (platform-api.js)
+  function getSettings() {
+    return new Promise(function (res) {
+      chrome.storage.local.get(['settings'], function (r) { res(r.settings || {}); });
+    });
+  }
+  function currentBaseUrl() {
+    var s = settings && settings.platformUrl ? settings.platformUrl : '';
+    return s.replace(/\/+$/, '');
+  }
+
+  async function updateAuthBadge() {
+    var btn = el('authBtn');
+    if (!btn || !window.PlatformAuth) return;
+    var s = await getSettings();
+    var base = (s.platformUrl || '').replace(/\/+$/, '');
+    var state = await window.PlatformAuth.getState(base);
+    var labelLg = btn.querySelector('.btn-label-lg');
+    var labelSm = btn.querySelector('.btn-label-sm');
+    var obj = await window.PlatformAuth.get();
+    var username = obj && obj.user && obj.user.username ? obj.user.username : '';
+    btn.classList.remove('btn-authed');
+    if (state === 'AUTHED') {
+      btn.title = '已登录' + (username ? '（' + username + '）' : '');
+      btn.classList.add('btn-authed');
+      if (labelLg) labelLg.textContent = username || '已登录';
+      if (labelSm) labelSm.textContent = username || '已登录';
+    } else if (state === 'EXPIRED') {
+      btn.title = '登录已过期，点击重新登录';
+      if (labelLg) labelLg.textContent = '重新登录';
+      if (labelSm) labelSm.textContent = '登录';
+    } else if (state === 'MISMATCH') {
+      btn.title = '登录环境与当前后端不一致，请重新登录';
+      if (labelLg) labelLg.textContent = '环境不符';
+      if (labelSm) labelSm.textContent = '登录';
+    } else {
+      btn.title = '未登录，点击登录';
+      if (labelLg) labelLg.textContent = '登录';
+      if (labelSm) labelSm.textContent = '登录';
+    }
+  }
+
+  async function probeLogin() {
+    if (!window.PlatformAuth || !window.PlatformApi) { updateAuthBadge(); return; }
+    var s = await getSettings();
+    var base = (s.platformUrl || '').replace(/\/+$/, '');
+    if (!base) { updateAuthBadge(); return; }
+    var state = await window.PlatformAuth.getState(base);
+    if (state === 'ANONYMOUS' || state === 'MISMATCH') { updateAuthBadge(); return; }
+    // AUTHED / EXPIRED：以服务端校验为准
+    try {
+      await window.PlatformApi.apiFetch('/api/user/me', { retryOn401: false, silent: true });
+      updateAuthBadge();
+    } catch (e) {
+      if (e && e.type === 'UNAUTHORIZED') {
+        await window.PlatformAuth.clear(); // 服务端已拒绝此令牌 → 清除，避免误判为已登录
+      } else {
+        updateAuthBadge(); // NETWORK/其他：可能只是后端暂时不可达，保留本地令牌
+      }
+    }
+  }
+
+  function openAuthPanel() {
+    var body = el('authBody');
+    if (!body) return;
+    body.innerHTML =
+      '<div class="auth-form">'
+      + '<div class="auth-hint" id="authMsg"></div>'
+      + '<div class="form-g"><label>用户名</label><input type="text" id="authUser" placeholder="请输入用户名" autocomplete="username"></div>'
+      + '<div class="form-g"><label>密码</label><input type="password" id="authPwd" placeholder="请输入密码" autocomplete="current-password"></div>'
+      + '<div class="form-g"><label>验证码</label>'
+      + '<div class="captcha-row">'
+      + '<input type="text" id="authCaptchaInput" placeholder="请输入右侧验证码" maxlength="6" autocomplete="off">'
+      + '<img id="authCaptchaImg" class="captcha-img" alt="验证码" title="点击刷新">'
+      + '</div></div>'
+      + '<button class="btn-solid btn-primary" id="authLoginBtn" style="width:100%;margin-top:6px">登录</button>'
+      + '<button class="btn-solid btn-outline" id="authSyncBtn" style="width:100%;margin-top:8px">同步平台登录态</button>'
+      + '<div class="auth-tip">若已在浏览器中登录本平台（同一后端），可一键同步登录态，无需重复输入账号密码。</div>'
+      + '</div>';
+
+    el('authOverlay').addEventListener('click', closeAuthPanel);
+    el('authClose').addEventListener('click', closeAuthPanel);
+    el('authCaptchaImg').addEventListener('click', loadCaptcha);
+    el('authLoginBtn').addEventListener('click', submitAuthLogin);
+    el('authSyncBtn').addEventListener('click', syncPlatformLogin);
+    el('authPwd').addEventListener('keydown', function (e) { if (e.key === 'Enter') submitAuthLogin(); });
+    loadCaptcha();
+    openP('auth');
+  }
+
+  function closeAuthPanel() {
+    closeP('auth');
+    // 若是 401 触发的登录（存在挂起的 waitForLogin），关闭即视为放弃 → 让重放失败
+    if (window.PlatformApi) window.PlatformApi.resolveLogin(false);
+  }
+
+  var currentCaptchaToken = '';
+  async function loadCaptcha() {
+    var img = el('authCaptchaImg');
+    var msg = el('authMsg');
+    if (!img) return;
+    try {
+      var d = await window.PlatformApi.apiFetch('/api/captcha', { auth: false, silent: true });
+      if (d && d.code === 200 && d.data) {
+        currentCaptchaToken = d.data.token || '';
+        img.src = d.data.image || '';
+        if (msg) { msg.textContent = ''; msg.className = 'auth-hint'; }
+      } else if (msg) {
+        msg.textContent = '验证码加载失败，请重试'; msg.className = 'auth-hint err';
+      }
+    } catch (e) {
+      if (msg) { msg.textContent = (e && e.message) || '验证码加载失败，请重试'; msg.className = 'auth-hint err'; }
+    }
+  }
+
+  async function submitAuthLogin() {
+    var msg = el('authMsg');
+    var user = el('authUser').value.trim();
+    var pwd = el('authPwd').value;
+    var cap = el('authCaptchaInput').value.trim();
+    if (!user || !pwd || !cap) { if (msg) { msg.textContent = '请填写用户名、密码与验证码'; msg.className = 'auth-hint err'; } return; }
+    var btn = el('authLoginBtn'); btn.disabled = true; btn.textContent = '登录中...';
+    try {
+      var d = await window.PlatformApi.apiFetch('/api/user/login', {
+        method: 'POST', auth: false, silent: true,
+        body: { username: user, password: pwd, captcha: cap, captchaToken: currentCaptchaToken }
+      });
+      if (d && d.code === 200 && d.data && d.data.token) {
+        var token = d.data.token;
+        var exp = window.PlatformAuth.parseExp(token);
+        var boundUrl = currentBaseUrl();
+        await window.PlatformAuth.set({ token: token, user: d.data.user || null, exp: exp, boundUrl: boundUrl });
+        if (msg) { msg.textContent = ''; msg.className = 'auth-hint'; }
+        if (window.PlatformApi) window.PlatformApi.resolveLogin(true);
+        closeAuthPanel();
+        updateAuthBadge();
+      } else {
+        if (msg) { msg.textContent = (d && d.message) || '登录失败'; msg.className = 'auth-hint err'; }
+        btn.disabled = false; btn.textContent = '登录';
+        loadCaptcha();
+      }
+    } catch (e) {
+      if (msg) { msg.textContent = (e && e.message) || '登录失败'; msg.className = 'auth-hint err'; }
+      btn.disabled = false; btn.textContent = '登录';
+      loadCaptcha();
+    }
+  }
+
+  function syncPlatformLogin() {
+    var msg = el('authMsg');
+    var btn = el('authSyncBtn'); btn.disabled = true; btn.textContent = '同步中...';
+    chrome.runtime.sendMessage({ type: 'SYNC_PLATFORM_TOKEN' }, async function (resp) {
+      btn.disabled = false; btn.textContent = '同步平台登录态';
+      if (chrome.runtime.lastError || !resp || !resp.ok) {
+        if (msg) { msg.textContent = (resp && resp.error) || '未找到已登录的平台页面，请先登录平台'; msg.className = 'auth-hint err'; }
+        return;
+      }
+      if (!resp.token) {
+        if (msg) { msg.textContent = '平台页面中未检测到登录态'; msg.className = 'auth-hint err'; }
+        return;
+      }
+      var exp = window.PlatformAuth.parseExp(resp.token);
+      var boundUrl = currentBaseUrl();
+      var user = null;
+      try { user = resp.user ? JSON.parse(resp.user) : null; } catch (e2) {}
+      await window.PlatformAuth.set({ token: resp.token, user: user, exp: exp, boundUrl: boundUrl });
+      if (msg) { msg.textContent = ''; msg.className = 'auth-hint'; }
+      if (window.PlatformApi) window.PlatformApi.resolveLogin(true);
+      closeAuthPanel();
+      updateAuthBadge();
+    });
+  }
+
   // ========== 推送 ==========
   function openPush() {
     var c = getChecked();
@@ -1077,12 +1253,11 @@
       }
 
       function pushGroup(ifList, chainName) {
-        var url = (settings.platformUrl || 'http://localhost:9093') + '/api/plugin/chain/' + (mode === 'create' ? 'create' : 'append');
+        var path = '/api/plugin/chain/' + (mode === 'create' ? 'create' : 'append');
         var body = mode === 'create'
-          ? JSON.stringify({ chainName: chainName, interfaceList: ifList })
-          : JSON.stringify({ chainCode: code, interfaceList: ifList });
-        return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body })
-          .then(function(r) { return r.json(); });
+          ? { chainName: chainName, interfaceList: ifList }
+          : { chainCode: code, interfaceList: ifList };
+        return window.PlatformApi.apiFetch(path, { method: 'POST', body: body });
       }
 
       if (totalGroups <= 1) {

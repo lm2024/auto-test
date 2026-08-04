@@ -2,9 +2,9 @@
   <div class="version-history">
     <div class="history-header">
       <span class="history-title">版本历史</span>
-      <el-button size="small" text @click="loadVersions(true)" v-if="versions.length >= 5">
+      <t-button size="small" theme="default" variant="text" @click="loadVersions(true)" v-if="versions.length >= 5">
         加载全部
-      </el-button>
+      </t-button>
     </div>
     <div class="history-list">
       <div v-for="v in versions" :key="v.version"

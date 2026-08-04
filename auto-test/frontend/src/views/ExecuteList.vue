@@ -1,6 +1,6 @@
 <template>
   <div>
-    <el-card>
+    <t-card>
       <template #header>
         <div class="card-header">
           <span>执行记录查询</span>
@@ -8,80 +8,84 @@
       </template>
 
       <div class="filter-bar">
-        <el-input v-model="filter.chainCode" placeholder="链路编码" clearable style="width:200px" />
-        <el-select v-model="filter.status" placeholder="执行状态" clearable style="width:120px;margin-left:10px">
-          <el-option label="运行中" value="RUNNING" />
-          <el-option label="成功" value="SUCCESS" />
-          <el-option label="失败" value="FAILED" />
-        </el-select>
-        <el-date-picker v-model="dateRange" type="daterange" range-separator="至"
-          start-placeholder="开始日期" end-placeholder="结束日期" style="margin-left:10px" />
-        <el-popover trigger="click" :width="300">
-          <template #reference>
-            <el-button style="margin-left:10px">
-              {{ filter.categoryId ? '已选分类' : '选择分类' }}
-            </el-button>
+        <t-input v-model="filter.chainCode" placeholder="链路编码" clearable style="width:200px" />
+        <t-select v-model="filter.status" placeholder="执行状态" clearable style="width:120px;margin-left:10px">
+          <t-option label="运行中" value="RUNNING" />
+          <t-option label="成功" value="SUCCESS" />
+          <t-option label="失败" value="FAILED" />
+        </t-select>
+        <t-date-range-picker v-model="dateRange" separator="至"
+          :placeholder="['开始日期', '结束日期']" clearable style="margin-left:10px" />
+        <t-popup trigger="click" placement="bottom-left" :overlay-inner-style="{ width: '300px' }">
+          <t-button theme="default" variant="outline" style="margin-left:10px">
+            {{ filter.categoryId ? '已选分类' : '选择分类' }}
+          </t-button>
+          <template #content>
+            <CategoryTree mode="select" v-model="filter.categoryId" />
           </template>
-          <CategoryTree mode="select" v-model="filter.categoryId" />
-        </el-popover>
-        <el-button type="primary" style="margin-left:10px" @click="loadRecords">查询</el-button>
+        </t-popup>
+        <t-button theme="primary" style="margin-left:10px" @click="loadRecords">查询</t-button>
       </div>
 
-      <el-table :data="records" border stripe style="margin-top:15px">
-        <el-table-column prop="executionId" label="执行ID" width="200" />
-        <el-table-column prop="chainName" label="关联链路" width="200" />
-        <el-table-column label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="statusType(row.status)">{{ statusText(row.status) }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="开始时间" width="180">
-          <template #default="{ row }">{{ formatTime(row.startTime) }}</template>
-        </el-table-column>
-        <el-table-column label="总耗时" width="120">
-          <template #default="{ row }">{{ row.totalCostMs ? row.totalCostMs + 'ms' : '-' }}</template>
-        </el-table-column>
-        <el-table-column label="节点统计" width="150">
-          <template #default="{ row }">
-            <span class="success-count">{{ row.successCount || 0 }}成功</span> /
-            <span class="fail-count">{{ row.failCount || 0 }}失败</span> /
-            <span class="skip-count">{{ row.skipCount || 0 }}跳过</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="80" fixed="right" align="center" class-name="action-column">
-          <template #default="{ row }">
-            <ActionMenu
-              :items="[{ label: '详情', command: 'detail', icon: View }]"
-              @command="(cmd) => onRecordCommand(cmd, row)"
-            />
-          </template>
-        </el-table-column>
-      </el-table>
+      <t-table
+        :data="records"
+        :columns="columns"
+        row-key="executionId"
+        bordered
+        stripe
+        style="margin-top:15px"
+      >
+        <template #status="{ row }">
+          <t-tag :theme="statusType(row.status)">{{ statusText(row.status) }}</t-tag>
+        </template>
+        <template #startTime="{ row }">{{ formatTime(row.startTime) }}</template>
+        <template #totalCostMs="{ row }">{{ row.totalCostMs ? row.totalCostMs + 'ms' : '-' }}</template>
+        <template #nodeStat="{ row }">
+          <span class="success-count">{{ row.successCount || 0 }}成功</span> /
+          <span class="fail-count">{{ row.failCount || 0 }}失败</span> /
+          <span class="skip-count">{{ row.skipCount || 0 }}跳过</span>
+        </template>
+        <template #operate="{ row }">
+          <ActionMenu
+            :items="[{ label: '详情', command: 'detail', icon: BrowseIcon }]"
+            @command="(cmd) => onRecordCommand(cmd, row)"
+          />
+        </template>
+      </t-table>
 
       <div class="pagination-bar">
-        <el-pagination
-          v-model:current-page="pageNo"
-          v-model:page-size="pageSize"
-          :page-sizes="[10, 20, 50, 100]"
+        <t-pagination
+          :current="pageNo"
+          :page-size="pageSize"
+          :page-size-options="[10, 20, 50, 100]"
           :total="total"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="loadRecords"
-          @current-change="loadRecords"
+          show-jumper
+          @change="onPageChange"
         />
       </div>
-    </el-card>
+    </t-card>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { View } from '@element-plus/icons-vue'
+import { BrowseIcon } from 'tdesign-icons-vue-next'
 import api from '../api'
 import CategoryTree from '../components/CategoryTree.vue'
 import ActionMenu from '../components/ActionMenu.vue'
 
 const router = useRouter()
+
+const columns = [
+  { colKey: 'executionId', title: '执行ID', width: 200 },
+  { colKey: 'chainName', title: '关联链路', width: 200 },
+  { colKey: 'status', title: '状态', width: 100 },
+  { colKey: 'startTime', title: '开始时间', width: 180 },
+  { colKey: 'totalCostMs', title: '总耗时', width: 120 },
+  { colKey: 'nodeStat', title: '节点统计', width: 150 },
+  { colKey: 'operate', title: '操作', width: 80, fixed: 'right', align: 'center', className: 'action-column' }
+]
 
 const records = ref([])
 const filter = ref({ chainCode: '', status: '', categoryId: null })
@@ -102,8 +106,15 @@ const loadRecords = async () => {
   total.value = res.data?.total || 0
 }
 
+const onPageChange = (pageInfo) => {
+  pageNo.value = pageInfo.current
+  pageSize.value = pageInfo.pageSize
+  loadRecords()
+}
+
 const formatTime = (t) => t ? new Date(t).toLocaleString() : '-'
-const statusType = (s) => ({ RUNNING: 'warning', SUCCESS: 'success', FAILED: 'danger' }[s] || 'info')
+// 返回 TDesign t-tag 的 theme 取值（Element 的 info 对应 TDesign 的 default）
+const statusType = (s) => ({ RUNNING: 'warning', SUCCESS: 'success', FAILED: 'danger' }[s] || 'default')
 const statusText = (s) => ({ RUNNING: '运行中', SUCCESS: '成功', FAILED: '失败' }[s] || s)
 
 const onRecordCommand = (cmd, row) => {

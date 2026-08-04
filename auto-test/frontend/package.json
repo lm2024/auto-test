@@ -9,13 +9,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "vue": "^3.4.0",
-    "vue-router": "^4.2.0",
-    "element-plus": "^2.5.0",
-    "axios": "^1.6.0",
     "@logicflow/core": "^1.2.0",
     "@logicflow/extension": "^1.2.0",
-    "monaco-editor": "^0.44.0"
+    "axios": "^1.6.0",
+    "monaco-editor": "^0.44.0",
+    "tdesign-icons-vue": "^0.4.7",
+    "tdesign-vue-next": "^1.20.5",
+    "vue": "^3.4.0",
+    "vue-router": "^4.2.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.0",

@@ -1,6 +1,6 @@
 <template>
   <div>
-    <el-card>
+    <t-card>
       <template #header>
         <div class="card-header">
           <span>浏览器插件</span>
@@ -17,25 +17,25 @@
           </div>
         </div>
 
-        <el-divider />
+        <t-divider />
 
         <div class="section">
           <h3>支持的浏览器</h3>
           <div class="browser-list">
-            <el-tag type="primary" size="large">Google Chrome 88+</el-tag>
-            <el-tag type="info" size="large">Microsoft Edge 88+</el-tag>
-            <el-tag type="warning" size="large">其他 Chromium 内核浏览器</el-tag>
+            <t-tag theme="primary" size="large">Google Chrome 88+</t-tag>
+            <t-tag theme="default" size="large">Microsoft Edge 88+</t-tag>
+            <t-tag theme="warning" size="large">其他 Chromium 内核浏览器</t-tag>
           </div>
         </div>
 
-        <el-divider />
+        <t-divider />
 
         <div class="section">
           <h3>下载安装</h3>
-          <el-button type="primary" size="large" @click="downloadPlugin">
-            <el-icon><Download /></el-icon>
+          <t-button theme="primary" size="large" @click="downloadPlugin">
+            <DownloadIcon />
             下载插件 (.crx)
-          </el-button>
+          </t-button>
           <div class="install-steps">
             <h4>安装方法：</h4>
             <ol>
@@ -47,13 +47,13 @@
           </div>
         </div>
 
-        <el-divider />
+        <t-divider />
 
         <div class="section">
           <h3>更新日志</h3>
-          <el-timeline>
-            <el-timeline-item timestamp="2026-06-17" placement="top" type="primary">
-              <el-card shadow="never">
+          <t-timeline mode="same" label-align="left">
+            <t-timeline-item label="2026-06-17" dot-color="primary">
+              <t-card :shadow="false">
                 <h4>v1.1.0</h4>
                 <ul>
                   <li>支持操作级 TraceId 分组</li>
@@ -61,10 +61,10 @@
                   <li>支持并行分组标识</li>
                   <li>优化请求体参数依赖自动识别</li>
                 </ul>
-              </el-card>
-            </el-timeline-item>
-            <el-timeline-item timestamp="2026-06-10" placement="top">
-              <el-card shadow="never">
+              </t-card>
+            </t-timeline-item>
+            <t-timeline-item label="2026-06-10">
+              <t-card :shadow="false">
                 <h4>v1.0.0</h4>
                 <ul>
                   <li>初始版本发布</li>
@@ -72,17 +72,17 @@
                   <li>支持一键推送至平台</li>
                   <li>支持链路追加模式</li>
                 </ul>
-              </el-card>
-            </el-timeline-item>
-          </el-timeline>
+              </t-card>
+            </t-timeline-item>
+          </t-timeline>
         </div>
       </div>
-    </el-card>
+    </t-card>
   </div>
 </template>
 
 <script setup>
-import { Download } from '@element-plus/icons-vue'
+import { DownloadIcon } from 'tdesign-icons-vue-next'
 
 const downloadPlugin = () => {
   const link = document.createElement('a')

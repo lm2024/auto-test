@@ -1,13 +1,12 @@
 import { createApp } from 'vue'
-import ElementPlus from 'element-plus'
-import 'element-plus/dist/index.css'
-import 'element-plus/theme-chalk/dark/css-vars.css'
+import TDesign from 'tdesign-vue-next'
+import 'tdesign-vue-next/es/style/index.css'
 import './styles/new-design-tokens.css'
-import './styles/new-element-overrides.css'
+import './styles/td-theme.css'
 import App from './App.vue'
 import router from './router'
 
 const app = createApp(App)
-app.use(ElementPlus, { size: 'default' })
+app.use(TDesign)
 app.use(router)
 app.mount('#app')

@@ -12,4 +12,5 @@ public interface UserService {
     UserVO getUserById(Long id);
     Map<String, Object> listUsers(String keyword, Long tenantId, int pageNo, int pageSize);
     Map<String, Object> login(String username, String password);
+    Map<String, Object> refreshToken(Long userId);
 }

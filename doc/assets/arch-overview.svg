@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 790 440" font-family="Segoe UI, Arial, 'Microsoft YaHei', sans-serif">
+  <rect width="790" height="440" fill="#fbfcfe"/>
+  <text x="395" y="30" text-anchor="middle" font-size="18" font-weight="700" fill="#1f2d3d">插件登录鉴权整体架构</text>
+  <text x="395" y="50" text-anchor="middle" font-size="11.5" fill="#8a98ad">插件所有平台请求经 apiFetch 统一注入 Bearer JWT；后端仅做增量放行</text>
+
+  <!-- 插件框 -->
+  <rect x="20" y="68" width="400" height="352" rx="10" fill="#eef4ff" stroke="#3b7ddd" stroke-width="2"/>
+  <text x="38" y="96" font-size="14" font-weight="700" fill="#1f3a5f">Chrome 插件 (MV3)</text>
+
+  <rect x="40" y="110" width="360" height="62" rx="6" fill="#ffffff" stroke="#9db8e0"/>
+  <text x="54" y="130" font-size="12.5" font-weight="700" fill="#2a4d80">UI 层 · sidepanel.html</text>
+  <text x="54" y="150" font-size="11.5" fill="#46566b">#authBtn 用户徽标（新增）　#authPanel 登录/用户面板（新增）</text>
+
+  <rect x="40" y="184" width="360" height="86" rx="6" fill="#ffffff" stroke="#9db8e0"/>
+  <text x="54" y="204" font-size="12.5" font-weight="700" fill="#2a4d80">服务层（新增，不碰 DOM）</text>
+  <text x="54" y="224" font-size="11.5" fill="#46566b">auth.js　　令牌仓库 + JWT exp 解析 + 状态机</text>
+  <text x="54" y="244" font-size="11.5" fill="#46566b">platform-api.js　apiFetch 统一网关（注入/重放）</text>
+
+  <rect x="40" y="282" width="360" height="64" rx="6" fill="#ffffff" stroke="#9db8e0"/>
+  <text x="54" y="302" font-size="12.5" font-weight="700" fill="#2a4d80">业务层</text>
+  <text x="54" y="322" font-size="11.5" fill="#46566b">sidepanel.js　6 处 fetch → apiFetch</text>
+  <text x="54" y="338" font-size="11.5" fill="#46566b">background.js　+2 消息：同步登录态</text>
+
+  <!-- 后端框 -->
+  <rect x="470" y="68" width="300" height="352" rx="10" fill="#f0fbf3" stroke="#2faa5b" stroke-width="2"/>
+  <text x="488" y="96" font-size="14" font-weight="700" fill="#1f5a37">Spring Boot 9093</text>
+
+  <rect x="490" y="110" width="260" height="58" rx="6" fill="#ffffff" stroke="#9fd6b4"/>
+  <text x="504" y="130" font-size="12" font-weight="700" fill="#1f5a37">JwtAuthFilter</text>
+  <text x="504" y="150" font-size="11" fill="#46566b">放行 OPTIONS + 白名单（P0 必改）</text>
+
+  <rect x="490" y="180" width="260" height="58" rx="6" fill="#ffffff" stroke="#9fd6b4"/>
+  <text x="504" y="200" font-size="12" font-weight="700" fill="#1f5a37">UserController</text>
+  <text x="504" y="220" font-size="11" fill="#46566b">/login(已有) · /me · /refresh</text>
+
+  <rect x="490" y="250" width="260" height="44" rx="6" fill="#ffffff" stroke="#9fd6b4"/>
+  <text x="504" y="270" font-size="12" font-weight="700" fill="#1f5a37">CaptchaController</text>
+  <text x="504" y="288" font-size="11" fill="#46566b">/api/captcha（白名单）</text>
+
+  <rect x="490" y="306" width="260" height="44" rx="6" fill="#fff4e6" stroke="#f0b27a"/>
+  <text x="504" y="326" font-size="12" font-weight="700" fill="#a85b12">PluginController</text>
+  <text x="504" y="344" font-size="11" fill="#46566b">/api/plugin/**（本期改造点）</text>
+
+  <text x="504" y="386" font-size="10.5" fill="#7a8aa0">④ 创建人归属 createBy/tenantId（P2 增值）</text>
+  <text x="504" y="404" font-size="10.5" fill="#7a8aa0">⑤ 长效插件令牌 /api/user/plugin-token（P2）</text>
+
+  <!-- 箭头 -->
+  <defs>
+    <marker id="ar" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#e06a2a"/>
+    </marker>
+  </defs>
+  <line x1="420" y1="244" x2="465" y2="244" stroke="#e06a2a" stroke-width="2.5" marker-end="url(#ar)"/>
+  <text x="442" y="236" text-anchor="middle" font-size="10" fill="#e06a2a">JWT</text>
+</svg>

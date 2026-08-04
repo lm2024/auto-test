@@ -1,110 +1,97 @@
 <template>
   <div>
-    <el-card>
+    <t-card>
       <template #header>
         <div class="card-header">
           <span>用户管理</span>
-          <el-button type="primary" @click="showCreateDialog">新增用户</el-button>
+          <t-button theme="primary" @click="showCreateDialog">新增用户</t-button>
         </div>
       </template>
 
       <div class="filter-bar">
-        <el-input v-model="filter.keyword" placeholder="搜索用户名/姓名" clearable style="width:200px" />
-        <el-button type="primary" style="margin-left:10px" @click="loadUsers">查询</el-button>
-        <el-button @click="resetFilter">重置</el-button>
+        <t-input v-model="filter.keyword" placeholder="搜索用户名/姓名" clearable style="width:200px" />
+        <t-button theme="primary" style="margin-left:10px" @click="loadUsers">查询</t-button>
+        <t-button @click="resetFilter">重置</t-button>
       </div>
 
-      <el-table :data="users" border stripe style="margin-top:15px">
-        <el-table-column prop="username" label="用户名" width="150" />
-        <el-table-column prop="displayName" label="显示名称" width="150" />
-        <el-table-column label="角色" width="100">
-          <template #default="{ row }">
-            <el-tag :type="row.role === 'ADMIN' ? 'danger' : ''">{{ row.role === 'ADMIN' ? '管理员' : '普通用户' }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="80">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? '启用' : '禁用' }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="最后登录" width="180">
-          <template #default="{ row }">{{ formatTime(row.lastLoginTime) }}</template>
-        </el-table-column>
-        <el-table-column label="创建时间" width="180">
-          <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="80" fixed="right" align="center" class-name="action-column">
-          <template #default="{ row }">
-            <ActionMenu
-              :items="[
-                { label: '编辑', command: 'edit', icon: Edit },
-                { label: '删除', command: 'delete', icon: Delete, divided: true, danger: true }
-              ]"
-              @command="(cmd) => onUserCommand(cmd, row)"
-            />
-          </template>
-        </el-table-column>
-      </el-table>
+      <t-table :data="users" :columns="userColumns" row-key="id" bordered stripe style="margin-top:15px">
+        <template #role="{ row }">
+          <t-tag :theme="row.role === 'ADMIN' ? 'danger' : 'default'">{{ row.role === 'ADMIN' ? '管理员' : '普通用户' }}</t-tag>
+        </template>
+        <template #status="{ row }">
+          <t-tag :theme="row.status === 1 ? 'success' : 'default'">{{ row.status === 1 ? '启用' : '禁用' }}</t-tag>
+        </template>
+        <template #lastLoginTime="{ row }">{{ formatTime(row.lastLoginTime) }}</template>
+        <template #createTime="{ row }">{{ formatTime(row.createTime) }}</template>
+        <template #operate="{ row }">
+          <ActionMenu
+            :items="[
+              { label: '编辑', command: 'edit', icon: EditIcon },
+              { label: '删除', command: 'delete', icon: DeleteIcon, divided: true, danger: true }
+            ]"
+            @command="(cmd) => onUserCommand(cmd, row)"
+          />
+        </template>
+      </t-table>
 
       <div class="pagination-bar">
-        <el-pagination
-          v-model:current-page="pageNo"
-          v-model:page-size="pageSize"
-          :page-sizes="[10, 20, 50]"
+        <t-pagination
+          :current="pageNo"
+          :page-size="pageSize"
+          :page-size-options="[10, 20, 50]"
           :total="total"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="loadUsers"
-          @current-change="loadUsers"
+          show-jumper
+          @change="onPageChange"
         />
       </div>
-    </el-card>
+    </t-card>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
-      <el-form :model="form" label-width="100px">
-        <el-form-item label="用户名">
-          <el-input v-model="form.username" :disabled="isEdit" />
-        </el-form-item>
-        <el-form-item label="密码" v-if="!isEdit">
-          <el-input v-model="form.password" type="password" show-password />
+    <t-dialog v-model:visible="dialogVisible" :header="dialogTitle" width="500px">
+      <t-form :data="form" label-width="100px">
+        <t-form-item label="用户名" name="username">
+          <t-input v-model="form.username" :disabled="isEdit" />
+        </t-form-item>
+        <t-form-item label="密码" name="password" v-if="!isEdit">
+          <t-input v-model="form.password" type="password" />
           <PasswordStrength 
             v-if="form.password" 
             :password="form.password" 
             :show-requirements="true"
           />
-        </el-form-item>
-        <el-form-item label="密码" v-else>
-          <el-input v-model="form.password" type="password" show-password placeholder="留空不修改" />
+        </t-form-item>
+        <t-form-item label="密码" name="password" v-else>
+          <t-input v-model="form.password" type="password" placeholder="留空不修改" />
           <PasswordStrength 
             v-if="form.password" 
             :password="form.password" 
             :show-requirements="true"
           />
-        </el-form-item>
-        <el-form-item label="显示名称">
-          <el-input v-model="form.displayName" />
-        </el-form-item>
-        <el-form-item label="角色">
-          <el-select v-model="form.role">
-            <el-option label="管理员" value="ADMIN" />
-            <el-option label="普通用户" value="USER" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="状态" v-if="isEdit">
-          <el-switch v-model="form.status" :active-value="1" :inactive-value="0" />
-        </el-form-item>
-      </el-form>
+        </t-form-item>
+        <t-form-item label="显示名称" name="displayName">
+          <t-input v-model="form.displayName" />
+        </t-form-item>
+        <t-form-item label="角色" name="role">
+          <t-select v-model="form.role">
+            <t-option label="管理员" value="ADMIN" />
+            <t-option label="普通用户" value="USER" />
+          </t-select>
+        </t-form-item>
+        <t-form-item label="状态" name="status" v-if="isEdit">
+          <t-switch v-model="form.status" :custom-value="[1, 0]" />
+        </t-form-item>
+      </t-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitForm">确定</el-button>
+        <t-button @click="dialogVisible = false">取消</t-button>
+        <t-button theme="primary" @click="submitForm">确定</t-button>
       </template>
-    </el-dialog>
+    </t-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Edit, Delete } from '@element-plus/icons-vue'
+import { MessagePlugin, DialogPlugin } from 'tdesign-vue-next'
+import { EditIcon, DeleteIcon } from 'tdesign-icons-vue-next'
 import api from '../api'
 import ActionMenu from '../components/ActionMenu.vue'
 import PasswordStrength from '../components/PasswordStrength.vue'
@@ -120,12 +107,28 @@ const isEdit = ref(false)
 const editId = ref(null)
 const form = ref({ username: '', password: '', displayName: '', role: 'USER', status: 1 })
 
+const userColumns = [
+  { colKey: 'username', title: '用户名', width: 150 },
+  { colKey: 'displayName', title: '显示名称', width: 150 },
+  { colKey: 'role', title: '角色', width: 100 },
+  { colKey: 'status', title: '状态', width: 80 },
+  { colKey: 'lastLoginTime', title: '最后登录', width: 180 },
+  { colKey: 'createTime', title: '创建时间', width: 180 },
+  { colKey: 'operate', title: '操作', width: 80, fixed: 'right', align: 'center', className: 'action-column' }
+]
+
 const loadUsers = async () => {
   const params = { ...filter.value, pageNo: pageNo.value, pageSize: pageSize.value }
   if (!params.keyword) delete params.keyword
   const res = await api.get('/user/list', { params })
   users.value = res.data?.list || []
   total.value = res.data?.total || 0
+}
+
+const onPageChange = (pageInfo) => {
+  pageNo.value = pageInfo.current
+  pageSize.value = pageInfo.pageSize
+  loadUsers()
 }
 
 const resetFilter = () => {
@@ -154,11 +157,11 @@ const editUser = (row) => {
 
 const submitForm = async () => {
   if (!form.value.username) {
-    ElMessage.warning('请输入用户名')
+    MessagePlugin.warning('请输入用户名')
     return
   }
   if (!isEdit.value && !form.value.password) {
-    ElMessage.warning('请输入密码')
+    MessagePlugin.warning('请输入密码')
     return
   }
   
@@ -167,31 +170,40 @@ const submitForm = async () => {
     try {
       const res = await api.post('/user/validate-password', { password: form.value.password })
       if (!res.data.valid) {
-        ElMessage.error(res.data.message)
+        MessagePlugin.error(res.data.message)
         return
       }
     } catch (e) {
-      ElMessage.error('密码验证失败')
+      MessagePlugin.error('密码验证失败')
       return
     }
   }
   
   if (isEdit.value) {
     await api.put('/user/update?id=' + editId.value, form.value)
-    ElMessage.success('编辑成功')
+    MessagePlugin.success('编辑成功')
   } else {
     await api.post('/user/create', form.value)
-    ElMessage.success('创建成功')
+    MessagePlugin.success('创建成功')
   }
   dialogVisible.value = false
   loadUsers()
 }
 
-const deleteUser = async (id) => {
-  await ElMessageBox.confirm('确定删除该用户？', '提示', { type: 'warning' })
-  await api.delete('/user/delete', { params: { id } })
-  ElMessage.success('删除成功')
-  loadUsers()
+const deleteUser = (id) => {
+  const dialog = DialogPlugin.confirm({
+    header: '提示',
+    body: '确定删除该用户？',
+    theme: 'warning',
+    confirmBtn: '确定',
+    cancelBtn: '取消',
+    onConfirm: async () => {
+      dialog.hide()
+      await api.delete('/user/delete', { params: { id } })
+      MessagePlugin.success('删除成功')
+      loadUsers()
+    }
+  })
 }
 
 const onUserCommand = (cmd, row) => {

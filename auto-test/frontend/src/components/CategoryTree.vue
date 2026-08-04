@@ -1,49 +1,54 @@
 <template>
   <div class="category-tree-wrapper">
     <div class="tree-toolbar" v-if="mode === 'manage'">
-      <el-input
+      <t-input
         v-model="searchKeyword"
         placeholder="搜索分类..."
         clearable
         size="small"
-        prefix-icon="Search"
-        @input="filterTree"
-      />
-      <el-button size="small" type="primary" @click="$emit('addRoot')" style="margin-top:8px">
+        @change="filterTree"
+      >
+        <template #prefix-icon><SearchIcon /></template>
+      </t-input>
+      <t-button size="small" theme="primary" @click="$emit('addRoot')" style="margin-top:8px">
         新增根分类
-      </el-button>
+      </t-button>
     </div>
-    <el-tree
+    <t-tree
       ref="treeRef"
       :data="filteredTree"
-      :props="treeProps"
-      :node-key="'id'"
-      :default-expand-all="true"
+      :keys="treeKeys"
+      :expand-all="true"
       :expand-on-click-node="false"
       :draggable="mode === 'manage'"
       :allow-drop="allowDrop"
-      :show-checkbox="mode === 'select' && multiple"
-      @node-drop="handleDrop"
-      @current-change="handleNodeClick"
-      @check="handleCheck"
-      highlight-current
+      :checkable="mode === 'select' && multiple"
+      :activable="!multiple"
+      :actived="activedKeys"
+      :value="checkedKeys"
+      hover
+      transition
+      @drop="handleDrop"
+      @active="handleNodeClick"
+      @change="handleCheck"
     >
-      <template #default="{ node, data }">
+      <template #label="{ node }">
         <div class="tree-node">
-          <span class="node-label">{{ data.categoryName }}</span>
+          <span class="node-label">{{ node.data.categoryName }}</span>
           <span class="node-actions" v-if="mode === 'manage'">
-            <el-button link type="primary" size="small" @click.stop="$emit('add-child', data)">+</el-button>
-            <el-button link type="primary" size="small" @click.stop="$emit('edit', data)">编辑</el-button>
-            <el-button link type="danger" size="small" @click.stop="$emit('delete', data)">删除</el-button>
+            <t-button variant="text" theme="primary" size="small" @click.stop="$emit('add-child', node.data)">+</t-button>
+            <t-button variant="text" theme="primary" size="small" @click.stop="$emit('edit', node.data)">编辑</t-button>
+            <t-button variant="text" theme="danger" size="small" @click.stop="$emit('delete', node.data)">删除</t-button>
           </span>
         </div>
       </template>
-    </el-tree>
+    </t-tree>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
+import { SearchIcon } from 'tdesign-icons-vue-next'
 import api from '../api'
 
 const props = defineProps({
@@ -58,7 +63,12 @@ const treeRef = ref(null)
 const treeData = ref([])
 const searchKeyword = ref('')
 
-const treeProps = { children: 'children', label: 'categoryName' }
+// t-tree 通过 keys 映射字段名（等价于 el-tree 的 node-key + props）
+const treeKeys = { value: 'id', label: 'categoryName', children: 'children' }
+
+// t-tree 无 setCheckedKeys / setCurrentKey 实例方法，改由受控数组驱动
+const activedKeys = ref([])
+const checkedKeys = ref([])
 
 const filteredTree = computed(() => {
   if (!searchKeyword.value) return treeData.value
@@ -84,24 +94,33 @@ const loadTree = async () => {
   }
 }
 
-const handleNodeClick = (data) => {
+// t-tree @active 回调签名为 (value: Array, context)
+const handleNodeClick = (value) => {
+  activedKeys.value = value
   if (props.multiple) return
-  emit('update:modelValue', data.id)
+  const id = Array.isArray(value) ? value[0] : value
+  if (id === undefined) return
+  emit('update:modelValue', id)
 }
 
-const handleCheck = () => {
-  if (!treeRef.value) return
-  emit('update:modelValue', treeRef.value.getCheckedKeys())
+// t-tree @change 回调签名为 (value: Array, context)，value 即选中项集合
+const handleCheck = (value) => {
+  checkedKeys.value = value
+  emit('update:modelValue', value)
 }
 
-const allowDrop = (draggingNode, dropNode, type) => {
-  if (type === 'inner') return true
-  return draggingNode.parent.id === dropNode.parent.id
+// t-tree allowDrop 接收单一 context 对象；dropPosition 为 0 表示放入节点内部
+const allowDrop = ({ dragNode, dropNode, dropPosition }) => {
+  if (dropPosition === 0) return true
+  const dragParentId = dragNode.getParent()?.data?.id || 0
+  const dropParentId = dropNode.getParent()?.data?.id || 0
+  return dragParentId === dropParentId
 }
 
-const handleDrop = async (draggingNode, dropNode, dropType) => {
-  const parentId = draggingNode.parent.id || 0
-  const siblings = draggingNode.parent.childNodes
+// t-tree @drop 回调签名为 ({ e, dragNode, dropNode, dropPosition })
+const handleDrop = async ({ dragNode }) => {
+  const parentId = dragNode.getParent()?.data?.id || 0
+  const siblings = dragNode.getSiblings() || []
   const sortData = siblings.map((node, index) => ({ id: node.data.id, sortOrder: index }))
   try {
     await api.put('/category/sort', { parentId, items: sortData })
@@ -113,24 +132,16 @@ const handleDrop = async (draggingNode, dropNode, dropType) => {
 
 const filterTree = () => {}
 
-watch(() => props.modelValue, (val) => {
-  if (!treeRef.value) return
-  if (props.multiple) {
-    treeRef.value.setCheckedKeys(Array.isArray(val) ? val : (val ? [val] : []))
-  } else if (val) {
-    treeRef.value.setCurrentKey(val)
-  }
-})
-
 const applyModelValue = () => {
-  if (!treeRef.value) return
   const val = props.modelValue
   if (props.multiple) {
-    treeRef.value.setCheckedKeys(Array.isArray(val) ? val : (val ? [val] : []))
-  } else if (val) {
-    treeRef.value.setCurrentKey(val)
+    checkedKeys.value = Array.isArray(val) ? [...val] : (val ? [val] : [])
+  } else {
+    activedKeys.value = (val === null || val === undefined || val === '') ? [] : [val]
   }
 }
+
+watch(() => props.modelValue, applyModelValue)
 
 onMounted(async () => {
   await loadTree()
@@ -171,16 +182,18 @@ defineExpose({ loadTree })
   gap: 4px;
 }
 
-:deep(.el-tree-node__content) {
+/* 节点行高（t-tree 用 __item::before 撑高） */
+:deep(.t-tree .t-tree__item::before) {
   height: 36px;
+}
+
+:deep(.t-tree .t-tree__label) {
   border-radius: 6px;
 }
 
-:deep(.el-tree-node.is-current > .el-tree-node__content) {
-  background: rgba(62, 207, 142, 0.14);
-}
-
-:deep(.el-tree-node__content:hover) {
-  background: rgba(62, 207, 142, 0.08);
+/* 选中态 / 悬停态：沿用原有的青绿色调，通过 TDesign 变量注入 */
+:deep(.t-tree) {
+  --td-brand-color-light: rgba(62, 207, 142, 0.14);
+  --td-bg-color-container-hover: rgba(62, 207, 142, 0.08);
 }
 </style>

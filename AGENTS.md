@@ -1,217 +1,60 @@
-# AGENTS.md - Auto Test 项目 AI Agent 提示词
+# AGENTS.md - Auto Test 速查（压缩版）
 
-## 项目简介
+API 自动化测试平台。前后端分离 + 浏览器插件 + WebSocket 实时推送。
 
-本项目是一个 API 自动化测试平台，包含前后端分离架构，支持测试链路管理、节点配置、流程执行引擎、AI 智能服务、浏览器插件对接、WebSocket 实时推送等能力。
+## 技术栈（速记）
+- 后端：Java 8 / Spring Boot 2.7.7 / MyBatis / MySQL 8.0 / Maven / LangChain4j
+- 前端：Vue 3.4 / Vite 5 / Element Plus / LogicFlow / Monaco
+- 插件：Chrome MV3
+- DB：MySQL 8.0（Docker），utf8mb4，表名大小写不敏感
 
----
+## 前端（重点：有两个，默认只用一个）
+- 目录：`auto-test/auto-test/`
+- ✅ **默认前端 = `frontend/`**（Vue 3.4 / Vite 5）—— 所有前端任务、启动、改码、部署默认都用它
+- ⚠️ `frontend-vue2/` 是 Vue 2.6 版本，**默认不碰**
+- 规则：除非我明确要求「用 Vue2」，否则一律只动 `frontend/`，不要去改 `frontend-vue2/`，也不要把两者混淆
 
-## 技术栈
+## 端口 & 服务
+- 后端 9093 / 前端 9094 / MySQL 3306
+- 前端 /api → 9093，/ws → ws://9093（vite 代理仅 dev 生效）
 
-### 后端 (backend/)
-- **语言**: Java 8 (1.8)
-- **框架**: Spring Boot 2.7.7
-- **ORM**: MyBatis (mybatis-spring-boot-starter 2.3.1)
-- **数据库**: MySQL 8.0 + Druid 连接池
-- **AI**: LangChain4j 0.35.0 (OpenAI 兼容接口)
-- **构建工具**: Maven
-- **其他**: FastJSON, JsonPath, Apache HttpClient, Lombok, Guava
+## 每次必做（启动顺序）
+1. Docker 起库：`cd docker && docker-compose up -d`
+2. 起后端：`mvn spring-boot:run`（或 start-backend.bat）
+3. 起前端：`npm install`（仅首次）→ `npm run dev`（或 start-frontend.bat）
+- 一键：start.bat / stop.bat / restart.bat
+- 改完后端代码要重新编译；改完前端依赖要 npm install
+- ⚠️ **前端改完代码，dev 能跑不算过，必须 `npm run build` 也通过才算完**（dev 能跑 ≠ build 能过，高频坑，见下方踩坑）
 
-### 前端 (frontend/)
-- **框架**: Vue 3.4 + Vite 5
-- **UI**: Element Plus 2.5
-- **路由**: Vue Router 4.2
-- **流程编排**: LogicFlow (@logicflow/core + @logicflow/extension)
-- **代码编辑**: Monaco Editor
-- **HTTP**: Axios
+## 关键配置（改前先看）
+- DB：root / AutoTest2026Kp9&Xz* / auto_test
+- AI：base-url http://localhost:11434/v1，model qwen-max，timeout 120s
+- account.aes-key 必须 16 字节（测试账号密码加密）
 
-### 数据库
-- MySQL 8.0，通过 Docker Compose 部署
-- 字符集: utf8mb4
-- 表名大小写不敏感 (lower-case-table-names=1)
+## 规则（编码铁律）
+1. 类/文档 ≤400 行（硬上限 500），超了拆文件
+2. 模块隔离，改动文件不重叠
+3. 任务拆到原子级，单会话只干一件
+4. Java 驼峰；MyBatis 下划线转驼峰已开
+5. 所有 Controller 接口必须有异常兜底
+6. 全程 UTF-8
 
-### 浏览器插件 (plugin-test/)
-- Chrome Extension Manifest V3
+## 踩坑清单（血泪）
+- JDK 必须 1.8，版本错编译直接挂
+- Docker 没起就起后端 → 连不上库
+- 9093/9094 被占 → 先 stop.bat 释放端口
+- aes-key 非 16 字节 → 账号加密报错
+- 新增前端依赖后必须 npm install 才生效
+- **前端 `npm run dev` 能跑但 `npm run build` 失败（用户高频踩坑）**：dev 不校验的隐患（未声明变量、类型错误、import 路径大小写不符、循环依赖、动态引入拼错）只在 build 才爆。改完前端务必跑一次 `npm run build` 验证，别只看 dev 绿灯
+- 默认账号密码已改为 Admin@123（原 admin123 弱密码已弃用）
+- 内网/离线部署：删 Google Fonts CDN，否则白屏
+  （前端 index.html/App.vue/ExecuteDetail.vue/ChainEdit.vue + 插件 sidepanel.html）
+- 前端 API/WS 用相对路径；生产静态托管需 nginx 反代 /api、/ws 到 9093
+- init.sql 有两份（backend/docker 与外层 docker），改动需保持一致
+- 安全密钥 account.aes-key / jwt.secret 是公开默认值；内网可信可暂不改，不可信须换
+- sso.* 整段默认关闭，可删
 
----
-
-## 环境要求
-
-| 依赖       | 版本要求        | 说明                        |
-|------------|----------------|----------------------------|
-| JDK        | 1.8            | 后端编译运行                  |
-| Maven      | 3.6+           | 后端构建                     |
-| Node.js    | 18+            | 前端构建运行                 |
-| MySQL      | 8.0            | 数据库（推荐 Docker 部署）     |
-| Docker     | 20+            | 数据库容器化部署               |
-
----
-
-## 启动指南
-
-### 1. 启动数据库（Docker）
-
-```bash
-cd docker
-docker-compose up -d
-```
-
-数据库连接信息：
-- Host: `localhost:3306`
-- Database: `auto_test`
-- Username: `root`
-- Password: `AutoTest2026Kp9&Xz*`
-
-### 2. 启动后端
-
-```bash
-cd backend
-mvn spring-boot:run
-```
-
-- 端口: `9093`
-- 上下文路径: `/`
-
-或者使用批处理脚本：
-```bash
-start-backend.bat
-```
-
-### 3. 启动前端
-
-```bash
-cd frontend
-npm install   # 首次需要安装依赖
-npm run dev
-```
-
-- 端口: `9094`
-- API 代理: `/api` -> `http://localhost:9093`
-- WebSocket 代理: `/ws` -> `ws://localhost:9093`
-
-或者使用批处理脚本：
-```bash
-start-frontend.bat
-```
-
-### 4. 一键启动全部服务
-
-```bash
-start.bat
-```
-
-此脚本会同时启动后端和前端，并在新窗口中运行。
-
----
-
-## 关闭指南
-
-### 一键关闭全部服务
-
-```bash
-stop.bat
-```
-
-此脚本会终止占用 9093（后端）和 9094（前端）端口的进程。
-
-### 手动关闭
-
-- 关闭后端：终止占用 9093 端口的 Java 进程
-- 关闭前端：在终端按 `Ctrl+C` 或终止占用 9094 端口的进程
-- 关闭数据库：`cd docker && docker-compose down`
-
----
-
-## 重启指南
-
-```bash
-restart.bat
-```
-
-等价于先执行 `stop.bat`，等待端口释放，再执行 `start.bat`。
-
----
-
-## 关键配置
-
-### 后端配置 (backend/src/main/resources/application.yml)
-
-```yaml
-# 数据库
-spring.datasource.url: jdbc:mysql://localhost:3306/auto_test
-spring.datasource.username: root
-spring.datasource.password: AutoTest2026Kp9&Xz*
-
-# AI 服务（OpenAI 兼容）
-ai.base-url: http://localhost:11434/v1
-ai.api-key: sk-placeholder
-ai.model: qwen-max
-ai.timeout-seconds: 120
-
-# AES 加密密钥（测试账号密码加密，必须16字节）
-account.aes-key: autotest_key_16!
-```
-
-### 前端配置 (frontend/vite.config.js)
-
-```javascript
-server.port: 9094
-server.proxy./api -> http://localhost:9093
-server.proxy./ws  -> ws://localhost:9093
-```
-
----
-
-## 项目结构
-
-```
-auto-test/
-├── backend/                    # Spring Boot 后端
-│   ├── src/main/java/com/autotest/
-│   │   ├── config/            # 配置类
-│   │   ├── controller/        # REST 控制器
-│   │   ├── engine/            # 流程执行引擎
-│   │   ├── exception/         # 异常处理
-│   │   ├── filter/            # 过滤器
-│   │   ├── mapper/            # MyBatis Mapper 接口
-│   │   ├── model/             # 数据模型（entity/dto/vo）
-│   │   ├── service/           # 业务服务层
-│   │   ├── util/              # 工具类
-│   │   └── websocket/         # WebSocket 推送
-│   ├── src/main/resources/
-│   │   ├── mapper/            # MyBatis XML 映射文件
-│   │   └── application.yml    # 应用配置
-│   └── pom.xml
-├── frontend/                   # Vue 3 前端
-│   ├── src/
-│   │   ├── api/               # API 请求封装
-│   │   ├── components/        # 公共组件
-│   │   ├── router/            # 路由配置
-│   │   ├── views/             # 页面视图
-│   │   ├── App.vue
-│   │   └── main.js
-│   ├── vite.config.js
-│   └── package.json
-├── plugin-test/                # Chrome 浏览器插件
-├── docker/                     # Docker 数据库部署
-│   ├── docker-compose.yml
-│   └── init.sql               # 数据库初始化脚本
-├── doc/                        # 设计文档
-├── agent-rules/                # AI Agent 编码规范
-├── start.bat                   # 一键启动
-├── stop.bat                    # 一键关闭
-├── restart.bat                 # 一键重启
-├── start-backend.bat           # 单独启动后端
-└── start-frontend.bat          # 单独启动前端
-```
-
----
-
-## 编码规范
-
-1. **行数限制**: 类和文档不超过 400 行，上限 500 行，超过则拆分
-2. **模块隔离**: 代码修改模块/文件相互隔离，禁止范围重叠
-3. **任务拆分**: 按「整体需求 → 主任务 → 原子任务」拆分，单会话执行单个原子任务
-4. **命名规范**: Java 使用驼峰命名，MyBatis 开启下划线转驼峰 (`map-underscore-to-camel-case: true`)
-5. **异常处理**: 所有 Controller 层接口必须有异常兜底处理
-6. **编码格式**: 所有文件使用 UTF-8 编码
+官网
+https://github.com/colbymchenry/codegraph
+https://tdesign.tencent.com/
+https://site.logic-flow.cn/

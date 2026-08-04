@@ -522,6 +522,37 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     chrome.storage.local.set({ macroReplayResult: msg.result });
   } else if (msg.type === 'GET_AUTH_CONTEXT') {
     sendResponse({ tokens: capturedTokens });
+  } else if (msg.type === 'SYNC_PLATFORM_TOKEN') {
+    // 从已登录的平台前端页面读取 localStorage 中的登录态（autotest_token / autotest_user）
+    chrome.storage.local.get(['settings'], (r) => {
+      var settings = r.settings || {};
+      var frontendUrl = (settings.frontendUrl || settings.platformUrl || '').replace(/\/+$/, '');
+      if (!frontendUrl) { sendResponse({ ok: false, error: '未配置前端地址' }); return; }
+      var origin;
+      try { origin = new URL(frontendUrl).origin; } catch (e) { sendResponse({ ok: false, error: '地址解析失败' }); return; }
+      chrome.tabs.query({}, (tabs) => {
+        var target = null;
+        for (var i = 0; i < tabs.length; i++) {
+          try { if (new URL(tabs[i].url).origin === origin) { target = tabs[i]; break; } } catch (e) {}
+        }
+        if (!target) { sendResponse({ ok: false, error: '未找到已登录的平台页面' }); return; }
+        chrome.scripting.executeScript({
+          target: { tabId: target.id },
+          func: () => ({
+            token: localStorage.getItem('autotest_token'),
+            user: localStorage.getItem('autotest_user')
+          })
+        }, (results) => {
+          if (chrome.runtime.lastError || !results || !results[0]) {
+            sendResponse({ ok: false, error: (chrome.runtime.lastError && chrome.runtime.lastError.message) || '读取失败' });
+            return;
+          }
+          var res = results[0].result || {};
+          sendResponse({ ok: true, token: res.token || null, user: res.user || null });
+        });
+      });
+    });
+    return true;
   } else if (msg.type === 'DECRYPT_DATA') {
     const decryptCode = msg.code || '';
     const encryptedData = msg.data || '';

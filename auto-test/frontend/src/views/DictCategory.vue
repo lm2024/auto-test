@@ -1,6 +1,6 @@
 <template>
   <div>
-    <el-card>
+    <t-card>
       <template #header>
         <div class="card-header">
           <span>分类管理</span>
@@ -22,73 +22,83 @@
         </div>
 
         <div class="detail-panel" v-if="selectedCategoryId">
-          <el-descriptions :title="selectedCategory?.categoryName || '分类详情'" :column="1" border>
-            <el-descriptions-item label="分类ID">{{ selectedCategory?.id }}</el-descriptions-item>
-            <el-descriptions-item label="父分类ID">{{ selectedCategory?.parentId || '无 (根节点)' }}</el-descriptions-item>
-            <el-descriptions-item label="排序号">{{ selectedCategory?.sortOrder }}</el-descriptions-item>
-            <el-descriptions-item label="状态">
-              <el-tag :type="selectedCategory?.status === 1 ? 'success' : 'info'">
+          <t-descriptions :title="selectedCategory?.categoryName || '分类详情'" :column="1" bordered>
+            <t-descriptions-item label="分类ID">{{ selectedCategory?.id }}</t-descriptions-item>
+            <t-descriptions-item label="父分类ID">{{ selectedCategory?.parentId || '无 (根节点)' }}</t-descriptions-item>
+            <t-descriptions-item label="排序号">{{ selectedCategory?.sortOrder }}</t-descriptions-item>
+            <t-descriptions-item label="状态">
+              <t-tag :theme="selectedCategory?.status === 1 ? 'success' : 'default'">
                 {{ selectedCategory?.status === 1 ? '启用' : '禁用' }}
-              </el-tag>
-            </el-descriptions-item>
-          </el-descriptions>
+              </t-tag>
+            </t-descriptions-item>
+          </t-descriptions>
 
           <div class="chain-section">
             <div class="chain-header">
               <h4>该分类下的链路</h4>
-              <el-button type="primary" size="small" @click="executeCategoryChains" :disabled="!chains.length">
+              <t-button theme="primary" size="small" @click="executeCategoryChains" :disabled="!chains.length">
                 执行全部
-              </el-button>
+              </t-button>
             </div>
-            <el-table :data="chains" border stripe size="small" style="margin-top:10px">
-              <el-table-column prop="chainCode" label="链路编码" width="180" />
-              <el-table-column prop="chainName" label="链路名称" width="200" />
-              <el-table-column prop="nodeCount" label="节点数" width="80" />
-              <el-table-column label="操作" width="80" align="center" class-name="action-column">
-                <template #default="{ row }">
-                  <ActionMenu
-                    :items="[{ label: '执行', command: 'execute', icon: VideoPlay }]"
-                    @command="(cmd) => onDictChainCommand(cmd, row)"
-                  />
-                </template>
-              </el-table-column>
-            </el-table>
+            <t-table
+              :data="chains"
+              :columns="chainColumns"
+              row-key="chainCode"
+              bordered
+              stripe
+              size="small"
+              style="margin-top:10px"
+            >
+              <template #operate="{ row }">
+                <ActionMenu
+                  :items="[{ label: '执行', command: 'execute', icon: PlayCircleIcon }]"
+                  @command="(cmd) => onDictChainCommand(cmd, row)"
+                />
+              </template>
+            </t-table>
           </div>
         </div>
 
         <div class="detail-panel empty" v-else>
-          <el-empty description="请选择左侧分类查看详情" />
+          <t-empty description="请选择左侧分类查看详情" />
         </div>
       </div>
-    </el-card>
+    </t-card>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
-      <el-form :model="form" label-width="100px">
-        <el-form-item label="分类名称">
-          <el-input v-model="form.categoryName" />
-        </el-form-item>
-        <el-form-item label="排序号">
-          <el-input-number v-model="form.sortOrder" :min="0" />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-switch v-model="form.status" :active-value="1" :inactive-value="0" />
-        </el-form-item>
-      </el-form>
+    <t-dialog v-model:visible="dialogVisible" :header="dialogTitle" width="500px">
+      <t-form :data="form" label-width="100px">
+        <t-form-item label="分类名称" name="categoryName">
+          <t-input v-model="form.categoryName" />
+        </t-form-item>
+        <t-form-item label="排序号" name="sortOrder">
+          <t-input-number v-model="form.sortOrder" :min="0" />
+        </t-form-item>
+        <t-form-item label="状态" name="status">
+          <t-switch v-model="form.status" :custom-value="[1, 0]" />
+        </t-form-item>
+      </t-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitForm">确定</el-button>
+        <t-button theme="default" variant="outline" @click="dialogVisible = false">取消</t-button>
+        <t-button theme="primary" @click="submitForm">确定</t-button>
       </template>
-    </el-dialog>
+    </t-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, watch, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { VideoPlay } from '@element-plus/icons-vue'
+import { MessagePlugin, DialogPlugin } from 'tdesign-vue-next'
+import { PlayCircleIcon } from 'tdesign-icons-vue-next'
 import api from '../api'
 import CategoryTree from '../components/CategoryTree.vue'
 import ActionMenu from '../components/ActionMenu.vue'
+
+const chainColumns = [
+  { colKey: 'chainCode', title: '链路编码', width: 180 },
+  { colKey: 'chainName', title: '链路名称', width: 200 },
+  { colKey: 'nodeCount', title: '节点数', width: 80 },
+  { colKey: 'operate', title: '操作', width: 80, align: 'center' }
+]
 
 const categoryTreeRef = ref(null)
 const selectedCategoryId = ref(null)
@@ -146,33 +156,43 @@ const editCategory = (data) => {
 
 const submitForm = async () => {
   if (!form.value.categoryName) {
-    ElMessage.warning('请输入分类名称')
+    MessagePlugin.warning('请输入分类名称')
     return
   }
   if (isEdit.value) {
     await api.put('/category/update?id=' + editId.value, form.value)
-    ElMessage.success('编辑成功')
+    MessagePlugin.success('编辑成功')
   } else {
     await api.post('/category/create', form.value)
-    ElMessage.success('创建成功')
+    MessagePlugin.success('创建成功')
   }
   dialogVisible.value = false
   loadTree()
 }
 
-const deleteCategory = async (data) => {
-  await ElMessageBox.confirm(`确定删除分类"${data.categoryName}"？子分类将同步删除。`, '提示', { type: 'warning' })
-  await api.delete('/category/delete', { params: { id: data.id } })
-  ElMessage.success('删除成功')
-  if (selectedCategoryId.value === data.id) {
-    selectedCategoryId.value = null
-  }
-  loadTree()
+const deleteCategory = (data) => {
+  const confirmDialog = DialogPlugin.confirm({
+    header: '提示',
+    body: `确定删除分类"${data.categoryName}"？子分类将同步删除。`,
+    theme: 'warning',
+    confirmBtn: '确定',
+    cancelBtn: '取消',
+    onConfirm: async () => {
+      confirmDialog.hide()
+      await api.delete('/category/delete', { params: { id: data.id } })
+      MessagePlugin.success('删除成功')
+      if (selectedCategoryId.value === data.id) {
+        selectedCategoryId.value = null
+      }
+      loadTree()
+    },
+    onClose: () => confirmDialog.hide()
+  })
 }
 
 const executeChain = async (chainCode) => {
   const res = await api.post('/execute/run', { chainCode })
-  ElMessage.success('执行已启动: ' + res.data.executionId)
+  MessagePlugin.success('执行已启动: ' + res.data.executionId)
 }
 
 const onDictChainCommand = (cmd, row) => {
@@ -184,7 +204,7 @@ const executeCategoryChains = async () => {
   const chainCodes = chains.value.map(c => c.chainCode)
   const res = await api.post('/execute/batchRun', { chainCodes })
   const started = (res.data || []).filter(r => r.status === 'started').length
-  ElMessage.success(`已启动 ${started} 条链路执行`)
+  MessagePlugin.success(`已启动 ${started} 条链路执行`)
 }
 
 onMounted(loadTree)

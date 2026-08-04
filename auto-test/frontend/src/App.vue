@@ -5,93 +5,96 @@
   </div>
 
   <!-- 已登录：侧边栏 + 主内容 -->
-  <el-container v-else class="app-container">
-    <el-aside :width="asideWidth + 'px'" class="app-aside" ref="asideRef">
+  <div v-else class="app-container">
+    <div class="app-aside" :style="{ width: asideWidth + 'px' }" ref="asideRef">
       <div class="logo">
         <span v-if="!isCollapsed">接口测试平台</span>
         <span v-else>AT</span>
       </div>
-      <el-menu
-        :default-active="route.path"
-        :collapse="isCollapsed"
-        :collapse-transition="false"
-        router
+      <t-menu
+        :value="route.path"
+        :collapsed="isCollapsed"
+        class="app-menu"
+        @change="onMenuChange"
       >
-        <el-menu-item index="/chain/list">
-          <el-icon><List /></el-icon>
-          <template #title>测试链路管理</template>
-        </el-menu-item>
-        <el-menu-item index="/execute/list">
-          <el-icon><Document /></el-icon>
-          <template #title>执行记录查询</template>
-        </el-menu-item>
-        <el-menu-item index="/account/list">
-          <el-icon><User /></el-icon>
-          <template #title>测试账号管理</template>
-        </el-menu-item>
-        <el-menu-item index="/dict/category">
-          <el-icon><Collection /></el-icon>
-          <template #title>分类字典管理</template>
-        </el-menu-item>
-        <el-menu-item index="/user/list" v-if="user && user.role === 'ADMIN'">
-          <el-icon><User /></el-icon>
-          <template #title>用户管理</template>
-        </el-menu-item>
-        <el-menu-item index="/scheduled-task" v-if="user && user.role === 'ADMIN'">
-          <el-icon><Timer /></el-icon>
-          <template #title>定时任务</template>
-        </el-menu-item>
-        <el-menu-item index="/plugin/download">
-          <el-icon><Monitor /></el-icon>
-          <template #title>插件下载</template>
-        </el-menu-item>
-        <el-menu-item index="/system/config">
-          <el-icon><Setting /></el-icon>
-          <template #title>系统设置</template>
-        </el-menu-item>
-      </el-menu>
+        <t-menu-item value="/chain/list">
+          <template #icon><ViewListIcon /></template>
+          测试链路管理
+        </t-menu-item>
+        <t-menu-item value="/execute/list">
+          <template #icon><BrowseIcon /></template>
+          执行记录查询
+        </t-menu-item>
+        <t-menu-item value="/account/list">
+          <template #icon><UserIcon /></template>
+          测试账号管理
+        </t-menu-item>
+        <t-menu-item value="/dict/category">
+          <template #icon><BookmarkIcon /></template>
+          分类字典管理
+        </t-menu-item>
+        <t-menu-item value="/user/list" v-if="user && user.role === 'ADMIN'">
+          <template #icon><UserIcon /></template>
+          用户管理
+        </t-menu-item>
+        <t-menu-item value="/scheduled-task" v-if="user && user.role === 'ADMIN'">
+          <template #icon><TimeIcon /></template>
+          定时任务
+        </t-menu-item>
+        <t-menu-item value="/plugin/download">
+          <template #icon><DesktopIcon /></template>
+          插件下载
+        </t-menu-item>
+        <t-menu-item value="/system/config">
+          <template #icon><SettingIcon /></template>
+          系统设置
+        </t-menu-item>
+      </t-menu>
 
       <div class="user-info" v-if="user">
-        <el-dropdown trigger="click">
+        <t-dropdown :options="userMenuOptions" @click="onUserMenuClick">
           <span class="user-name">
-            <el-icon><User /></el-icon>
+            <UserIcon />
             {{ user.displayName || user.username }}
           </span>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item @click="handleLogout">退出登录</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
+        </t-dropdown>
       </div>
       <div class="theme-toggle" @click="toggleTheme" :title="isDark ? '切换到亮色' : '切换到暗色'">
-        <el-icon :size="18">
-          <Sunny v-if="isDark" />
-          <Moon v-else />
-        </el-icon>
+        <SunnyIcon v-if="isDark" />
+        <MoonIcon v-else />
       </div>
       <div class="collapse-btn" @click="toggleCollapse">
-        <el-icon :size="18">
-          <Fold v-if="!isCollapsed" />
-          <Expand v-else />
-        </el-icon>
+        <MenuFoldIcon v-if="!isCollapsed" />
+        <MenuUnfoldIcon v-else />
       </div>
-    </el-aside>
+    </div>
     <div
       class="resize-handle"
       @mousedown="startResize"
       v-show="!isCollapsed"
     ></div>
-    <el-main class="app-main">
+    <div class="app-main">
       <router-view />
-    </el-main>
-  </el-container>
+    </div>
+  </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { List, Document, Setting, User, Collection, Fold, Expand, Timer, Monitor, Sunny, Moon } from '@element-plus/icons-vue'
+import {
+  ViewListIcon,
+  BrowseIcon,
+  SettingIcon,
+  UserIcon,
+  BookmarkIcon,
+  MenuFoldIcon,
+  MenuUnfoldIcon,
+  TimeIcon,
+  DesktopIcon,
+  SunnyIcon,
+  MoonIcon
+} from 'tdesign-icons-vue-next'
 import { getUser, logout } from './utils/auth'
 
 const route = useRoute()
@@ -106,7 +109,17 @@ const asideRef = ref(null)
 
 const isCollapsed = ref(localStorage.getItem('menuCollapsed') === 'true')
 const asideWidth = ref(parseInt(localStorage.getItem('menuWidth') || '240'))
-const isResizing = ref(false)
+
+const userMenuOptions = [
+  { content: '退出登录', value: 'logout' }
+]
+const onUserMenuClick = (data) => {
+  if (data.value === 'logout') handleLogout()
+}
+
+const onMenuChange = (value) => {
+  router.push(value)
+}
 
 const toggleCollapse = () => {
   isCollapsed.value = !isCollapsed.value
@@ -114,7 +127,7 @@ const toggleCollapse = () => {
   setTimeout(() => {
     localStorage.setItem('menuCollapsed', isCollapsed.value)
   }, 0)
-  
+
   if (isCollapsed.value) {
     asideWidth.value = 64
   } else {
@@ -123,6 +136,7 @@ const toggleCollapse = () => {
 }
 
 const startResize = (e) => {
+  const isResizing = ref(false)
   isResizing.value = true
   const startX = e.clientX
   const startWidth = asideWidth.value
@@ -130,12 +144,12 @@ const startResize = (e) => {
 
   const onMouseMove = (e) => {
     if (!isResizing.value) return
-    
+
     // 使用requestAnimationFrame优化性能
     if (animationFrameId) {
       cancelAnimationFrame(animationFrameId)
     }
-    
+
     animationFrameId = requestAnimationFrame(() => {
       const diff = e.clientX - startX
       let newWidth = startWidth + diff
@@ -164,6 +178,9 @@ onMounted(() => {
     asideWidth.value = 64
   }
   user.value = getUser()
+  // 初始化主题双态（自定义令牌 .dark + TDesign .t-theme-dark）
+  applyTheme(localStorage.getItem('theme') === 'dark')
+  isDark.value = localStorage.getItem('theme') === 'dark'
 })
 
 onUnmounted(() => {
@@ -177,17 +194,22 @@ const handleLogout = () => {
   router.push('/login')
 }
 
-// ── 亮/暗主题切换 ──
-const isDark = ref(document.documentElement.classList.contains('dark'))
+// ── 亮/暗主题切换（双态：.dark 控制自定义令牌，.t-theme-dark 控制 TDesign）──
+const isDark = ref(false)
+const applyTheme = (dark) => {
+  const el = document.documentElement
+  if (dark) {
+    el.classList.add('dark')
+    el.classList.add('t-theme-dark')
+  } else {
+    el.classList.remove('dark')
+    el.classList.remove('t-theme-dark')
+  }
+}
 const toggleTheme = () => {
   isDark.value = !isDark.value
-  if (isDark.value) {
-    document.documentElement.classList.add('dark')
-    localStorage.setItem('theme', 'dark')
-  } else {
-    document.documentElement.classList.remove('dark')
-    localStorage.setItem('theme', 'light')
-  }
+  applyTheme(isDark.value)
+  localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
 }
 </script>
 
@@ -237,7 +259,7 @@ html, body, #app {
 }
 
 .resize-handle:hover {
-  background: rgba(74, 158, 142, 0.4);
+  background: rgba(0, 82, 217, 0.4);
 }
 
 /* ── Logo Area ── */
@@ -261,8 +283,8 @@ html, body, #app {
   width: 10px;
   height: 10px;
   border-radius: 3px;
-  background: var(--primary, #4a9e8e);
-  box-shadow: 0 0 12px rgba(74, 158, 142, 0.5);
+  background: var(--primary, #0052d9);
+  box-shadow: 0 0 12px rgba(0, 82, 217, 0.5);
 }
 
 .logo span {
@@ -286,7 +308,7 @@ html, body, #app {
 }
 
 .collapse-btn:hover {
-  background: var(--accent-bg, rgba(74, 158, 142, 0.08));
+  background: var(--accent-bg, rgba(0, 82, 217, 0.08));
   color: var(--text, #2c3e50);
 }
 
@@ -303,8 +325,8 @@ html, body, #app {
 }
 
 .theme-toggle:hover {
-  background: var(--accent-bg, rgba(74, 158, 142, 0.08));
-  color: var(--primary, #4a9e8e);
+  background: var(--accent-bg, rgba(0, 82, 217, 0.08));
+  color: var(--primary, #0052d9);
 }
 
 /* ── User Info ── */
@@ -331,27 +353,26 @@ html, body, #app {
 }
 
 /* ── Navigation Menu ── */
-.el-menu {
+.app-menu {
   border-right: none;
   background: transparent;
   flex: 1;
   padding: 12px 8px;
 }
 
-.el-menu-item {
+.t-menu__item {
   color: var(--text-mute, #8494a7);
   margin: 4px 0;
   border-radius: 6px;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   height: 44px;
-  line-height: 44px;
   font-size: 14px;
   font-weight: 500;
   position: relative;
   overflow: hidden;
 }
 
-.el-menu-item::before {
+.t-menu__item::before {
   content: '';
   position: absolute;
   left: 0;
@@ -359,22 +380,22 @@ html, body, #app {
   transform: translateY(-50%);
   width: 3px;
   height: 0;
-  background: var(--primary, #4a9e8e);
+  background: var(--primary, #0052d9);
   border-radius: 0 2px 2px 0;
   transition: height 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.el-menu-item:hover {
-  background: var(--accent-bg, rgba(74, 158, 142, 0.08));
+.t-menu__item:hover {
+  background: var(--accent-bg, rgba(0, 82, 217, 0.08));
   color: var(--text, #2c3e50);
 }
 
-.el-menu-item.is-active {
-  color: var(--primary, #4a9e8e);
-  background: var(--primary-soft, rgba(74, 158, 142, 0.1));
+.t-menu__item.t-is-active {
+  color: var(--primary, #0052d9);
+  background: var(--primary-soft, rgba(0, 82, 217, 0.1));
 }
 
-.el-menu-item.is-active::before {
+.t-menu__item.t-is-active::before {
   height: 20px;
 }
 
@@ -396,32 +417,11 @@ html, body, #app {
 .app-main::-webkit-scrollbar { width: 8px; }
 .app-main::-webkit-scrollbar-track { background: transparent; }
 .app-main::-webkit-scrollbar-thumb {
-  background: var(--accent-soft, rgba(74, 158, 142, 0.4));
+  background: var(--accent-soft, rgba(0, 82, 217, 0.4));
   border-radius: 4px;
 }
 .app-main::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-medium, rgba(74, 158, 142, 0.6));
-}
-
-/* ── Element Plus Overrides ── */
-:deep(.el-menu--collapse) {
-  width: 64px;
-}
-:deep(.el-menu--collapse .el-menu-item) {
-  padding: 0;
-  margin: 4px 6px;
-  height: 44px;
-  border-radius: 6px;
-}
-:deep(.el-menu--collapse .el-menu-item span) {
-  display: none;
-}
-:deep(.el-menu--collapse .el-menu-item .el-icon) {
-  margin: 0;
-  font-size: 18px;
-}
-:deep(.el-menu--collapse .el-menu-item:hover) {
-  background: rgba(0, 0, 0, 0.04);
+  background: var(--accent-medium, rgba(0, 82, 217, 0.6));
 }
 
 /* ── 暗色模式覆盖 ── */
@@ -434,7 +434,7 @@ html.dark .collapse-btn {
 }
 
 html.dark .collapse-btn:hover {
-  background: var(--accent-bg, rgba(93, 184, 167, 0.1));
+  background: var(--accent-bg, rgba(69, 130, 230, 0.1));
   color: var(--text, #e8edf3);
 }
 
@@ -443,8 +443,8 @@ html.dark .theme-toggle {
 }
 
 html.dark .theme-toggle:hover {
-  background: var(--accent-bg, rgba(93, 184, 167, 0.1));
-  color: var(--primary, #5db8a7);
+  background: var(--accent-bg, rgba(69, 130, 230, 0.1));
+  color: var(--primary, #4582e6);
 }
 
 html.dark .user-name {
@@ -455,17 +455,17 @@ html.dark .user-name:hover {
   color: var(--text, #e8edf3);
 }
 
-html.dark .el-menu-item {
+html.dark .t-menu__item {
   color: var(--text-mute, #7d8694);
 }
 
-html.dark .el-menu-item:hover {
-  background: var(--accent-bg, rgba(93, 184, 167, 0.1));
+html.dark .t-menu__item:hover {
+  background: var(--accent-bg, rgba(69, 130, 230, 0.1));
   color: var(--text, #e8edf3);
 }
 
-html.dark .el-menu-item.is-active {
-  color: var(--primary, #5db8a7);
-  background: var(--primary-soft, rgba(93, 184, 167, 0.1));
+html.dark .t-menu__item.t-is-active {
+  color: var(--primary, #4582e6);
+  background: var(--primary-soft, rgba(69, 130, 230, 0.1));
 }
 </style>

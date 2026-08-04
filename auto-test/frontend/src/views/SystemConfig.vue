@@ -1,44 +1,46 @@
 <template>
   <div>
-    <el-card>
+    <t-card>
       <template #header><span>系统设置</span></template>
-      <el-form :model="config" label-width="120px" style="max-width:600px" v-loading="loading">
-        <el-divider content-position="left">大模型配置</el-divider>
-        <el-form-item label="服务地址">
-          <el-input v-model="config.aiBaseUrl" placeholder="http://localhost:11434/v1" />
-        </el-form-item>
-        <el-form-item label="API密钥">
-          <el-input v-model="config.aiApiKey" type="password" show-password />
-        </el-form-item>
-        <el-form-item label="模型名称">
-          <el-input v-model="config.aiModel" placeholder="qwen-max" />
-        </el-form-item>
-        <el-form-item label="超时时间(秒)">
-          <el-input-number v-model="config.aiTimeout" :min="30" :max="300" />
-        </el-form-item>
+      <t-loading :loading="loading">
+        <t-form :data="config" label-width="120px" style="max-width:600px">
+          <t-divider align="left">大模型配置</t-divider>
+          <t-form-item label="服务地址" name="aiBaseUrl">
+            <t-input v-model="config.aiBaseUrl" placeholder="http://localhost:11434/v1" />
+          </t-form-item>
+          <t-form-item label="API密钥" name="aiApiKey">
+            <t-input v-model="config.aiApiKey" type="password" />
+          </t-form-item>
+          <t-form-item label="模型名称" name="aiModel">
+            <t-input v-model="config.aiModel" placeholder="qwen-max" />
+          </t-form-item>
+          <t-form-item label="超时时间(秒)" name="aiTimeout">
+            <t-input-number v-model="config.aiTimeout" :min="30" :max="300" />
+          </t-form-item>
 
-        <el-divider content-position="left">ID生成默认规则</el-divider>
-        <el-form-item label="默认模式">
-          <el-select v-model="config.idGenerateMode">
-            <el-option label="自增模式" value="AUTO_INCREMENT" />
-            <el-option label="自定义模式" value="CUSTOM" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="默认步长">
-          <el-input-number v-model="config.idStep" :min="1" :max="20" />
-        </el-form-item>
+          <t-divider align="left">ID生成默认规则</t-divider>
+          <t-form-item label="默认模式" name="idGenerateMode">
+            <t-select v-model="config.idGenerateMode">
+              <t-option label="自增模式" value="AUTO_INCREMENT" />
+              <t-option label="自定义模式" value="CUSTOM" />
+            </t-select>
+          </t-form-item>
+          <t-form-item label="默认步长" name="idStep">
+            <t-input-number v-model="config.idStep" :min="1" :max="20" />
+          </t-form-item>
 
-        <el-form-item>
-          <el-button type="primary" @click="saveConfig" :loading="saving">保存</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
+          <t-form-item>
+            <t-button theme="primary" @click="saveConfig" :loading="saving">保存</t-button>
+          </t-form-item>
+        </t-form>
+      </t-loading>
+    </t-card>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { MessagePlugin } from 'tdesign-vue-next'
 import api from '../api/index.js'
 
 const API = '/config'
@@ -89,9 +91,9 @@ const saveConfig = async () => {
       'idGenerate.step': String(config.value.idStep || 1)
     }
     await api.post(`${API}/save`, params)
-    ElMessage.success('配置已保存')
+    MessagePlugin.success('配置已保存')
   } catch (e) {
-    ElMessage.error('保存失败: ' + (e.response?.data?.message || e.message))
+    MessagePlugin.error('保存失败: ' + (e.response?.data?.message || e.message))
   } finally {
     saving.value = false
   }

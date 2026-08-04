@@ -1,10 +1,10 @@
 /**
- * 新设计令牌 - 舒适配色方案
+ * 新设计令牌 - 舒适配色方案（TDesign 蓝统一版）
  * 基于现代UI设计最佳实践，提供视觉舒适的登录前后主题配色
- * 
+ *
  * 设计原则：
  * 1. 避免纯黑色和纯白色，使用更柔和的中性色
- * 2. 主色调降低饱和度，减少视觉疲劳
+ * 2. 主色调采用 TDesign 蓝，与组件库统一
  * 3. 登录页面和主应用使用和谐的色彩过渡
  * 4. 亮色和暗色模式都保持足够的对比度和可读性
  */
@@ -13,12 +13,12 @@
 :root {
   color-scheme: light;
 
-  /* ── Brand · 蓝绿色（降低饱和度，更柔和）── */
-  --primary: #4a9e8e;           /* 主色 - 柔和的蓝绿色 */
-  --primary-light: #5db8a7;     /* 悬停状态 - 更亮 */
-  --primary-dark: #3a8576;      /* 按下状态 - 更深 */
-  --primary-soft: rgba(74, 158, 142, 0.1);  /* 浅色背景 */
-  --primary-medium: rgba(74, 158, 142, 0.2); /* 中等背景 */
+  /* ── Brand · TDesign 蓝 ── */
+  --primary: #0052d9;           /* 主色 - TDesign 蓝 */
+  --primary-light: #266fe8;     /* 悬停状态 - 更亮 */
+  --primary-dark: #003cab;      /* 按下状态 - 更深 */
+  --primary-soft: rgba(0, 82, 217, 0.1);   /* 浅色背景 */
+  --primary-medium: rgba(0, 82, 217, 0.2); /* 中等背景 */
 
   /* ── Surfaces（亮色：柔和灰白）── */
   --bg: #f8f9fa;                /* 页面底色 - 柔和灰白 */
@@ -40,11 +40,11 @@
   --text-on-primary: #ffffff;   /* 主色上的文本 */
 
   /* ── Accent tints（主色语义化底色）── */
-  --accent-bg: rgba(74, 158, 142, 0.08);
-  --accent-bg-2: rgba(74, 158, 142, 0.15);
-  --accent-border: rgba(74, 158, 142, 0.25);
-  --accent-soft: rgba(74, 158, 142, 0.4);
-  --accent-medium: rgba(74, 158, 142, 0.6);
+  --accent-bg: rgba(0, 82, 217, 0.08);
+  --accent-bg-2: rgba(0, 82, 217, 0.15);
+  --accent-border: rgba(0, 82, 217, 0.25);
+  --accent-soft: rgba(0, 82, 217, 0.4);
+  --accent-medium: rgba(0, 82, 217, 0.6);
 
   /* ── Semantic status ── */
   --success: #28a745;
@@ -78,7 +78,7 @@
   --shadow-1: 0 1px 3px rgba(0, 0, 0, 0.05);
   --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.08);
   --shadow-3: 0 16px 48px rgba(0, 0, 0, 0.12);
-  --shadow-primary: 0 4px 24px rgba(74, 158, 142, 0.15);
+  --shadow-primary: 0 4px 24px rgba(0, 82, 217, 0.15);
 
   /* ── Typography ── */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -89,12 +89,12 @@
 html.dark {
   color-scheme: dark;
 
-  /* ── Brand · 蓝绿色（暗色模式调整）── */
-  --primary: #5db8a7;           /* 主色 - 更亮，适合暗色背景 */
-  --primary-light: #6dc4b4;     /* 悬停状态 */
-  --primary-dark: #4a9e8e;      /* 按下状态 */
-  --primary-soft: rgba(93, 184, 167, 0.1);
-  --primary-medium: rgba(93, 184, 167, 0.2);
+  /* ── Brand · TDesign 蓝（暗色提亮）── */
+  --primary: #4582e6;           /* 主色 - 更亮，适合暗色背景 */
+  --primary-light: #5b94ea;     /* 悬停状态 */
+  --primary-dark: #003cab;      /* 按下状态 */
+  --primary-soft: rgba(69, 130, 230, 0.1);
+  --primary-medium: rgba(69, 130, 230, 0.2);
 
   /* ── Surfaces（暗色：深蓝灰色调）── */
   --bg: #1a1f2e;                /* 页面底色 - 深蓝灰，温暖 */
@@ -113,14 +113,14 @@ html.dark {
   --text-secondary: #b0b8c4;    /* 次级文本 */
   --text-mute: #7d8694;         /* 辅助文本 */
   --text-disabled: #565f6b;     /* 禁用文本 */
-  --text-on-primary: #232938;   /* 主色上的文本 */
+  --text-on-primary: #ffffff;   /* 主色上的文本 */
 
   /* ── Accent tints（主色语义化底色）── */
-  --accent-bg: rgba(93, 184, 167, 0.1);
-  --accent-bg-2: rgba(93, 184, 167, 0.18);
-  --accent-border: rgba(93, 184, 167, 0.28);
-  --accent-soft: rgba(93, 184, 167, 0.45);
-  --accent-medium: rgba(93, 184, 167, 0.65);
+  --accent-bg: rgba(69, 130, 230, 0.1);
+  --accent-bg-2: rgba(69, 130, 230, 0.18);
+  --accent-border: rgba(69, 130, 230, 0.28);
+  --accent-soft: rgba(69, 130, 230, 0.45);
+  --accent-medium: rgba(69, 130, 230, 0.65);
 
   /* ── Semantic status ── */
   --success-bg: rgba(40, 167, 69, 0.15);
@@ -132,12 +132,12 @@ html.dark {
   --shadow-1: 0 1px 3px rgba(0, 0, 0, 0.3);
   --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.4);
   --shadow-3: 0 16px 48px rgba(0, 0, 0, 0.5);
-  --shadow-primary: 0 4px 24px rgba(93, 184, 167, 0.12);
+  --shadow-primary: 0 4px 24px rgba(69, 130, 230, 0.12);
 }
 
 /* ════════════ 登录页面专用样式 ════════════ */
 .login-theme {
-  /* 登录页面使用更温暖、专业的配色 */
+  /* 登录页面使用更温暖、专业的配色（保留 teal 品牌调性） */
   --login-left-bg: linear-gradient(135deg, #e8edf3 0%, #34495e 100%);
   --login-right-bg: var(--surface);
   --login-brand-shadow: var(--shadow-primary);

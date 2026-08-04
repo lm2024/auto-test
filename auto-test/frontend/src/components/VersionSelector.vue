@@ -2,33 +2,33 @@
   <div class="version-bar">
     <div class="version-bar-left">
       <span class="version-label">版本:</span>
-      <el-select v-model="currentVersion" placeholder="选择版本" size="small" @change="onVersionChange" style="width: 200px">
-        <el-option
+      <t-select v-model="currentVersion" placeholder="选择版本" size="small" @change="onVersionChange" style="width: 200px">
+        <t-option
           v-for="v in versions"
           :key="v.version"
           :label="'v' + v.version + ' — ' + formatTime(v.createTime)"
           :value="v.version"
         />
-      </el-select>
-      <el-button v-if="versions.length > 5" size="small" text @click="loadAllVersions">
+      </t-select>
+      <t-button v-if="versions.length > 5" size="small" theme="default" variant="text" @click="loadAllVersions">
         查看全部 ({{ totalVersions }})
-      </el-button>
+      </t-button>
     </div>
     <div class="version-bar-right" v-if="diffSummary">
       <span class="diff-badge added">
-        <el-icon><Plus /></el-icon>
+        <AddIcon />
         新增 {{ diffSummary.added }}
       </span>
       <span class="diff-badge removed">
-        <el-icon><Minus /></el-icon>
+        <MinusIcon />
         删除 {{ diffSummary.removed }}
       </span>
       <span class="diff-badge modified">
-        <el-icon><Edit /></el-icon>
+        <EditIcon />
         修改 {{ diffSummary.modified }}
       </span>
       <span class="diff-badge unchanged">
-        <el-icon><Check /></el-icon>
+        <CheckIcon />
         未变 {{ diffSummary.unchanged }}
       </span>
     </div>
@@ -37,7 +37,7 @@
 
 <script setup>
 import { ref, watch, onMounted } from 'vue'
-import { Plus, Minus, Edit, Check } from '@element-plus/icons-vue'
+import { AddIcon, MinusIcon, EditIcon, CheckIcon } from 'tdesign-icons-vue-next'
 import axios from 'axios'
 
 const props = defineProps({

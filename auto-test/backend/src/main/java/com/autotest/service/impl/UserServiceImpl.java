@@ -123,6 +123,16 @@ public class UserServiceImpl implements UserService {
         return result;
     }
 
+    @Override
+    public Map<String, Object> refreshToken(Long userId) {
+        UserVO user = getUserById(userId);
+        String token = JwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole(), user.getTenantId());
+        Map<String, Object> result = new HashMap<>();
+        result.put("token", token);
+        result.put("user", user);
+        return result;
+    }
+
     private UserVO toVO(SysUser user) {
         UserVO vo = new UserVO();
         vo.setId(user.getId());

@@ -52,21 +52,28 @@ ai:
   timeout-seconds: 120
   max-retries: 1
 
-# 测试账号密码 AES 加密密钥（必须为16字节）
+# ============ 安全相关配置 ============
+# 判定标准：纯内网 + 网络/机器完全可信 + 测试账号不是真实生产凭证 → 下面【可不改】项保持默认也能跑。
+# 若任一条件不满足（内网有不可信终端 / 机器可能被他人登录 / 存了真实账号密码）→ 建议把【建议改】项换成自定义随机值。
+
+# 测试账号密码 AES 加密密钥（必须为16字节 ASCII）
+# 【可不改，但建议改】当前是公开仓库默认值；内网不可信或含真实凭证时务必改，否则密钥等于透明
 account:
   aes-key: autotest_key_16!
 
-# JWT 配置
+# JWT 配置（登录 token 签发）
+# 【可不改，但建议改】secret 同样是公开默认值；不可信环境建议改，否则他人可伪造登录 token
 jwt:
   secret: auto-test-jwt-secret-key-2026
-  expiration: 86400000
+  expiration: 86400000   # token 有效期（毫秒）：86400000 = 24小时，可按需调长/调短
 
-# SSO OAuth2 配置
+# SSO OAuth2 配置（单点登录）
+# 【无需改、整段可删】enabled=false 时以下子项全部不生效，都是占位示例域名，删了后端照样启动
 sso:
   enabled: false
-  client-id: your-client-id
-  client-secret: your-client-secret
-  authorize-url: https://sso.company.com/oauth2/authorize
-  token-url: https://sso.company.com/oauth2/token
-  user-info-url: https://sso.company.com/oauth2/userinfo
-  redirect-uri: http://localhost:9094/api/sso/callback
+  # client-id: your-client-id
+  # client-secret: your-client-secret
+  # authorize-url: https://sso.company.com/oauth2/authorize
+  # token-url: https://sso.company.com/oauth2/token
+  # user-info-url: https://sso.company.com/oauth2/userinfo
+  # redirect-uri: http://localhost:9094/api/sso/callback

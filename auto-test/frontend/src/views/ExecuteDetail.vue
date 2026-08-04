@@ -1,19 +1,19 @@
 <template>
   <div class="execute-detail">
     <div class="toolbar">
-      <el-button @click="$router.back()">返回</el-button>
+      <t-button theme="default" variant="outline" @click="$router.back()">返回</t-button>
       <span v-if="mainInfo" style="margin-left:20px">
         执行ID: {{ mainInfo.executionId }} |
-        状态: <el-tag :type="statusType(mainInfo.status)">{{ statusText(mainInfo.status) }}</el-tag> |
+        状态: <t-tag :theme="statusType(mainInfo.status)">{{ statusText(mainInfo.status) }}</t-tag> |
         耗时: {{ mainInfo.totalCostMs }}ms
       </span>
     </div>
 
     <div class="view-toggle">
-      <el-button-group>
-        <el-button :type="viewMode === 'flat' ? 'primary' : ''" @click="viewMode = 'flat'" size="small">平铺视图</el-button>
-        <el-button :type="viewMode === 'trace' ? 'primary' : ''" @click="viewMode = 'trace'" size="small">分组视图</el-button>
-      </el-button-group>
+      <t-radio-group v-model="viewMode" variant="default-filled" size="small">
+        <t-radio-button value="flat">平铺视图</t-radio-button>
+        <t-radio-button value="trace">分组视图</t-radio-button>
+      </t-radio-group>
     </div>
 
     <!-- 平铺视图 -->
@@ -21,7 +21,7 @@
       <div v-for="log in nodeLogs" :key="log.nodeCode" class="node-log-card" :class="'status-' + log.status.toLowerCase()">
         <div class="log-header">
           <span class="log-name">{{ log.nodeName || log.nodeCode }}</span>
-          <el-tag size="small" :type="statusType(log.status)">{{ statusText(log.status) }}</el-tag>
+          <t-tag size="small" :theme="statusType(log.status)">{{ statusText(log.status) }}</t-tag>
           <span class="log-cost">{{ log.costMs }}ms</span>
         </div>
         <div class="log-info">
@@ -30,8 +30,8 @@
           <div v-if="log.errorMessage" class="log-error"><strong>错误:</strong> {{ log.errorMessage }}</div>
         </div>
         <div class="log-actions">
-          <el-button size="small" @click="showDetail(log)">查看详情</el-button>
-          <el-button size="small" type="warning" v-if="log.status === 'FAILED'" @click="analyzeFailure(log)">AI分析失败原因</el-button>
+          <t-button size="small" theme="default" variant="outline" @click="showDetail(log)">查看详情</t-button>
+          <t-button size="small" theme="warning" v-if="log.status === 'FAILED'" @click="analyzeFailure(log)">AI分析失败原因</t-button>
         </div>
       </div>
     </div>
@@ -41,11 +41,11 @@
       <div v-for="(group, gIdx) in traceLogGroups" :key="gIdx" class="trace-group-card">
         <div class="trace-group-header">
           <div class="trace-group-info">
-            <el-tag size="small" type="primary" effect="dark">TraceId</el-tag>
+            <t-tag size="small" theme="primary" variant="dark">TraceId</t-tag>
             <span class="trace-group-id">{{ group.traceId }}</span>
           </div>
           <div class="trace-group-meta">
-            <el-tag size="small" :type="groupStatusType(group)">{{ groupStatusText(group) }}</el-tag>
+            <t-tag size="small" :theme="groupStatusType(group)">{{ groupStatusText(group) }}</t-tag>
             <span class="trace-group-cost">{{ groupCost(group) }}ms</span>
             <span class="trace-group-count">{{ group.logs.length }} 个节点</span>
           </div>
@@ -58,7 +58,7 @@
               <div class="trace-node-url">{{ log.requestMethod }} {{ log.requestUrl }}</div>
             </div>
             <div class="trace-node-right">
-              <el-tag size="small" :type="statusType(log.status)">{{ statusText(log.status) }}</el-tag>
+              <t-tag size="small" :theme="statusType(log.status)">{{ statusText(log.status) }}</t-tag>
               <span class="trace-node-cost">{{ log.costMs }}ms</span>
             </div>
           </div>
@@ -66,83 +66,93 @@
       </div>
     </div>
 
-    <el-dialog v-model="detailVisible" title="节点详情" width="700px">
+    <t-dialog v-model:visible="detailVisible" header="节点详情" width="700px" :footer="false">
       <template v-if="currentLog">
-        <el-descriptions :column="2" border size="small">
-          <el-descriptions-item label="节点编码">{{ currentLog.nodeCode }}</el-descriptions-item>
-          <el-descriptions-item label="状态">{{ statusText(currentLog.status) }}</el-descriptions-item>
-          <el-descriptions-item label="请求方法">{{ currentLog.requestMethod }}</el-descriptions-item>
-          <el-descriptions-item label="响应码">{{ currentLog.responseCode }}</el-descriptions-item>
-          <el-descriptions-item label="耗时">{{ currentLog.costMs }}ms</el-descriptions-item>
-        </el-descriptions>
+        <t-descriptions :column="2" bordered size="small">
+          <t-descriptions-item label="节点编码">{{ currentLog.nodeCode }}</t-descriptions-item>
+          <t-descriptions-item label="状态">{{ statusText(currentLog.status) }}</t-descriptions-item>
+          <t-descriptions-item label="请求方法">{{ currentLog.requestMethod }}</t-descriptions-item>
+          <t-descriptions-item label="响应码">{{ currentLog.responseCode }}</t-descriptions-item>
+          <t-descriptions-item label="耗时">{{ currentLog.costMs }}ms</t-descriptions-item>
+        </t-descriptions>
 
         <div class="section-title">请求头</div>
         <MonacoEditor :model-value="formatJson(currentLog.requestHeaders)" language="json" :height="120" :readonly="true" />
-        <el-button size="small" @click="copyText(currentLog.requestHeaders)">复制</el-button>
+        <t-button size="small" theme="default" variant="outline" @click="copyText(currentLog.requestHeaders)">复制</t-button>
 
         <div class="section-title">请求体</div>
         <MonacoEditor :model-value="formatJson(currentLog.requestBody)" language="json" :height="200" :readonly="true" />
-        <el-button size="small" @click="copyText(currentLog.requestBody)">复制</el-button>
+        <t-button size="small" theme="default" variant="outline" @click="copyText(currentLog.requestBody)">复制</t-button>
 
         <div class="section-title">响应体</div>
         <MonacoEditor :model-value="formatJson(currentLog.responseBody)" language="json" :height="200" :readonly="true" />
-        <el-button size="small" @click="copyText(currentLog.responseBody)">复制</el-button>
+        <t-button size="small" theme="default" variant="outline" @click="copyText(currentLog.responseBody)">复制</t-button>
 
         <div v-if="currentLog.errorMessage" class="section-title" style="color:#f56c6c">错误信息</div>
         <MonacoEditor v-if="currentLog.errorMessage" :model-value="currentLog.errorMessage" language="plaintext" :height="100" :readonly="true" />
       </template>
-    </el-dialog>
+    </t-dialog>
 
-    <el-dialog v-model="aiVisible" title="AI分析结果" width="650px" :close-on-click-modal="false">
+    <t-dialog v-model:visible="aiVisible" header="AI分析结果" width="650px" :close-on-overlay-click="false" :footer="false">
       <div v-if="aiLoading" class="ai-loading">
-        <el-icon class="loading-icon"><Loading /></el-icon>
+        <LoadingIcon class="loading-icon" />
         <span>正在分析失败原因...</span>
       </div>
       <div v-else-if="aiResult">
         <div class="source-badge" :class="aiResult.source === 'AI智能分析' ? 'source-ai' : 'source-rule'">
-          <el-icon v-if="aiResult.source === 'AI智能分析'"><MagicStick /></el-icon>
-          <el-icon v-else><Monitor /></el-icon>
+          <AiIcon v-if="aiResult.source === 'AI智能分析'" />
+          <DesktopIcon v-else />
           <span>{{ aiResult.source || '规则分析' }}</span>
           <span v-if="aiResult.source !== 'AI智能分析'" class="source-hint">（AI模型未配置，基于规则自动分析）</span>
         </div>
         <div class="analysis-section">
           <div class="analysis-label">
-            <el-icon class="label-icon error"><WarningFilled /></el-icon>
+            <ErrorTriangleFilledIcon class="label-icon error" />
             根因定位
           </div>
           <div class="analysis-content">{{ aiResult.rootCause }}</div>
         </div>
         <div class="analysis-section">
           <div class="analysis-label">
-            <el-icon class="label-icon info"><InfoFilled /></el-icon>
+            <InfoCircleFilledIcon class="label-icon info" />
             排查步骤
           </div>
           <div class="analysis-content">{{ aiResult.troubleshootingSteps }}</div>
         </div>
         <div class="analysis-section">
           <div class="analysis-label">
-            <el-icon class="label-icon success"><CircleCheckFilled /></el-icon>
+            <CheckCircleFilledIcon class="label-icon success" />
             修复方案
           </div>
           <div class="analysis-content">{{ aiResult.fixSuggestion }}</div>
         </div>
         <div class="analysis-footer">
-          <el-button size="small" @click="copyText(JSON.stringify(aiResult, null, 2))" :icon="DocumentCopy">复制全部</el-button>
+          <t-button size="small" theme="default" variant="outline" @click="copyText(JSON.stringify(aiResult, null, 2))">
+            <FileCopyIcon />复制全部
+          </t-button>
         </div>
       </div>
       <div v-else class="ai-empty">
-        <el-icon><WarningFilled /></el-icon>
+        <ErrorTriangleFilledIcon />
         <span>分析失败，请稍后重试</span>
       </div>
-    </el-dialog>
+    </t-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { Loading, WarningFilled, InfoFilled, CircleCheckFilled, DocumentCopy, MagicStick, Monitor } from '@element-plus/icons-vue'
+import { MessagePlugin } from 'tdesign-vue-next'
+import {
+  LoadingIcon,
+  ErrorTriangleFilledIcon,
+  InfoCircleFilledIcon,
+  CheckCircleFilledIcon,
+  FileCopyIcon,
+  AiIcon,
+  DesktopIcon
+} from 'tdesign-icons-vue-next'
 import api from '../api'
 import MonacoEditor from '../components/MonacoEditor.vue'
 
@@ -234,7 +244,7 @@ const analyzeFailure = async (log) => {
     const res = await api.post('/ai/failure/analyze', { executionId, nodeCode: log.nodeCode })
     aiResult.value = res.data
   } catch (e) {
-    ElMessage.error('分析失败: ' + (e.response?.data?.message || e.message))
+    MessagePlugin.error('分析失败: ' + (e.response?.data?.message || e.message))
   } finally {
     aiLoading.value = false
   }
@@ -245,8 +255,9 @@ const formatJson = (str) => {
   try { return JSON.stringify(JSON.parse(str), null, 2) } catch { return str }
 }
 
-const copyText = (text) => { navigator.clipboard.writeText(text); ElMessage.success('已复制') }
-const statusType = (s) => ({ RUNNING: 'warning', SUCCESS: 'success', FAILED: 'danger', SKIPPED: 'info' }[s] || 'info')
+const copyText = (text) => { navigator.clipboard.writeText(text); MessagePlugin.success('已复制') }
+// 返回 TDesign t-tag 的 theme 取值（Element 的 info 对应 TDesign 的 default）
+const statusType = (s) => ({ RUNNING: 'warning', SUCCESS: 'success', FAILED: 'danger', SKIPPED: 'default' }[s] || 'default')
 const statusText = (s) => ({ RUNNING: '运行中', SUCCESS: '成功', FAILED: '失败', SKIPPED: '跳过', PENDING: '待执行' }[s] || s)
 
 onMounted(() => { loadData(); connectWs() })

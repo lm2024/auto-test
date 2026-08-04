@@ -2,13 +2,15 @@
   <div class="chain-edit">
     <div class="toolbar">
       <div class="toolbar-left">
-        <el-button @click="$router.back()" :icon="ArrowLeft">返回</el-button>
-        <el-divider direction="vertical" />
+        <t-button theme="default" variant="outline" @click="$router.back()">
+          <template #icon><ChevronLeftIcon /></template>返回
+        </t-button>
+        <t-divider layout="vertical" />
         <span class="chain-title">链路编排</span>
-        <el-divider direction="vertical" />
-        <el-select v-model="currentVersion" placeholder="选择版本" size="small" @change="onVersionChange" style="width: 160px" clearable>
-          <el-option v-for="v in versions" :key="v.version" :label="'v' + v.version" :value="v.version" />
-        </el-select>
+        <t-divider layout="vertical" />
+        <t-select v-model="currentVersion" placeholder="选择版本" size="small" @change="onVersionChange" style="width: 160px" clearable>
+          <t-option v-for="v in versions" :key="v.version" :label="'v' + v.version" :value="v.version" />
+        </t-select>
         <div class="version-diff-summary" v-if="diffSummary">
           <span class="diff-badge diff-added">新增 {{ diffSummary.added }}</span>
           <span class="diff-badge diff-removed">删除 {{ diffSummary.removed }}</span>
@@ -17,21 +19,33 @@
         </div>
       </div>
       <div class="toolbar-right">
-        <el-button-group>
-          <el-button :type="viewMode === 'list' ? 'primary' : ''" @click="viewMode = 'list'" size="small">
-            <el-icon><List /></el-icon> 列表视图
-          </el-button>
-          <el-button :type="viewMode === 'trace' ? 'primary' : ''" @click="viewMode = 'trace'; loadTraceGroups()" size="small">
-            <el-icon><Connection /></el-icon> 分组视图
-          </el-button>
-        </el-button-group>
-        <el-button @click="undo" :disabled="!canUndo" :icon="RefreshLeft">撤销</el-button>
-        <el-button @click="redo" :disabled="!canRedo" :icon="RefreshRight">重做</el-button>
-        <el-button @click="autoLayout" :icon="Grid">自动布局</el-button>
-        <el-divider direction="vertical" />
-        <el-button type="warning" @click="generateTestData" :loading="aiLoading" :icon="MagicStick">AI生成测试数据</el-button>
-        <el-button type="success" @click="executeChain" :disabled="nodes.length === 0" :icon="CaretRight">执行</el-button>
-        <el-button type="primary" @click="saveAll" :icon="Check">保存</el-button>
+        <t-space :size="4">
+          <t-button :theme="viewMode === 'list' ? 'primary' : 'default'" :variant="viewMode === 'list' ? 'base' : 'outline'" @click="viewMode = 'list'" size="small">
+            <template #icon><ViewListIcon /></template> 列表视图
+          </t-button>
+          <t-button :theme="viewMode === 'trace' ? 'primary' : 'default'" :variant="viewMode === 'trace' ? 'base' : 'outline'" @click="viewMode = 'trace'; loadTraceGroups()" size="small">
+            <template #icon><LinkIcon /></template> 分组视图
+          </t-button>
+        </t-space>
+        <t-button theme="default" variant="outline" @click="undo" :disabled="!canUndo">
+          <template #icon><RollbackIcon /></template>撤销
+        </t-button>
+        <t-button theme="default" variant="outline" @click="redo" :disabled="!canRedo">
+          <template #icon><RollfrontIcon /></template>重做
+        </t-button>
+        <t-button theme="default" variant="outline" @click="autoLayout">
+          <template #icon><GridViewIcon /></template>自动布局
+        </t-button>
+        <t-divider layout="vertical" />
+        <t-button theme="warning" @click="generateTestData" :loading="aiLoading">
+          <template #icon><AiIcon /></template>AI生成测试数据
+        </t-button>
+        <t-button theme="success" @click="executeChain" :disabled="nodes.length === 0">
+          <template #icon><PlayIcon /></template>执行
+        </t-button>
+        <t-button theme="primary" @click="saveAll">
+          <template #icon><CheckIcon /></template>保存
+        </t-button>
       </div>
     </div>
 
@@ -39,26 +53,26 @@
       <div class="left-panel" :style="{ width: leftPanelWidth + 'px' }">
         <div class="panel-section">
           <div class="panel-title">
-            <el-icon><Box /></el-icon>
+            <AppIcon />
             <span>节点库</span>
           </div>
           <div class="node-item" draggable @dragstart="onDragStart">
-            <el-icon class="node-icon http"><Connection /></el-icon>
+            <LinkIcon class="node-icon http" />
             <div class="node-item-info">
               <span class="node-item-name">HTTP请求</span>
               <span class="node-item-desc">发送HTTP请求</span>
             </div>
           </div>
-          <el-button type="primary" plain @click="openImportDialog" style="width:100%;margin-top:12px" :icon="Upload">
-            批量导入
-          </el-button>
+          <t-button theme="primary" variant="outline" @click="openImportDialog" style="width:100%;margin-top:12px">
+            <template #icon><UploadIcon /></template>批量导入
+          </t-button>
         </div>
 
         <div class="panel-section" style="margin-top:16px">
           <div class="panel-title">
-            <el-icon><List /></el-icon>
+            <ViewListIcon />
             <span>节点列表</span>
-            <el-tag size="small" type="info" style="margin-left:auto">{{ nodes.length }}</el-tag>
+            <t-tag size="small" theme="default" style="margin-left:auto">{{ nodes.length }}</t-tag>
           </div>
           <div class="node-list">
             <div v-for="(node, index) in sortedNodes" :key="node.nodeCode"
@@ -69,8 +83,8 @@
                  @dragover.prevent
                  @drop="onListDrop($event, node.nodeCode)"
                  @click="selectNode(node)">
-              <el-icon class="list-drag-handle"><Rank /></el-icon>
-              <el-tag size="small" :type="methodType(node.requestMethod)" class="method-tag">{{ node.requestMethod }}</el-tag>
+              <MoveIcon class="list-drag-handle" />
+              <t-tag size="small" :theme="methodType(node.requestMethod)" class="method-tag">{{ node.requestMethod }}</t-tag>
               <span class="node-list-name">{{ node.nodeName || node.nodeCode }}</span>
             </div>
             <div v-if="nodes.length === 0" class="empty-list">暂无节点</div>
@@ -88,20 +102,20 @@
       <!-- TraceId分组视图 -->
       <div class="center-panel trace-group-view" v-if="viewMode === 'trace'" ref="traceCanvasRef" @dragover.prevent>
         <div v-if="traceGroups.length === 0" class="empty-canvas">
-          <el-icon class="empty-icon"><Connection /></el-icon>
+          <LinkIcon class="empty-icon" />
           <div class="empty-title">暂无分组数据</div>
           <div class="empty-desc">链路节点未携带 bizOperTraceId 信息</div>
         </div>
         <div v-for="(group, gIdx) in traceGroups" :key="group.traceId" class="trace-group-card">
           <div class="trace-group-header">
             <div class="trace-group-info">
-              <el-tag size="small" type="primary" effect="dark">TraceId</el-tag>
+              <t-tag size="small" theme="primary" variant="dark">TraceId</t-tag>
               <span class="trace-group-id">{{ group.traceId === '__ungrouped__' ? '未分组' : group.traceId }}</span>
             </div>
             <div class="trace-group-meta">
-              <el-tag size="small" v-if="group.triggerEvent" type="info">{{ group.triggerEvent }}</el-tag>
+              <t-tag size="small" v-if="group.triggerEvent" theme="default">{{ group.triggerEvent }}</t-tag>
               <span class="trace-group-url" v-if="group.pageUrl">{{ group.pageUrl }}</span>
-              <el-tag size="small" type="success">{{ group.nodeCount }} 个节点</el-tag>
+              <t-tag size="small" theme="success">{{ group.nodeCount }} 个节点</t-tag>
             </div>
           </div>
           <div class="trace-group-nodes">
@@ -114,20 +128,20 @@
                 <div class="trace-node-url">{{ node.requestUrl }}</div>
               </div>
               <div class="trace-node-right">
-                <el-tag size="small" :type="methodType(node.requestMethod)" effect="dark">{{ node.requestMethod }}</el-tag>
+                <t-tag size="small" :theme="methodType(node.requestMethod)" variant="dark">{{ node.requestMethod }}</t-tag>
                 <span v-if="node.isIgnored" class="trace-node-ignored">已忽略</span>
               </div>
             </div>
           </div>
           <div class="trace-group-footer">
-            <el-button size="small" type="primary" plain @click="runTraceGroup(group.traceId)">执行此分组</el-button>
+            <t-button size="small" theme="primary" variant="outline" @click="runTraceGroup(group.traceId)">执行此分组</t-button>
           </div>
         </div>
       </div>
 
       <div class="center-panel" v-if="viewMode === 'list'" ref="canvasRef" @dragover.prevent>
         <div v-if="nodes.length === 0" class="empty-canvas" @drop="onDrop" @dragover.prevent>
-          <el-icon class="empty-icon"><Connection /></el-icon>
+          <LinkIcon class="empty-icon" />
           <div class="empty-title">拖拽节点到此处</div>
           <div class="empty-desc">或点击左侧「批量导入」添加接口</div>
         </div>
@@ -143,7 +157,7 @@
                @click="selectNode(node)">
             <div class="node-card-header">
               <div class="node-card-left">
-                <el-icon class="drag-handle"><Rank /></el-icon>
+                <MoveIcon class="drag-handle" />
                 <div class="node-index">{{ index + 1 }}</div>
                 <div class="node-card-info">
                   <div class="node-card-name">{{ node.nodeName || node.nodeCode }}</div>
@@ -151,7 +165,7 @@
                 </div>
               </div>
               <div class="node-card-right">
-                <el-tag size="small" :type="methodType(node.requestMethod)" effect="dark">{{ node.requestMethod }}</el-tag>
+                <t-tag size="small" :theme="methodType(node.requestMethod)" variant="dark">{{ node.requestMethod }}</t-tag>
                 <div v-if="nodeChangeMap[node.nodeCode]" class="change-indicator" :class="nodeChangeMap[node.nodeCode]">
                   {{ nodeChangeMap[node.nodeCode] === 'added' ? '+' : nodeChangeMap[node.nodeCode] === 'removed' ? '-' : '~' }}
                 </div>
@@ -161,21 +175,23 @@
               </div>
             </div>
             <div v-if="node.bodyType === 'file'" class="node-card-file">
-              <el-icon><Document /></el-icon>
+              <FileIcon />
               <span>文件上传</span>
             </div>
             <div v-if="node.bodyData" class="node-card-data">
-              <el-icon><Document /></el-icon>
+              <FileIcon />
               <span>已填充测试数据</span>
             </div>
           </div>
           <div v-if="index < sortedNodes.length - 1" class="connection-arrow">
             <div class="arrow-line"></div>
-            <el-icon class="arrow-icon"><Bottom /></el-icon>
+            <ArrowDownIcon class="arrow-icon" />
           </div>
         </template>
         <div v-if="nodes.length > 0" class="add-node-area" @drop.stop="onDrop" @dragover.prevent>
-          <el-button type="primary" plain @click="addNode" :icon="Plus">新增节点</el-button>
+          <t-button theme="primary" variant="outline" @click="addNode">
+            <template #icon><AddIcon /></template>新增节点
+          </t-button>
         </div>
       </div>
 
@@ -186,62 +202,64 @@
         <div class="right-panel" :style="{ width: rightPanelWidth + 'px' }" v-if="selectedNode">
           <div class="panel-header">
             <div class="panel-title-row">
-              <el-icon class="config-icon"><Setting /></el-icon>
+              <SettingIcon class="config-icon" />
               <span>属性配置</span>
             </div>
-            <el-button text @click="selectedNode = null" :icon="Close" />
+            <t-button theme="default" variant="text" shape="square" @click="selectedNode = null">
+              <template #icon><CloseIcon /></template>
+            </t-button>
           </div>
 
-          <el-tabs v-model="activeTab" class="config-tabs">
-            <el-tab-pane label="基础信息" name="basic">
+          <t-tabs v-model="activeTab" class="config-tabs">
+            <t-tab-panel label="基础信息" value="basic">
               <div class="config-section">
                 <div class="config-label">节点名称</div>
-                <el-input v-model="selectedNode.nodeName" placeholder="请输入节点名称" clearable />
+                <t-input v-model="selectedNode.nodeName" placeholder="请输入节点名称" clearable />
               </div>
               <div class="config-row">
                 <div class="config-label">排序号</div>
-                <el-input-number v-model="selectedNode.sortNo" :min="1" size="small" />
+                <t-input-number v-model="selectedNode.sortNo" :min="1" size="small" />
               </div>
               <div class="config-row">
                 <div class="config-label">并行分组</div>
-                <el-input v-model="selectedNode.parallelGroup" placeholder="为空则串行" size="small" clearable />
+                <t-input v-model="selectedNode.parallelGroup" placeholder="为空则串行" size="small" clearable />
               </div>
               <div class="config-row">
                 <div class="config-label">等待时间</div>
                 <div class="config-inline">
-                  <el-input-number v-model="selectedNode.delaySeconds" :min="0" :max="3600" size="small" />
+                  <t-input-number v-model="selectedNode.delaySeconds" :min="0" :max="3600" size="small" />
                   <span class="config-hint">秒，执行后等待再执行下一节点</span>
                 </div>
               </div>
-            </el-tab-pane>
+            </t-tab-panel>
 
-            <el-tab-pane label="请求配置" name="request">
+            <t-tab-panel label="请求配置" value="request">
               <div class="config-section">
                 <div class="config-label">请求方法</div>
-                <el-select v-model="selectedNode.requestMethod" style="width:100%">
-                  <el-option label="GET" value="GET" />
-                  <el-option label="POST" value="POST" />
-                  <el-option label="PUT" value="PUT" />
-                  <el-option label="DELETE" value="DELETE" />
-                  <el-option label="PATCH" value="PATCH" />
-                </el-select>
+                <t-select v-model="selectedNode.requestMethod" style="width:100%">
+                  <t-option label="GET" value="GET" />
+                  <t-option label="POST" value="POST" />
+                  <t-option label="PUT" value="PUT" />
+                  <t-option label="DELETE" value="DELETE" />
+                  <t-option label="PATCH" value="PATCH" />
+                </t-select>
               </div>
               <div class="config-section">
                 <div class="config-label">URL</div>
-                <el-input v-model="selectedNode.requestUrl" placeholder="https://api.example.com/endpoint" clearable />
+                <t-input v-model="selectedNode.requestUrl" placeholder="https://api.example.com/endpoint" clearable />
               </div>
               <div class="config-section">
                 <div class="config-label">
                   请求体类型
-                  <el-tooltip content="JSON: 发送JSON数据 | 文件: 上传文件(Multipart)" placement="top">
-                    <el-icon class="help-icon"><QuestionFilled /></el-icon>
-                  </el-tooltip>
+                  <t-tooltip content="JSON: 发送JSON数据 | 文件: 上传文件(Multipart)" placement="top">
+                    <HelpCircleIcon class="help-icon" />
+                  </t-tooltip>
                 </div>
-                <el-radio-group v-model="selectedNode.bodyType" size="small">
-                  <el-radio-button label="json">JSON</el-radio-button>
-                  <el-radio-button label="file">文件上传</el-radio-button>
-                  <el-radio-button label="form">Form Data</el-radio-button>
-                </el-radio-group>
+                <t-radio-group v-model="selectedNode.bodyType" size="small">
+                  <t-radio-button value="json">JSON</t-radio-button>
+                  <t-radio-button value="file">文件上传</t-radio-button>
+                  <t-radio-button value="form">Form Data</t-radio-button>
+                </t-radio-group>
               </div>
 
               <template v-if="selectedNode.bodyType === 'json'">
@@ -249,16 +267,16 @@
                   <div class="config-label">请求头</div>
                   <MonacoEditor v-model="selectedNode.requestHeaders" language="json" :height="120" />
                   <div class="config-actions">
-                    <el-button size="small" text @click="formatJson('requestHeaders')">格式化</el-button>
-                    <el-button size="small" text @click="copyText(selectedNode.requestHeaders)">复制</el-button>
+                    <t-button size="small" theme="default" variant="text" @click="formatJson('requestHeaders')">格式化</t-button>
+                    <t-button size="small" theme="default" variant="text" @click="copyText(selectedNode.requestHeaders)">复制</t-button>
                   </div>
                 </div>
                 <div class="config-section">
                   <div class="config-label">请求体</div>
                   <MonacoEditor v-model="selectedNode.bodyData" language="json" :height="220" />
                   <div class="config-actions">
-                    <el-button size="small" text @click="formatJson('bodyData')">格式化</el-button>
-                    <el-button size="small" text @click="copyText(selectedNode.bodyData)">复制</el-button>
+                    <t-button size="small" theme="default" variant="text" @click="formatJson('bodyData')">格式化</t-button>
+                    <t-button size="small" theme="default" variant="text" @click="copyText(selectedNode.bodyData)">复制</t-button>
                   </div>
                 </div>
               </template>
@@ -267,35 +285,41 @@
                 <div class="config-section">
                   <div class="config-label">文件上传</div>
                   <div class="file-upload-area" v-if="!selectedNode._uploadedFile">
-                    <el-upload
+                    <t-upload
                       ref="fileUploadRef"
-                      drag
+                      v-model="uploadFileList"
+                      theme="custom"
+                      draggable
                       :auto-upload="true"
-                      :action="'/api/upload/file'"
+                      action="/api/upload/file"
                       :data="{ nodeCode: selectedNode.nodeCode }"
-                      :on-success="handleFileUploadSuccess"
-                      :on-error="handleFileUploadError"
                       :before-upload="beforeFileUpload"
                       accept=".xlsx,.xls,.csv,.json,.txt,.xml,.pdf,.doc,.docx,.zip,.rar"
-                      :limit="1"
+                      :max="1"
+                      @success="handleFileUploadSuccess"
+                      @fail="handleFileUploadError"
                     >
-                      <el-icon class="upload-icon"><UploadFilled /></el-icon>
-                      <div class="upload-text">拖拽文件到此处，或<em>点击上传</em></div>
-                      <div class="upload-tip">支持 Excel、CSV、JSON、XML 等文件，最大 50MB</div>
-                    </el-upload>
+                      <template #dragContent>
+                        <CloudUploadIcon class="upload-icon" />
+                        <div class="upload-text">拖拽文件到此处，或<em>点击上传</em></div>
+                        <div class="upload-tip">支持 Excel、CSV、JSON、XML 等文件，最大 50MB</div>
+                      </template>
+                    </t-upload>
                   </div>
                   <div class="file-info" v-else>
                     <div class="file-card">
-                      <el-icon class="file-icon"><Document /></el-icon>
+                      <FileIcon class="file-icon" />
                       <div class="file-detail">
                         <div class="file-name">{{ selectedNode._uploadedFile.fileName }}</div>
                         <div class="file-size">{{ formatFileSize(selectedNode._uploadedFile.size) }}</div>
                       </div>
-                      <el-button type="danger" text @click="removeUploadedFile" :icon="Delete">移除</el-button>
+                      <t-button theme="danger" variant="text" @click="removeUploadedFile">
+                        <template #icon><DeleteIcon /></template>移除
+                      </t-button>
                     </div>
                   </div>
                   <div class="config-hint-box">
-                    <el-icon><InfoFilled /></el-icon>
+                    <InfoCircleIcon />
                     <span>文件将作为 Multipart 请求体发送，文件ID会保存到节点配置中</span>
                   </div>
                 </div>
@@ -310,7 +334,7 @@
                   <div class="config-label">请求头</div>
                   <MonacoEditor v-model="selectedNode.requestHeaders" language="json" :height="120" />
                   <div class="config-actions">
-                    <el-button size="small" text @click="formatJson('requestHeaders')">格式化</el-button>
+                    <t-button size="small" theme="default" variant="text" @click="formatJson('requestHeaders')">格式化</t-button>
                   </div>
                 </div>
                 <div class="config-section">
@@ -318,134 +342,138 @@
                   <MonacoEditor v-model="selectedNode.bodyData" language="json" :height="180" />
                 </div>
               </template>
-            </el-tab-pane>
+            </t-tab-panel>
 
-            <el-tab-pane label="提取规则" name="extract">
+            <t-tab-panel label="提取规则" value="extract">
               <div class="config-section">
                 <div class="config-label">从响应中提取变量</div>
                 <div class="config-hint-box" style="margin-bottom:14px">
-                  <el-icon><InfoFilled /></el-icon>
+                  <InfoCircleIcon />
                   <span>提取响应数据保存为变量，供后续节点使用（如：提取 token、用户ID 等）</span>
                 </div>
                 <div v-for="(rule, idx) in extractRuleList" :key="idx" class="rule-row">
                   <div class="rule-row-header">
                     <span class="rule-index">#{{ idx + 1 }}</span>
-                    <el-button text type="danger" size="small" @click="removeExtractRule(idx)" :icon="Delete" />
+                    <t-button variant="text" theme="danger" size="small" shape="square" @click="removeExtractRule(idx)">
+                      <template #icon><DeleteIcon /></template>
+                    </t-button>
                   </div>
                   <div class="rule-fields">
                     <div class="rule-field">
                       <div class="rule-field-label">变量名称</div>
-                      <el-input v-model="rule.varName" size="small" placeholder="例如: token, userId" clearable />
+                      <t-input v-model="rule.varName" size="small" placeholder="例如: token, userId" clearable />
                     </div>
                     <div class="rule-field">
                       <div class="rule-field-label">提取路径</div>
-                      <el-input v-model="rule.jsonPath" size="small" placeholder="例如: $.data.token" clearable />
+                      <t-input v-model="rule.jsonPath" size="small" placeholder="例如: $.data.token" clearable />
                     </div>
                   </div>
                   <div class="rule-field">
                     <div class="rule-field-label">路径说明</div>
                     <div class="path-examples">
-                      <el-tag size="small" type="info" @click="rule.jsonPath = '$.data.id'">$.data.id</el-tag>
-                      <el-tag size="small" type="info" @click="rule.jsonPath = '$.data.token'">$.data.token</el-tag>
-                      <el-tag size="small" type="info" @click="rule.jsonPath = '$.data.items[0].name'">$.data.items[0].name</el-tag>
-                      <el-tag size="small" type="info" @click="rule.jsonPath = '$.data.list.length'">$.data.list.length</el-tag>
+                      <t-tag size="small" theme="default" @click="rule.jsonPath = '$.data.id'">$.data.id</t-tag>
+                      <t-tag size="small" theme="default" @click="rule.jsonPath = '$.data.token'">$.data.token</t-tag>
+                      <t-tag size="small" theme="default" @click="rule.jsonPath = '$.data.items[0].name'">$.data.items[0].name</t-tag>
+                      <t-tag size="small" theme="default" @click="rule.jsonPath = '$.data.list.length'">$.data.list.length</t-tag>
                     </div>
                   </div>
                 </div>
-                <el-button type="primary" plain size="small" @click="addExtractRule" :icon="Plus" style="width:100%;margin-top:8px">
-                  添加提取规则
-                </el-button>
+                <t-button theme="primary" variant="outline" size="small" @click="addExtractRule" style="width:100%;margin-top:8px">
+                  <template #icon><AddIcon /></template>添加提取规则
+                </t-button>
               </div>
-            </el-tab-pane>
+            </t-tab-panel>
 
-            <el-tab-pane label="断言规则" name="assert">
+            <t-tab-panel label="断言规则" value="assert">
               <div class="config-section">
                 <div class="config-label">验证响应结果</div>
                 <div class="config-hint-box" style="margin-bottom:14px">
-                  <el-icon><InfoFilled /></el-icon>
+                  <InfoCircleIcon />
                   <span>设置验证条件，执行后自动检查是否符合预期</span>
                 </div>
 
                 <div class="assert-group">
                   <div class="assert-group-title">
-                    <el-icon><Monitor /></el-icon>
+                    <DesktopIcon />
                     <span>状态码检查</span>
                   </div>
                   <div class="rule-fields">
                     <div class="rule-field" style="flex:0 0 120px">
-                      <el-select v-model="assertStatusMode" size="small" style="width:100%">
-                        <el-option label="等于" value="eq" />
-                        <el-option label="不等于" value="ne" />
-                        <el-option label="在范围内" value="in" />
-                      </el-select>
+                      <t-select v-model="assertStatusMode" size="small" style="width:100%">
+                        <t-option label="等于" value="eq" />
+                        <t-option label="不等于" value="ne" />
+                        <t-option label="在范围内" value="in" />
+                      </t-select>
                     </div>
                     <div class="rule-field">
-                      <el-input v-model="assertStatusCode" size="small" placeholder="例如: 200" clearable />
+                      <t-input v-model="assertStatusCode" size="small" placeholder="例如: 200" clearable />
                     </div>
                   </div>
                   <div class="path-examples">
-                    <el-tag size="small" type="info" @click="assertStatusCode='200'">200 成功</el-tag>
-                    <el-tag size="small" type="info" @click="assertStatusCode='201'">201 创建</el-tag>
-                    <el-tag size="small" type="info" @click="assertStatusCode='400'">400 参数错误</el-tag>
-                    <el-tag size="small" type="info" @click="assertStatusCode='401'">401 未授权</el-tag>
-                    <el-tag size="small" type="info" @click="assertStatusCode='404'">404 不存在</el-tag>
-                    <el-tag size="small" type="info" @click="assertStatusCode='500'">500 服务器错误</el-tag>
+                    <t-tag size="small" theme="default" @click="assertStatusCode='200'">200 成功</t-tag>
+                    <t-tag size="small" theme="default" @click="assertStatusCode='201'">201 创建</t-tag>
+                    <t-tag size="small" theme="default" @click="assertStatusCode='400'">400 参数错误</t-tag>
+                    <t-tag size="small" theme="default" @click="assertStatusCode='401'">401 未授权</t-tag>
+                    <t-tag size="small" theme="default" @click="assertStatusCode='404'">404 不存在</t-tag>
+                    <t-tag size="small" theme="default" @click="assertStatusCode='500'">500 服务器错误</t-tag>
                   </div>
                 </div>
 
                 <div class="assert-group">
                   <div class="assert-group-title">
-                    <el-icon><DataLine /></el-icon>
+                    <ChartLineIcon />
                     <span>响应体字段检查</span>
                   </div>
                   <div v-for="(rule, idx) in assertBodyRules" :key="idx" class="rule-row">
                     <div class="rule-row-header">
                       <span class="rule-index">#{{ idx + 1 }}</span>
-                      <el-button text type="danger" size="small" @click="removeAssertBodyRule(idx)" :icon="Delete" />
+                      <t-button variant="text" theme="danger" size="small" shape="square" @click="removeAssertBodyRule(idx)">
+                        <template #icon><DeleteIcon /></template>
+                      </t-button>
                     </div>
                     <div class="rule-fields">
                       <div class="rule-field">
                         <div class="rule-field-label">字段路径</div>
-                        <el-input v-model="rule.path" size="small" placeholder="例如: $.data.code" clearable />
+                        <t-input v-model="rule.path" size="small" placeholder="例如: $.data.code" clearable />
                       </div>
                       <div class="rule-field" style="flex:0 0 100px">
                         <div class="rule-field-label">比较方式</div>
-                        <el-select v-model="rule.operator" size="small" style="width:100%">
-                          <el-option label="等于" value="eq" />
-                          <el-option label="不等于" value="ne" />
-                          <el-option label="包含" value="contains" />
-                          <el-option label="大于" value="gt" />
-                          <el-option label="小于" value="lt" />
-                          <el-option label="不为空" value="notNull" />
-                        </el-select>
+                        <t-select v-model="rule.operator" size="small" style="width:100%">
+                          <t-option label="等于" value="eq" />
+                          <t-option label="不等于" value="ne" />
+                          <t-option label="包含" value="contains" />
+                          <t-option label="大于" value="gt" />
+                          <t-option label="小于" value="lt" />
+                          <t-option label="不为空" value="notNull" />
+                        </t-select>
                       </div>
                       <div class="rule-field">
                         <div class="rule-field-label">期望值</div>
-                        <el-input v-model="rule.expected" size="small" placeholder="期望值" clearable :disabled="rule.operator === 'notNull'" />
+                        <t-input v-model="rule.expected" size="small" placeholder="期望值" clearable :disabled="rule.operator === 'notNull'" />
                       </div>
                     </div>
                     <div class="path-examples">
-                      <el-tag size="small" type="info" @click="rule.path='$.code'">$.code 状态码</el-tag>
-                      <el-tag size="small" type="info" @click="rule.path='$.message'">$.message 消息</el-tag>
-                      <el-tag size="small" type="info" @click="rule.path='$.data.id'">$.data.id 数据ID</el-tag>
-                      <el-tag size="small" type="info" @click="rule.path='$.data.list.length'">$.data.list.length 列表长度</el-tag>
+                      <t-tag size="small" theme="default" @click="rule.path='$.code'">$.code 状态码</t-tag>
+                      <t-tag size="small" theme="default" @click="rule.path='$.message'">$.message 消息</t-tag>
+                      <t-tag size="small" theme="default" @click="rule.path='$.data.id'">$.data.id 数据ID</t-tag>
+                      <t-tag size="small" theme="default" @click="rule.path='$.data.list.length'">$.data.list.length 列表长度</t-tag>
                     </div>
                   </div>
-                  <el-button type="primary" plain size="small" @click="addAssertBodyRule" :icon="Plus" style="width:100%;margin-top:8px">
-                    添加字段检查
-                  </el-button>
+                  <t-button theme="primary" variant="outline" size="small" @click="addAssertBodyRule" style="width:100%;margin-top:8px">
+                    <template #icon><AddIcon /></template>添加字段检查
+                  </t-button>
                 </div>
               </div>
-            </el-tab-pane>
+            </t-tab-panel>
 
-            <el-tab-pane label="差异对比" name="diff" v-if="diffData && diffData.nodes">
+            <t-tab-panel label="差异对比" value="diff" v-if="diffData && diffData.nodes">
               <div class="config-section">
                 <div class="config-label">
                   变更状态
-                  <el-tag v-if="getNodeDiffType(selectedNode)" :type="diffTagType(getNodeDiffType(selectedNode))" size="small" style="margin-left:6px">
+                  <t-tag v-if="getNodeDiffType(selectedNode)" :theme="diffTagType(getNodeDiffType(selectedNode))" size="small" style="margin-left:6px">
                     {{ diffLabel(getNodeDiffType(selectedNode)) }}
-                  </el-tag>
-                  <el-tag v-else type="info" size="small" style="margin-left:6px">无对比数据</el-tag>
+                  </t-tag>
+                  <t-tag v-else theme="default" size="small" style="margin-left:6px">无对比数据</t-tag>
                 </div>
               </div>
               <FieldDiff v-if="getNodeFieldChanges(selectedNode).length > 0" :changes="getNodeFieldChanges(selectedNode)" />
@@ -453,22 +481,30 @@
                 该节点与上一版本无字段差异
               </div>
               <AiAnalysis v-if="diffData.aiAnalysis" :analysis="diffData.aiAnalysis" />
-            </el-tab-pane>
-          </el-tabs>
+            </t-tab-panel>
+          </t-tabs>
 
           <div class="panel-footer">
-            <el-button @click="moveNodeUp" :disabled="isFirstNode" :icon="Top" size="small">上移</el-button>
-            <el-button @click="moveNodeDown" :disabled="isLastNode" :icon="Bottom" size="small">下移</el-button>
-            <el-divider direction="vertical" />
-            <el-button type="primary" @click="saveNode" :icon="Check" style="flex:1">保存节点</el-button>
-            <el-button type="danger" @click="deleteNode" :icon="Delete" style="flex:1">删除节点</el-button>
+            <t-button theme="default" variant="outline" @click="moveNodeUp" :disabled="isFirstNode" size="small">
+              <template #icon><ArrowUpIcon /></template>上移
+            </t-button>
+            <t-button theme="default" variant="outline" @click="moveNodeDown" :disabled="isLastNode" size="small">
+              <template #icon><ArrowDownIcon /></template>下移
+            </t-button>
+            <t-divider layout="vertical" />
+            <t-button theme="primary" @click="saveNode" style="flex:1">
+              <template #icon><CheckIcon /></template>保存节点
+            </t-button>
+            <t-button theme="danger" @click="deleteNode" style="flex:1">
+              <template #icon><DeleteIcon /></template>删除节点
+            </t-button>
           </div>
         </div>
       </transition>
 
       <div class="right-panel empty-right" v-if="!selectedNode">
         <div class="empty-config">
-          <el-icon class="empty-config-icon"><Setting /></el-icon>
+          <SettingIcon class="empty-config-icon" />
           <div class="empty-config-title">选择节点配置</div>
           <div class="empty-config-desc">点击左侧节点列表或画布中的节点</div>
         </div>
@@ -476,83 +512,76 @@
     </div>
 
     <!-- 批量导入对话框 -->
-    <el-dialog v-model="importDialogVisible" title="批量导入接口" width="750px" :close-on-click-modal="false" class="import-dialog">
-      <el-tabs v-model="importTab">
-        <el-tab-pane label="Swagger/OpenAPI" name="swagger">
-          <el-form label-width="100px">
-            <el-form-item label="API文档URL">
-              <el-input v-model="swaggerUrl" placeholder="https://petstore.swagger.io/v2/swagger.json" />
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" @click="importFromSwagger" :loading="importLoading">解析并导入</el-button>
-            </el-form-item>
-          </el-form>
+    <t-dialog v-model:visible="importDialogVisible" header="批量导入接口" width="750px" :close-on-overlay-click="false" class="import-dialog">
+      <t-tabs v-model="importTab">
+        <t-tab-panel label="Swagger/OpenAPI" value="swagger">
+          <t-form label-width="100px">
+            <t-form-item label="API文档URL" name="swaggerUrl">
+              <t-input v-model="swaggerUrl" placeholder="https://petstore.swagger.io/v2/swagger.json" />
+            </t-form-item>
+            <t-form-item>
+              <t-button theme="primary" @click="importFromSwagger" :loading="importLoading">解析并导入</t-button>
+            </t-form-item>
+          </t-form>
           <div v-if="swaggerResult.length" style="margin-top:15px">
             <div style="font-weight:600;margin-bottom:10px">解析结果 ({{ swaggerResult.length }}个接口)</div>
-            <el-table :data="swaggerResult" border size="small" max-height="300">
-              <el-table-column type="selection" width="40" />
-              <el-table-column prop="nodeName" label="名称" />
-              <el-table-column prop="method" label="方法" width="80" />
-              <el-table-column prop="url" label="URL" show-overflow-tooltip />
-            </el-table>
-            <el-button type="primary" style="margin-top:10px" @click="confirmSwaggerImport">确认导入选中</el-button>
+            <t-table :data="swaggerResult" :columns="importColumns" row-key="url" bordered size="small" max-height="300" />
+            <t-button theme="primary" style="margin-top:10px" @click="confirmSwaggerImport">确认导入选中</t-button>
           </div>
-        </el-tab-pane>
+        </t-tab-panel>
 
-        <el-tab-pane label="JSON文件" name="json">
-          <el-upload
+        <t-tab-panel label="JSON文件" value="json">
+          <t-upload
             ref="jsonUploadRef"
-            drag
+            v-model="jsonFileList"
+            theme="custom"
+            draggable
             :auto-upload="false"
-            :on-change="handleJsonFile"
             accept=".json"
-            :limit="1"
+            :max="1"
+            @change="handleJsonFile"
           >
-            <el-icon style="font-size:40px;color:#909399"><UploadFilled /></el-icon>
-            <div>拖拽JSON文件到此处，或<em>点击上传</em></div>
-            <template #tip>
-              <div style="color:#909399;font-size:12px">支持格式：Postman Collection、Insomnia Export、自定义JSON</div>
+            <template #dragContent>
+              <CloudUploadIcon style="font-size:40px;color:#909399" />
+              <div>拖拽JSON文件到此处，或<em>点击上传</em></div>
+              <div style="color:#909399;font-size:12px;margin-top:6px">支持格式：Postman Collection、Insomnia Export、自定义JSON</div>
             </template>
-          </el-upload>
+          </t-upload>
           <div v-if="jsonPreview.length" style="margin-top:15px">
             <div style="font-weight:600;margin-bottom:10px">预览 ({{ jsonPreview.length }}个接口)</div>
-            <el-table :data="jsonPreview" border size="small" max-height="250">
-              <el-table-column type="selection" width="40" />
-              <el-table-column prop="nodeName" label="名称" />
-              <el-table-column prop="method" label="方法" width="80" />
-              <el-table-column prop="url" label="URL" show-overflow-tooltip />
-            </el-table>
-            <el-button type="primary" style="margin-top:10px" @click="confirmJsonImport">确认导入选中</el-button>
+            <t-table :data="jsonPreview" :columns="importColumns" row-key="url" bordered size="small" max-height="250" />
+            <t-button theme="primary" style="margin-top:10px" @click="confirmJsonImport">确认导入选中</t-button>
           </div>
-        </el-tab-pane>
+        </t-tab-panel>
 
-        <el-tab-pane label="cURL命令" name="curl">
+        <t-tab-panel label="cURL命令" value="curl">
           <MonacoEditor v-model="curlCommand" language="shell" :height="180" />
-          <el-button type="primary" style="margin-top:10px" @click="importFromCurl" :loading="importLoading">解析并导入</el-button>
-        </el-tab-pane>
+          <t-button theme="primary" style="margin-top:10px" @click="importFromCurl" :loading="importLoading">解析并导入</t-button>
+        </t-tab-panel>
 
-        <el-tab-pane label="直接粘贴JSON" name="paste">
+        <t-tab-panel label="直接粘贴JSON" value="paste">
           <MonacoEditor v-model="pasteJson" language="json" :height="240" />
-          <el-button type="primary" style="margin-top:10px" @click="importFromPaste" :loading="importLoading">解析并导入</el-button>
-        </el-tab-pane>
-      </el-tabs>
+          <t-button theme="primary" style="margin-top:10px" @click="importFromPaste" :loading="importLoading">解析并导入</t-button>
+        </t-tab-panel>
+      </t-tabs>
 
       <template #footer>
-        <el-button @click="importDialogVisible = false">取消</el-button>
+        <t-button theme="default" variant="outline" @click="importDialogVisible = false">取消</t-button>
       </template>
-    </el-dialog>
+    </t-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { MessagePlugin } from 'tdesign-vue-next'
 import {
-  ArrowLeft, RefreshLeft, RefreshRight, Grid, MagicStick, CaretRight, Check,
-  Connection, Box, Upload, List, Document, Setting, Close, Delete, Plus,
-  UploadFilled, InfoFilled, Bottom, QuestionFilled, Rank, Top, Monitor, DataLine
-} from '@element-plus/icons-vue'
+  ChevronLeftIcon, RollbackIcon, RollfrontIcon, GridViewIcon, AiIcon, PlayIcon, CheckIcon,
+  LinkIcon, AppIcon, UploadIcon, ViewListIcon, FileIcon, SettingIcon, CloseIcon, DeleteIcon,
+  AddIcon, CloudUploadIcon, InfoCircleIcon, ArrowDownIcon, HelpCircleIcon, MoveIcon,
+  ArrowUpIcon, DesktopIcon, ChartLineIcon
+} from 'tdesign-icons-vue-next'
 import api from '../api'
 import FieldDiff from '../components/FieldDiff.vue'
 import AiAnalysis from '../components/AiAnalysis.vue'
@@ -643,6 +672,16 @@ const curlCommand = ref('')
 const pasteJson = ref('')
 const jsonUploadRef = ref(null)
 const fileUploadRef = ref(null)
+const jsonFileList = ref([])
+const uploadFileList = ref([])
+
+// t-table 列定义（导入预览）
+const importColumns = [
+  { colKey: 'row-select', type: 'multiple', width: 46 },
+  { colKey: 'nodeName', title: '名称' },
+  { colKey: 'method', title: '方法', width: 80 },
+  { colKey: 'url', title: 'URL', ellipsis: true }
+]
 
 const extractRuleList = ref([])
 const assertStatusMode = ref('eq')
@@ -806,10 +845,10 @@ const runTraceGroup = async (traceId) => {
       params: { chainCode, traceId, parallel: false }
     })
     const executionId = res.data.executionId
-    ElMessage.success('分组执行已启动')
+    MessagePlugin.success('分组执行已启动')
     router.push('/execute/detail/' + executionId)
   } catch (e) {
-    ElMessage.error('执行失败: ' + (e.message || '未知错误'))
+    MessagePlugin.error('执行失败: ' + (e.message || '未知错误'))
   }
 }
 
@@ -819,6 +858,7 @@ const selectNode = (node) => {
     n._uploadedFile = { fileId: n.bodyData, fileName: '已上传文件' }
   }
   selectedNode.value = n
+  uploadFileList.value = []
   parseExtractRules()
   parseAssertRules()
 }
@@ -898,8 +938,8 @@ const removeAssertBodyRule = (idx) => {
 }
 
 const methodType = (m) => {
-  const map = { GET: 'success', POST: 'primary', PUT: 'warning', DELETE: 'danger', PATCH: 'info' }
-  return map[m] || 'info'
+  const map = { GET: 'success', POST: 'primary', PUT: 'warning', DELETE: 'danger', PATCH: 'default' }
+  return map[m] || 'default'
 }
 
 const formatJson = (field) => {
@@ -907,13 +947,13 @@ const formatJson = (field) => {
     const val = selectedNode.value[field]
     selectedNode.value[field] = JSON.stringify(JSON.parse(val), null, 2)
   } catch (e) {
-    ElMessage.warning('JSON格式错误')
+    MessagePlugin.warning('JSON格式错误')
   }
 }
 
 const copyText = (text) => {
   navigator.clipboard.writeText(text)
-  ElMessage.success('已复制')
+  MessagePlugin.success('已复制')
 }
 
 const formatFileSize = (bytes) => {
@@ -925,24 +965,25 @@ const formatFileSize = (bytes) => {
   return size.toFixed(1) + ' ' + units[i]
 }
 
-const handleFileUploadSuccess = (response) => {
+const handleFileUploadSuccess = (context) => {
+  const response = context?.response || {}
   if (response.code === 200) {
     selectedNode.value.bodyData = response.data.fileId
     selectedNode.value._uploadedFile = response.data
-    ElMessage.success('文件上传成功')
+    MessagePlugin.success('文件上传成功')
   } else {
-    ElMessage.error(response.message || '上传失败')
+    MessagePlugin.error(response.message || '上传失败')
   }
 }
 
 const handleFileUploadError = () => {
-  ElMessage.error('文件上传失败')
+  MessagePlugin.error('文件上传失败')
 }
 
 const beforeFileUpload = (file) => {
   const maxSize = 50 * 1024 * 1024
   if (file.size > maxSize) {
-    ElMessage.error('文件大小不能超过50MB')
+    MessagePlugin.error('文件大小不能超过50MB')
     return false
   }
   return true
@@ -951,6 +992,7 @@ const beforeFileUpload = (file) => {
 const removeUploadedFile = () => {
   selectedNode.value.bodyData = ''
   selectedNode.value._uploadedFile = null
+  uploadFileList.value = []
 }
 
 const saveNode = async () => {
@@ -959,13 +1001,13 @@ const saveNode = async () => {
   const data = { ...selectedNode.value }
   delete data._uploadedFile
   await api.post('/node/edit', data)
-  ElMessage.success('保存成功')
+  MessagePlugin.success('保存成功')
   loadNodes()
 }
 
 const deleteNode = async () => {
   await api.post('/node/delete', null, { params: { id: selectedNode.value.id } })
-  ElMessage.success('删除成功')
+  MessagePlugin.success('删除成功')
   selectedNode.value = null
   loadNodes()
 }
@@ -976,7 +1018,7 @@ const saveAll = async () => {
     delete data._uploadedFile
     await api.post('/node/edit', data)
   }
-  ElMessage.success('全部保存成功')
+  MessagePlugin.success('全部保存成功')
 }
 
 const onDragStart = (e) => {
@@ -990,7 +1032,7 @@ const onDrop = async (e) => {
     await api.post('/node/create', { chainCode, nodeName: '新节点', requestMethod: 'GET', requestUrl: 'http://' })
     await loadNodes()
   } catch (e) {
-    ElMessage.error('新增失败: ' + (e.response?.data?.message || e.message))
+    MessagePlugin.error('新增失败: ' + (e.response?.data?.message || e.message))
   }
 }
 
@@ -998,9 +1040,9 @@ const addNode = async () => {
   try {
     await api.post('/node/create', { chainCode, nodeName: '新节点', requestMethod: 'GET', requestUrl: 'http://' })
     await loadNodes()
-    ElMessage.success('已新增节点')
+    MessagePlugin.success('已新增节点')
   } catch (e) {
-    ElMessage.error('新增失败: ' + (e.response?.data?.message || e.message))
+    MessagePlugin.error('新增失败: ' + (e.response?.data?.message || e.message))
   }
 }
 
@@ -1010,12 +1052,13 @@ const openImportDialog = () => {
   jsonPreview.value = []
   curlCommand.value = ''
   pasteJson.value = ''
+  jsonFileList.value = []
   importDialogVisible.value = true
 }
 
 const importFromSwagger = async () => {
   if (!swaggerUrl.value) {
-    ElMessage.warning('请输入Swagger URL')
+    MessagePlugin.warning('请输入Swagger URL')
     return
   }
   importLoading.value = true
@@ -1039,9 +1082,9 @@ const importFromSwagger = async () => {
       }
     }
     swaggerResult.value = result
-    ElMessage.success(`解析到 ${result.length} 个接口`)
+    MessagePlugin.success(`解析到 ${result.length} 个接口`)
   } catch (e) {
-    ElMessage.error('解析失败: ' + e.message)
+    MessagePlugin.error('解析失败: ' + e.message)
   } finally {
     importLoading.value = false
   }
@@ -1050,24 +1093,30 @@ const importFromSwagger = async () => {
 const confirmSwaggerImport = async () => {
   const list = swaggerResult.value.map((item, i) => ({ ...item, sort: i + 1, parallelGroup: '' }))
   await api.post('/node/import', { chainCode, interfaces: list })
-  ElMessage.success(`导入 ${list.length} 个接口成功`)
+  MessagePlugin.success(`导入 ${list.length} 个接口成功`)
   importDialogVisible.value = false
   loadNodes()
 }
 
-const handleJsonFile = (file) => {
+const handleJsonFile = (files, context) => {
+  if (context?.trigger === 'remove') {
+    jsonPreview.value = []
+    return
+  }
+  const raw = context?.file?.raw || files?.[0]?.raw
+  if (!raw) return
   const reader = new FileReader()
   reader.onload = (e) => {
     try {
       const data = JSON.parse(e.target.result)
       const result = parseImportData(data)
       jsonPreview.value = result
-      ElMessage.success(`解析到 ${result.length} 个接口`)
+      MessagePlugin.success(`解析到 ${result.length} 个接口`)
     } catch (err) {
-      ElMessage.error('JSON解析失败: ' + err.message)
+      MessagePlugin.error('JSON解析失败: ' + err.message)
     }
   }
-  reader.readAsText(file.raw)
+  reader.readAsText(raw)
 }
 
 const parseImportData = (data) => {
@@ -1113,25 +1162,25 @@ const parseImportData = (data) => {
 const confirmJsonImport = async () => {
   const list = jsonPreview.value.map((item, i) => ({ ...item, sort: i + 1, parallelGroup: '' }))
   await api.post('/node/import', { chainCode, interfaces: list })
-  ElMessage.success(`导入 ${list.length} 个接口成功`)
+  MessagePlugin.success(`导入 ${list.length} 个接口成功`)
   importDialogVisible.value = false
   loadNodes()
 }
 
 const importFromCurl = async () => {
   if (!curlCommand.value.trim()) {
-    ElMessage.warning('请输入cURL命令')
+    MessagePlugin.warning('请输入cURL命令')
     return
   }
   importLoading.value = true
   try {
     const result = parseCurl(curlCommand.value)
     await api.post('/node/import', { chainCode, interfaces: [result] })
-    ElMessage.success('导入成功')
+    MessagePlugin.success('导入成功')
     importDialogVisible.value = false
     loadNodes()
   } catch (e) {
-    ElMessage.error('解析失败: ' + e.message)
+    MessagePlugin.error('解析失败: ' + e.message)
   } finally {
     importLoading.value = false
   }
@@ -1165,7 +1214,7 @@ const parseCurl = (cmd) => {
 
 const importFromPaste = async () => {
   if (!pasteJson.value.trim()) {
-    ElMessage.warning('请粘贴JSON数据')
+    MessagePlugin.warning('请粘贴JSON数据')
     return
   }
   importLoading.value = true
@@ -1181,26 +1230,26 @@ const importFromPaste = async () => {
       parallelGroup: ''
     }))
     await api.post('/node/import', { chainCode, interfaces: list })
-    ElMessage.success(`导入 ${list.length} 个接口成功`)
+    MessagePlugin.success(`导入 ${list.length} 个接口成功`)
     importDialogVisible.value = false
     loadNodes()
   } catch (e) {
-    ElMessage.error('JSON解析失败: ' + e.message)
+    MessagePlugin.error('JSON解析失败: ' + e.message)
   } finally {
     importLoading.value = false
   }
 }
 
 const autoLayout = () => {
-  ElMessage.success('已自动布局')
+  MessagePlugin.success('已自动布局')
 }
 
-const undo = () => ElMessage.info('撤销')
-const redo = () => ElMessage.info('重做')
+const undo = () => MessagePlugin.info('撤销')
+const redo = () => MessagePlugin.info('重做')
 
 const generateTestData = async () => {
   if (nodes.value.length === 0) {
-    ElMessage.warning('请先添加节点')
+    MessagePlugin.warning('请先添加节点')
     return
   }
   aiLoading.value = true
@@ -1217,12 +1266,12 @@ const generateTestData = async () => {
     }
     if (updatedCount > 0) {
       await saveAll()
-      ElMessage.success(`${message}，已写入 ${updatedCount} 个节点的请求体，请在右侧「请求配置」中查看`)
+      MessagePlugin.success(`${message}，已写入 ${updatedCount} 个节点的请求体，请在右侧「请求配置」中查看`)
     } else {
-      ElMessage.warning('未生成到有效数据，请检查节点是否配置了请求URL')
+      MessagePlugin.warning('未生成到有效数据，请检查节点是否配置了请求URL')
     }
   } catch (e) {
-    ElMessage.error('AI生成失败: ' + (e.message || '未知错误'))
+    MessagePlugin.error('AI生成失败: ' + (e.message || '未知错误'))
   } finally {
     aiLoading.value = false
   }
@@ -1231,7 +1280,7 @@ const generateTestData = async () => {
 const executeChain = async () => {
   const res = await api.post('/execute/run', { chainCode })
   const executionId = res.data.executionId
-  ElMessage.success('执行已启动')
+  MessagePlugin.success('执行已启动')
   router.push('/execute/detail/' + executionId)
 }
 
@@ -1285,7 +1334,7 @@ function diffTagType(type) {
   if (type === 'ADDED') return 'success'
   if (type === 'REMOVED') return 'danger'
   if (type === 'MODIFIED') return 'warning'
-  return 'info'
+  return 'default'
 }
 
 function diffLabel(type) {

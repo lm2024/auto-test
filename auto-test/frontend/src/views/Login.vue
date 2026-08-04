@@ -76,59 +76,61 @@
 
         <h2>欢迎登录</h2>
 
-        <el-button
+        <t-button
           v-if="ssoEnabled"
-          type="primary"
+          theme="primary"
           size="large"
           class="sso-btn"
           @click="ssoLogin"
         >
-          <el-icon><Connection /></el-icon>
+          <LinkIcon />
           SSO 统一认证登录
-        </el-button>
+        </t-button>
 
-        <el-divider v-if="ssoEnabled">或使用账号密码</el-divider>
+        <t-divider v-if="ssoEnabled">或使用账号密码</t-divider>
 
-        <el-form :model="form" @keyup.enter="handleLogin" label-width="0">
+        <t-form :data="form" @keyup.enter="handleLogin" label-width="0">
           <!-- 用户名 -->
-          <el-form-item>
-            <el-input
+          <t-form-item>
+            <t-input
               v-model="form.username"
               placeholder="用户名"
-              prefix-icon="User"
               size="large"
-            />
-          </el-form-item>
+            >
+              <template #prefix-icon><UserIcon /></template>
+            </t-input>
+          </t-form-item>
 
           <!-- 密码 -->
-          <el-form-item>
-            <el-input
+          <t-form-item>
+            <t-input
               v-model="form.password"
               type="password"
               placeholder="密码"
-              prefix-icon="Lock"
               size="large"
-              show-password
-            />
+            >
+              <template #prefix-icon><LockOnIcon /></template>
+            </t-input>
             <PasswordStrength
               v-if="form.password"
               :password="form.password"
               :show-requirements="false"
             />
-          </el-form-item>
+          </t-form-item>
 
           <!-- 验证码 -->
-          <el-form-item>
+          <t-form-item>
             <div class="captcha-row">
-              <el-input
+              <t-input
                 v-model="form.captcha"
                 placeholder="请输入验证码"
-                prefix-icon="Picture"
                 size="large"
-                maxlength="4"
+                :maxlength="4"
                 class="captcha-input"
-                @input="form.captcha = form.captcha.toUpperCase()"
-              />
+                @change="(val) => (form.captcha = String(val || '').toUpperCase())"
+              >
+                <template #prefix-icon><ImageIcon /></template>
+              </t-input>
               <div
                 class="captcha-box"
                 :class="{ refreshing: captchaRefreshing }"
@@ -150,24 +152,24 @@
                   />
                 </svg>
                 <span class="captcha-count">{{ countdown }}</span>
-                <el-icon class="captcha-refresh"><Refresh /></el-icon>
+                <RefreshIcon class="captcha-refresh" />
               </div>
             </div>
-          </el-form-item>
+          </t-form-item>
 
           <!-- 登录按钮 -->
-          <el-form-item>
-            <el-button
-              type="primary"
+          <t-form-item>
+            <t-button
+              theme="primary"
               size="large"
               class="login-btn"
               :loading="loading"
               @click="handleLogin"
             >
               {{ loading ? '登录中…' : '登 录' }}
-            </el-button>
-          </el-form-item>
-        </el-form>
+            </t-button>
+          </t-form-item>
+        </t-form>
 
         <div class="login-hint">
           <span>默认账号: admin / Admin@123</span>
@@ -180,8 +182,8 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { Connection, Refresh } from '@element-plus/icons-vue'
+import { MessagePlugin } from 'tdesign-vue-next'
+import { LinkIcon, RefreshIcon, UserIcon, LockOnIcon, ImageIcon } from 'tdesign-icons-vue-next'
 import api from '../api'
 import { setToken, setUser } from '../utils/auth'
 import PasswordStrength from '../components/PasswordStrength.vue'
@@ -234,7 +236,7 @@ const fetchCaptcha = async () => {
     countdown.value = expireSeconds.value
     startCountdown()
   } catch (e) {
-    ElMessage.error('验证码加载失败，请稍后重试')
+    MessagePlugin.error('验证码加载失败，请稍后重试')
   } finally {
     captchaRefreshing.value = false
   }
@@ -263,15 +265,15 @@ const loginSuccess = ref(false)
 
 const handleLogin = async () => {
   if (!form.value.username || !form.value.password) {
-    ElMessage.warning('请输入用户名和密码')
+    MessagePlugin.warning('请输入用户名和密码')
     return
   }
   if (!form.value.captcha) {
-    ElMessage.warning('请输入验证码')
+    MessagePlugin.warning('请输入验证码')
     return
   }
   if (!captchaToken.value) {
-    ElMessage.warning('验证码已失效，正在刷新')
+    MessagePlugin.warning('验证码已失效，正在刷新')
     fetchCaptcha()
     return
   }
@@ -287,11 +289,11 @@ const handleLogin = async () => {
     setUser(res.data.user)
     loginSuccess.value = true
     setTimeout(() => {
-      ElMessage.success('登录成功')
+      MessagePlugin.success('登录成功')
       router.push('/')
     }, 900)
   } catch (e) {
-    ElMessage.error(e.response?.data?.message || '登录失败')
+    MessagePlugin.error(e.response?.data?.message || '登录失败')
     // 登录失败（含验证码错误）自动换一张新验证码
     fetchCaptcha()
     form.value.captcha = ''
@@ -521,18 +523,29 @@ onBeforeUnmount(() => {
 }
 .sso-btn { margin-bottom: 16px; }
 
-.login-btn {
+/* 选择器多加一层 .login-card 提高权重，压过 TDesign 的 .t-button--theme-primary
+   （全局品牌色是蓝色），并就地把品牌色变量改成青绿，使 hover / focus 态也不串蓝 */
+.login-card .login-btn {
+  --td-brand-color: #4a9e8e;
+  --td-brand-color-hover: #5db8a7;
+  --td-brand-color-active: #3a8576;
+  --td-brand-color-focus: rgba(74, 158, 142, 0.2);
+  --td-brand-color-disabled: rgba(74, 158, 142, 0.4);
   margin-top: 4px;
   background: linear-gradient(135deg, #4a9e8e, #3a8576);
   border: none;
   box-shadow: 0 8px 20px rgba(74, 158, 142, 0.3);
   transition: transform 0.2s, box-shadow 0.2s;
 }
-.login-btn:hover {
+.login-card .login-btn:hover {
+  background: linear-gradient(135deg, #4a9e8e, #3a8576);
   transform: translateY(-2px);
   box-shadow: 0 12px 26px rgba(74, 158, 142, 0.42);
 }
-.login-btn:active { transform: translateY(0); }
+.login-card .login-btn:active {
+  background: linear-gradient(135deg, #4a9e8e, #3a8576);
+  transform: translateY(0);
+}
 
 .login-hint {
   text-align: center;
@@ -644,17 +657,23 @@ html.dark .ring-bg { stroke: rgba(255, 255, 255, 0.12); }
   animation: drawCheck 0.4s 0.45s ease forwards;
 }
 
-:deep(.el-input__wrapper) {
+/* t-form-item 的内容区默认是 flex 单行，改回块级堆叠，
+   让密码强度条仍然显示在输入框下方（与原 el-form-item 一致） */
+:deep(.t-form__controls-content) {
+  display: block;
+}
+
+:deep(.t-input) {
   border-radius: 8px;
   box-shadow: none;
   border: 1px solid var(--border-strong, rgba(0, 0, 0, 0.12));
   background: var(--bg, #f8f9fa);
   transition: border-color 0.2s, box-shadow 0.2s;
 }
-:deep(.el-input__wrapper:hover) {
+:deep(.t-input:hover) {
   border-color: rgba(74, 158, 142, 0.5);
 }
-:deep(.el-input__wrapper.is-focus) {
+:deep(.t-input.t-input--focused) {
   box-shadow: 0 0 0 3px rgba(74, 158, 142, 0.18);
   border-color: var(--primary, #4a9e8e);
 }
@@ -706,7 +725,7 @@ html.dark .login-hint { color: var(--text-mute, #7d8694); }
 html.dark .captcha-box { background: var(--bg, #1a1f2e); border-color: var(--border-strong, rgba(255,255,255,0.1)); }
 html.dark .captcha-count { color: var(--primary-light, #6dc4b4); }
 html.dark .captcha-refresh { color: var(--text-mute, #7d8694); }
-html.dark :deep(.el-input__wrapper) { background: var(--bg, #1a1f2e); border-color: var(--border-strong, rgba(255,255,255,0.1)); }
+html.dark :deep(.t-input) { background: var(--bg, #1a1f2e); border-color: var(--border-strong, rgba(255,255,255,0.1)); }
 html.dark .success-mask { background: var(--surface, #232938); }
 
 /* 窄屏：隐藏左侧，仅保留登录卡片 */

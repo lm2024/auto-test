@@ -1,0 +1,46 @@
+/**
+ * TDesign 主题覆盖 · 全局统一为 TDesign 蓝 (#0052d9)
+ * 仅覆盖品牌色、字体、圆角等与“设计令牌”对齐的项；
+ * 其余表面 / 文本由 TDesign 自带变量 + new-design-tokens.css 的自定义令牌共同决定。
+ */
+
+:root {
+  /* ── 品牌色（蓝）── */
+  --td-brand-color: #0052d9;
+  --td-brand-color-hover: #266fe8;
+  --td-brand-color-active: #003cab;
+  --td-brand-color-light: #ecf2fe;
+  --td-brand-color-light-hover: #d4e2fc;
+  --td-brand-color-light-active: #b5c7eb;
+  --td-brand-color-focus: #b5c7eb;
+  --td-brand-color-disabled: #b5c7eb;
+
+  /* ── 字体 ── */
+  --td-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* ── 圆角（与令牌对齐）── */
+  --td-radius-default: 6px;
+  --td-radius-small: 4px;
+}
+
+/* 暗色：跟随 .t-theme-dark（由 App.vue 切换），同时兼容 .dark */
+.t-theme-dark,
+html.dark {
+  --td-brand-color: #4582e6;
+  --td-brand-color-hover: #5b94ea;
+  --td-brand-color-active: #003cab;
+  --td-brand-color-light: #1c2a4a;
+  --td-brand-color-light-hover: #20304f;
+  --td-brand-color-light-active: #142042;
+  --td-brand-color-focus: #2a3f66;
+  --td-brand-color-disabled: #3a4a66;
+}
+
+/* 全局滚动条（主色点缀，双态通用） */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--accent-soft, rgba(0, 82, 217, 0.4));
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--accent-medium, rgba(0, 82, 217, 0.6)); }

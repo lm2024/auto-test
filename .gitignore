@@ -11,3 +11,5 @@ node_modules/
 .reasonix/
 /*.png
 fix-codex-web-search.sh
+**/dist/
+**/node_modules/

@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import javax.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/user")
@@ -81,5 +82,17 @@ public class UserController {
         String password = params.get("password");
         PasswordValidator.PasswordStrengthResult result = PasswordValidator.validatePassword(password);
         return Result.success(result);
+    }
+
+    @GetMapping("/me")
+    public Result<?> me(HttpServletRequest req) {
+        Long userId = (Long) req.getAttribute("userId");
+        return Result.success(userService.getUserById(userId));
+    }
+
+    @PostMapping("/refresh")
+    public Result<?> refresh(HttpServletRequest req) {
+        Long userId = (Long) req.getAttribute("userId");
+        return Result.success(userService.refreshToken(userId));
     }
 }

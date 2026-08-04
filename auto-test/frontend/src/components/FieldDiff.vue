@@ -1,7 +1,7 @@
 <template>
   <div class="field-diff">
     <div v-if="!changes || changes.length === 0" class="no-changes">
-      <el-icon><Check /></el-icon>
+      <CheckIcon />
       无字段变化
     </div>
     <div v-for="change in changes" :key="change.field" class="diff-item">
@@ -21,7 +21,7 @@
 </template>
 
 <script setup>
-import { Check } from '@element-plus/icons-vue'
+import { CheckIcon } from 'tdesign-icons-vue-next'
 
 const props = defineProps({
   changes: { type: Array, default: () => [] }
