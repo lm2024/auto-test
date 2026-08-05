@@ -146,7 +146,7 @@ public class PluginController {
         config.put("methods", Arrays.asList("GET", "POST", "PUT", "DELETE"));
         config.put("nodeTypes", Arrays.asList("HTTP"));
         config.put("defaultBodyType", "application/json");
-        config.put("defaultParallelGroup", "");
+        config.put("scopes", Arrays.asList("INTERNAL", "EXTERNAL", "UNKNOWN"));
         config.put("maxInterfacesPerPush", 200);
         config.put("traceEnabled", true);
         return Result.success(config);
@@ -159,8 +159,8 @@ public class PluginController {
         vo.setNodeCode(node.getNodeCode());
         vo.setNodeName(node.getNodeName());
         vo.setNodeType(node.getNodeType());
-        vo.setSortNo(node.getSortNo());
-        vo.setParallelGroup(node.getParallelGroup());
+        vo.setInterfaceScope(node.getInterfaceScope());
+        vo.setTargetSystem(node.getTargetSystem());
         vo.setRequestUrl(node.getRequestUrl());
         vo.setRequestMethod(node.getRequestMethod());
         vo.setRequestHeaders(node.getRequestHeaders());

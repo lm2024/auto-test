@@ -8,7 +8,6 @@ public class PluginInterfaceDTO {
     private String bodyData;
     private String responseData;
     private Integer sort;
-    private String parallelGroup;
 
     // 阶段二新增字段
     private String bizOperTraceId;
@@ -32,8 +31,6 @@ public class PluginInterfaceDTO {
     public void setResponseData(String responseData) { this.responseData = responseData; }
     public Integer getSort() { return sort; }
     public void setSort(Integer sort) { this.sort = sort; }
-    public String getParallelGroup() { return parallelGroup; }
-    public void setParallelGroup(String parallelGroup) { this.parallelGroup = parallelGroup; }
 
     // 阶段二新增字段 getter/setter
     public String getBizOperTraceId() { return bizOperTraceId; }

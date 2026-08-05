@@ -16,10 +16,8 @@ public interface TestNodeConfigMapper {
     TestNodeConfig selectById(@Param("id") Long id);
     TestNodeConfig selectByNodeCode(@Param("chainCode") String chainCode, @Param("nodeCode") String nodeCode);
     List<TestNodeConfig> selectByChainCode(@Param("chainCode") String chainCode);
-    int getMaxSortNo(@Param("chainCode") String chainCode);
     int getMaxNodeId(@Param("chainCode") String chainCode);
     int countByChainCode(@Param("chainCode") String chainCode);
-    int incrementSortNoFrom(@Param("chainCode") String chainCode, @Param("fromSortNo") int fromSortNo);
 
     /**
      * 按 bizOperTraceId 分组查询节点

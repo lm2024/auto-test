@@ -3,8 +3,6 @@ package com.autotest.model.dto;
 public class NodeEditDTO {
     private Long id;
     private String nodeName;
-    private Integer sortNo;
-    private String parallelGroup;
     private String requestUrl;
     private String requestMethod;
     private String requestHeaders;
@@ -19,10 +17,6 @@ public class NodeEditDTO {
     public void setId(Long id) { this.id = id; }
     public String getNodeName() { return nodeName; }
     public void setNodeName(String nodeName) { this.nodeName = nodeName; }
-    public Integer getSortNo() { return sortNo; }
-    public void setSortNo(Integer sortNo) { this.sortNo = sortNo; }
-    public String getParallelGroup() { return parallelGroup; }
-    public void setParallelGroup(String parallelGroup) { this.parallelGroup = parallelGroup; }
     public String getRequestUrl() { return requestUrl; }
     public void setRequestUrl(String requestUrl) { this.requestUrl = requestUrl; }
     public String getRequestMethod() { return requestMethod; }

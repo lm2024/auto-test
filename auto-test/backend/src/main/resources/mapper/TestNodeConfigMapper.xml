@@ -9,8 +9,6 @@
         <result column="node_code" property="nodeCode"/>
         <result column="node_name" property="nodeName"/>
         <result column="node_type" property="nodeType"/>
-        <result column="sort_no" property="sortNo"/>
-        <result column="parallel_group" property="parallelGroup"/>
         <result column="request_url" property="requestUrl"/>
         <result column="request_method" property="requestMethod"/>
         <result column="request_headers" property="requestHeaders"/>
@@ -28,30 +26,36 @@
         <result column="page_url" property="pageUrl"/>
         <result column="window_id" property="windowId"/>
         <result column="is_ignored" property="isIgnored"/>
+        <result column="interface_scope" property="interfaceScope"/>
+        <result column="target_system" property="targetSystem"/>
     </resultMap>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO test_node_config (chain_code, node_id, node_code, node_name, node_type, sort_no,
-            parallel_group, request_url, request_method, request_headers, body_type, body_data,
+        INSERT INTO test_node_config (chain_code, node_id, node_code, node_name, node_type,
+            request_url, request_method, request_headers, body_type, body_data,
             extract_rules, assert_rules, variable_mapping, delay_seconds,
-            biz_oper_trace_id, trigger_event, target_dom, page_url, window_id, is_ignored)
-        VALUES (#{chainCode}, #{nodeId}, #{nodeCode}, #{nodeName}, #{nodeType}, #{sortNo},
-            #{parallelGroup}, #{requestUrl}, #{requestMethod}, #{requestHeaders}, #{bodyType}, #{bodyData},
+            biz_oper_trace_id, trigger_event, target_dom, page_url, window_id, is_ignored,
+            interface_scope, target_system)
+        VALUES (#{chainCode}, #{nodeId}, #{nodeCode}, #{nodeName}, #{nodeType},
+            #{requestUrl}, #{requestMethod}, #{requestHeaders}, #{bodyType}, #{bodyData},
             #{extractRules}, #{assertRules}, #{variableMapping}, #{delaySeconds},
-            #{bizOperTraceId}, #{triggerEvent}, #{targetDom}, #{pageUrl}, #{windowId}, #{isIgnored})
+            #{bizOperTraceId}, #{triggerEvent}, #{targetDom}, #{pageUrl}, #{windowId}, #{isIgnored},
+            #{interfaceScope}, #{targetSystem})
     </insert>
 
     <insert id="batchInsert">
-        INSERT INTO test_node_config (chain_code, node_id, node_code, node_name, node_type, sort_no,
-            parallel_group, request_url, request_method, request_headers, body_type, body_data,
+        INSERT INTO test_node_config (chain_code, node_id, node_code, node_name, node_type,
+            request_url, request_method, request_headers, body_type, body_data,
             extract_rules, assert_rules, variable_mapping, delay_seconds,
-            biz_oper_trace_id, trigger_event, target_dom, page_url, window_id, is_ignored)
+            biz_oper_trace_id, trigger_event, target_dom, page_url, window_id, is_ignored,
+            interface_scope, target_system)
         VALUES
         <foreach collection="list" item="item" separator=",">
-            (#{item.chainCode}, #{item.nodeId}, #{item.nodeCode}, #{item.nodeName}, #{item.nodeType}, #{item.sortNo},
-             #{item.parallelGroup}, #{item.requestUrl}, #{item.requestMethod}, #{item.requestHeaders}, #{item.bodyType}, #{item.bodyData},
+            (#{item.chainCode}, #{item.nodeId}, #{item.nodeCode}, #{item.nodeName}, #{item.nodeType},
+             #{item.requestUrl}, #{item.requestMethod}, #{item.requestHeaders}, #{item.bodyType}, #{item.bodyData},
              #{item.extractRules}, #{item.assertRules}, #{item.variableMapping}, #{item.delaySeconds},
-             #{item.bizOperTraceId}, #{item.triggerEvent}, #{item.targetDom}, #{item.pageUrl}, #{item.windowId}, #{item.isIgnored})
+             #{item.bizOperTraceId}, #{item.triggerEvent}, #{item.targetDom}, #{item.pageUrl}, #{item.windowId}, #{item.isIgnored},
+             #{item.interfaceScope}, #{item.targetSystem})
         </foreach>
     </insert>
 
@@ -59,8 +63,6 @@
         UPDATE test_node_config
         <set>
             <if test="nodeName != null">node_name = #{nodeName},</if>
-            <if test="sortNo != null">sort_no = #{sortNo},</if>
-            <if test="parallelGroup != null">parallel_group = #{parallelGroup},</if>
             <if test="requestUrl != null">request_url = #{requestUrl},</if>
             <if test="requestMethod != null">request_method = #{requestMethod},</if>
             <if test="requestHeaders != null">request_headers = #{requestHeaders},</if>
@@ -70,6 +72,8 @@
             <if test="assertRules != null">assert_rules = #{assertRules},</if>
             <if test="variableMapping != null">variable_mapping = #{variableMapping},</if>
             <if test="delaySeconds != null">delay_seconds = #{delaySeconds},</if>
+            <if test="interfaceScope != null">interface_scope = #{interfaceScope},</if>
+            <if test="targetSystem != null">target_system = #{targetSystem},</if>
         </set>
         WHERE id = #{id}
     </update>
@@ -90,12 +94,9 @@
         SELECT * FROM test_node_config WHERE chain_code = #{chainCode} AND node_code = #{nodeCode}
     </select>
 
+    <!-- 执行顺序由 X6 图拓扑决定，此处仅按 node_id 稳定排序 -->
     <select id="selectByChainCode" resultMap="BaseResultMap">
-        SELECT * FROM test_node_config WHERE chain_code = #{chainCode} ORDER BY sort_no ASC
-    </select>
-
-    <select id="getMaxSortNo" resultType="int">
-        SELECT COALESCE(MAX(sort_no), 0) FROM test_node_config WHERE chain_code = #{chainCode}
+        SELECT * FROM test_node_config WHERE chain_code = #{chainCode} ORDER BY node_id ASC
     </select>
 
     <select id="getMaxNodeId" resultType="int">
@@ -106,18 +107,13 @@
         SELECT COUNT(*) FROM test_node_config WHERE chain_code = #{chainCode}
     </select>
 
-    <update id="incrementSortNoFrom">
-        UPDATE test_node_config SET sort_no = sort_no + 1
-        WHERE chain_code = #{chainCode} AND sort_no >= #{fromSortNo}
-    </update>
-
     <select id="selectByTraceId" resultMap="BaseResultMap">
         SELECT * FROM test_node_config
         WHERE chain_code = #{chainCode}
         <if test="bizOperTraceId != null and bizOperTraceId != ''">
             AND biz_oper_trace_id = #{bizOperTraceId}
         </if>
-        ORDER BY sort_no ASC
+        ORDER BY node_id ASC
     </select>
 
     <select id="selectTraceIdsByChainCode" resultType="string">

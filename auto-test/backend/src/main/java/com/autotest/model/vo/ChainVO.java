@@ -24,6 +24,9 @@ public class ChainVO {
     // 阶段三新增字段
     private Long categoryId;
 
+    // 260804 编排改造：X6 画布数据，仅详情接口返回（列表接口不带，避免响应体过大）
+    private String graphData;
+
     public Long getChainId() { return chainId; }
     public void setChainId(Long chainId) { this.chainId = chainId; }
     public String getChainCode() { return chainCode; }
@@ -56,4 +59,7 @@ public class ChainVO {
 
     public Long getCategoryId() { return categoryId; }
     public void setCategoryId(Long categoryId) { this.categoryId = categoryId; }
+
+    public String getGraphData() { return graphData; }
+    public void setGraphData(String graphData) { this.graphData = graphData; }
 }

@@ -6,6 +6,7 @@ import com.autotest.service.CaptchaService;
 import com.autotest.service.UserService;
 import com.autotest.util.PasswordValidator;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -20,6 +21,13 @@ public class UserController {
 
     @Autowired
     private CaptchaService captchaService;
+
+    /**
+     * 开发/本地联调用开关：设为 true 时跳过图形验证码校验。
+     * 生产环境务必保持默认 false，避免被暴力破解。
+     */
+    @Value("${captcha.bypass:false}")
+    private boolean captchaBypass;
 
     @PostMapping("/create")
     public Result<?> createUser(@RequestBody Map<String, Object> params) {
@@ -70,7 +78,7 @@ public class UserController {
         String password = params.get("password");
         String captcha = params.get("captcha");
         String captchaToken = params.get("captchaToken");
-        if (!captchaService.validate(captchaToken, captcha)) {
+        if (!captchaBypass && !captchaService.validate(captchaToken, captcha)) {
             return Result.error(400, "验证码错误或已过期，请重新输入");
         }
         Map<String, Object> result = userService.login(username, password);

@@ -6,7 +6,6 @@ import com.autotest.model.vo.*;
 import com.autotest.mapper.TestNodeConfigMapper;
 import com.autotest.service.ChainService;
 import com.autotest.service.ExecuteService;
-import com.autotest.service.VersionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,9 +19,6 @@ public class ChainController {
 
     @Autowired
     private ChainService chainService;
-
-    @Autowired
-    private VersionService versionService;
 
     @PostMapping("/create")
     public Result<?> createChain(@Valid @RequestBody ChainCreateDTO dto) {
@@ -95,6 +91,31 @@ public class ChainController {
         return Result.success(vo);
     }
 
+    /**
+     * 保存 X6 画布。画布即编排，执行顺序完全由这里的 DAG 决定。
+     * 存在环形依赖会被拒绝，返回 400。
+     */
+    @PostMapping("/graph/save")
+    public Result<?> saveGraph(@RequestBody Map<String, String> params) {
+        String chainCode = params.get("chainCode");
+        if (chainCode == null || chainCode.trim().isEmpty()) {
+            return Result.error("chainCode 不能为空");
+        }
+        List<List<String>> layers = chainService.saveGraph(chainCode, params.get("graphData"));
+        Map<String, Object> data = new HashMap<>();
+        data.put("layers", layers);
+        data.put("layerCount", layers.size());
+        return Result.success(data);
+    }
+
+    /**
+     * 执行顺序预览：返回拓扑分层，同层并发、层间串行
+     */
+    @GetMapping("/graph/layers")
+    public Result<?> previewLayers(@RequestParam String chainCode) {
+        return Result.success(chainService.previewLayers(chainCode));
+    }
+
     @PostMapping("/copy")
     public Result<?> copyChain(@RequestBody Map<String, String> params) {
         String chainCode = params.get("chainCode");
@@ -125,37 +146,6 @@ public class ChainController {
         data.put("successCount", success);
         data.put("failCount", chainCodes.size() - success);
         return Result.success(data);
-    }
-
-    @GetMapping("/versions")
-    public Result<?> getVersions(
-            @RequestParam String chainCode,
-            @RequestParam(defaultValue = "false") boolean all) {
-        List<VersionVO> versions = versionService.getVersions(chainCode, all);
-        Map<String, Object> data = new HashMap<>();
-        data.put("total", versions.size());
-        data.put("list", versions);
-        return Result.success(data);
-    }
-
-    @GetMapping("/version/diff")
-    public Result<?> getVersionDiff(
-            @RequestParam String chainCode,
-            @RequestParam int version) {
-        DiffVO diff = versionService.getVersionDiff(chainCode, version);
-        return Result.success(diff);
-    }
-
-    @PostMapping("/version/delete")
-    public Result<?> deleteVersion(@Valid @RequestBody VersionDeleteDTO dto) {
-        versionService.deleteVersion(dto);
-        return Result.success();
-    }
-
-    @PostMapping("/version/batchDelete")
-    public Result<?> batchDeleteVersions(@Valid @RequestBody BatchVersionDeleteDTO dto) {
-        versionService.batchDeleteVersions(dto.getChainCode(), dto.getBeforeVersion());
-        return Result.success();
     }
 
     @Autowired
@@ -217,8 +207,8 @@ public class ChainController {
                 vo.setNodeCode(node.getNodeCode());
                 vo.setNodeName(node.getNodeName());
                 vo.setNodeType(node.getNodeType());
-                vo.setSortNo(node.getSortNo());
-                vo.setParallelGroup(node.getParallelGroup());
+                vo.setInterfaceScope(node.getInterfaceScope());
+                vo.setTargetSystem(node.getTargetSystem());
                 vo.setRequestUrl(node.getRequestUrl());
                 vo.setRequestMethod(node.getRequestMethod());
                 vo.setRequestHeaders(node.getRequestHeaders());
@@ -256,8 +246,8 @@ public class ChainController {
                 vo.setNodeCode(node.getNodeCode());
                 vo.setNodeName(node.getNodeName());
                 vo.setNodeType(node.getNodeType());
-                vo.setSortNo(node.getSortNo());
-                vo.setParallelGroup(node.getParallelGroup());
+                vo.setInterfaceScope(node.getInterfaceScope());
+                vo.setTargetSystem(node.getTargetSystem());
                 vo.setRequestUrl(node.getRequestUrl());
                 vo.setRequestMethod(node.getRequestMethod());
                 vo.setRequestHeaders(node.getRequestHeaders());

@@ -9,8 +9,6 @@ public class TestNodeConfig {
     private String nodeCode;
     private String nodeName;
     private String nodeType;
-    private Integer sortNo;
-    private String parallelGroup;
     private String requestUrl;
     private String requestMethod;
     private String requestHeaders;
@@ -31,6 +29,12 @@ public class TestNodeConfig {
     private String windowId;
     private Integer isIgnored;
 
+    // 内外网识别新增字段
+    /** 接口归属范围：INTERNAL-内网 / EXTERNAL-外网 / UNKNOWN-未识别 */
+    private String interfaceScope;
+    /** 归属目标系统编码，取自 sys_system_registry.system_code */
+    private String targetSystem;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getChainCode() { return chainCode; }
@@ -43,10 +47,6 @@ public class TestNodeConfig {
     public void setNodeName(String nodeName) { this.nodeName = nodeName; }
     public String getNodeType() { return nodeType; }
     public void setNodeType(String nodeType) { this.nodeType = nodeType; }
-    public Integer getSortNo() { return sortNo; }
-    public void setSortNo(Integer sortNo) { this.sortNo = sortNo; }
-    public String getParallelGroup() { return parallelGroup; }
-    public void setParallelGroup(String parallelGroup) { this.parallelGroup = parallelGroup; }
     public String getRequestUrl() { return requestUrl; }
     public void setRequestUrl(String requestUrl) { this.requestUrl = requestUrl; }
     public String getRequestMethod() { return requestMethod; }
@@ -83,4 +83,10 @@ public class TestNodeConfig {
     public void setWindowId(String windowId) { this.windowId = windowId; }
     public Integer getIsIgnored() { return isIgnored; }
     public void setIsIgnored(Integer isIgnored) { this.isIgnored = isIgnored; }
+
+    // 内外网识别新增字段 getter/setter
+    public String getInterfaceScope() { return interfaceScope; }
+    public void setInterfaceScope(String interfaceScope) { this.interfaceScope = interfaceScope; }
+    public String getTargetSystem() { return targetSystem; }
+    public void setTargetSystem(String targetSystem) { this.targetSystem = targetSystem; }
 }

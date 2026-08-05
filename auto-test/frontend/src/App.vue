@@ -45,6 +45,14 @@
           <template #icon><DesktopIcon /></template>
           插件下载
         </t-menu-item>
+        <t-menu-item value="/system/registry">
+          <template #icon><ServerIcon /></template>
+          系统注册表
+        </t-menu-item>
+        <t-menu-item value="/call-graph">
+          <template #icon><ShareIcon /></template>
+          调用关系图
+        </t-menu-item>
         <t-menu-item value="/system/config">
           <template #icon><SettingIcon /></template>
           系统设置
@@ -93,7 +101,9 @@ import {
   TimeIcon,
   DesktopIcon,
   SunnyIcon,
-  MoonIcon
+  MoonIcon,
+  ServerIcon,
+  ShareIcon
 } from 'tdesign-icons-vue-next'
 import { getUser, logout } from './utils/auth'
 
@@ -214,8 +224,7 @@ const toggleTheme = () => {
 </script>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
+/* 注意：内网/离线部署不要引入 Google Fonts CDN，否则白屏。已使用系统字体栈兜底。 */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body, #app {
   height: 100%;
@@ -259,7 +268,7 @@ html, body, #app {
 }
 
 .resize-handle:hover {
-  background: rgba(0, 82, 217, 0.4);
+  background: rgba(74, 158, 142, 0.4);
 }
 
 /* ── Logo Area ── */
@@ -283,8 +292,8 @@ html, body, #app {
   width: 10px;
   height: 10px;
   border-radius: 3px;
-  background: var(--primary, #0052d9);
-  box-shadow: 0 0 12px rgba(0, 82, 217, 0.5);
+  background: var(--primary, #4a9e8e);
+  box-shadow: 0 0 12px rgba(74, 158, 142, 0.5);
 }
 
 .logo span {

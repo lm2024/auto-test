@@ -6,6 +6,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ExecutionContext {
     private String executionId;
@@ -16,6 +17,8 @@ public class ExecutionContext {
     private Date startTime;
     private Date endTime;
     private String status;
+    /** 节点实际执行序号，DAG 编排下不再有静态 sort_no，改为运行时自增 */
+    private final AtomicInteger executeSeq = new AtomicInteger(0);
 
     public ExecutionContext() {
         this.variables = new ConcurrentHashMap<>();
@@ -23,6 +26,9 @@ public class ExecutionContext {
         this.stopped = false;
         this.status = "RUNNING";
     }
+
+    /** 取下一个执行序号（从 1 开始） */
+    public int nextExecuteSeq() { return executeSeq.incrementAndGet(); }
 
     public String getExecutionId() { return executionId; }
     public void setExecutionId(String executionId) { this.executionId = executionId; }

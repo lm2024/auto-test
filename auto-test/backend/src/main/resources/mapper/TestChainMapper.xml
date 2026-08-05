@@ -12,8 +12,7 @@
         <result column="update_time" property="updateTime"/>
         <result column="create_by" property="createBy"/>
         <result column="status" property="status"/>
-        <result column="current_version" property="currentVersion"/>
-        <result column="chain_fingerprint" property="chainFingerprint"/>
+        <result column="graph_data" property="graphData"/>
         <result column="biz_oper_trace_id" property="bizOperTraceId"/>
         <result column="account_code" property="accountCode"/>
         <result column="system_category" property="systemCategory"/>
@@ -24,9 +23,9 @@
     </resultMap>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO test_chain (chain_code, chain_name, execute_mode, description, create_by, status, current_version, chain_fingerprint,
+        INSERT INTO test_chain (chain_code, chain_name, execute_mode, description, create_by, status, graph_data,
             biz_oper_trace_id, account_code, system_category, func_category, priority, category_id, tenant_id)
-        VALUES (#{chainCode}, #{chainName}, #{executeMode}, #{description}, #{createBy}, #{status}, #{currentVersion}, #{chainFingerprint},
+        VALUES (#{chainCode}, #{chainName}, #{executeMode}, #{description}, #{createBy}, #{status}, #{graphData},
             #{bizOperTraceId}, #{accountCode}, #{systemCategory}, #{funcCategory}, #{priority}, #{categoryId}, #{tenantId})
     </insert>
 
@@ -37,8 +36,7 @@
             <if test="executeMode != null">execute_mode = #{executeMode},</if>
             <if test="description != null">description = #{description},</if>
             <if test="status != null">status = #{status},</if>
-            <if test="currentVersion != null">current_version = #{currentVersion},</if>
-            <if test="chainFingerprint != null">chain_fingerprint = #{chainFingerprint},</if>
+            <if test="graphData != null">graph_data = #{graphData},</if>
             <if test="bizOperTraceId != null">biz_oper_trace_id = #{bizOperTraceId},</if>
             <if test="accountCode != null">account_code = #{accountCode},</if>
             <if test="systemCategory != null">system_category = #{systemCategory},</if>

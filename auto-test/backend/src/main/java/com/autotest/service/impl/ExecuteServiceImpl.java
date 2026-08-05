@@ -19,6 +19,8 @@ import com.autotest.model.vo.NodeExecuteLogVO;
 import com.autotest.service.AccountService;
 import com.autotest.service.ExecuteService;
 import com.autotest.util.CodeGenerator;
+import com.autotest.util.DagPlanner;
+import com.autotest.util.FileUploadUtil;
 import com.autotest.util.PlaceholderUtil;
 import com.autotest.websocket.WebSocketPushService;
 import com.alibaba.fastjson.JSON;
@@ -130,8 +132,24 @@ public class ExecuteServiceImpl implements ExecuteService {
         contextMap.put(executionId, context);
 
         TestChain chain = chainMapper.selectByChainCode(chainCode);
-        List<TestNodeConfig> nodes = nodeConfigMapper.selectByChainCode(chainCode);
-        nodes.sort(Comparator.comparing(TestNodeConfig::getSortNo));
+        List<TestNodeConfig> allNodes = nodeConfigMapper.selectByChainCode(chainCode);
+
+        // 执行顺序由 X6 画布拓扑决定，不再依赖 sort_no / parallel_group
+        List<List<TestNodeConfig>> dagLayers = new ArrayList<>();
+        String planError = null;
+        try {
+            dagLayers = DagPlanner.planLayers(chain.getGraphData(), allNodes);
+        } catch (Exception e) {
+            planError = e.getMessage();
+            log.error("[Execute] 链路拓扑解析失败: chainCode={}", chainCode, e);
+        }
+        List<TestNodeConfig> nodes = new ArrayList<>();
+        for (List<TestNodeConfig> layer : dagLayers) {
+            nodes.addAll(layer);
+        }
+        if (planError != null) {
+            nodes = allNodes;
+        }
 
         int successCount = 0;
         int failCount = 0;
@@ -139,6 +157,11 @@ public class ExecuteServiceImpl implements ExecuteService {
         String errorMessage = null;
 
         try {
+            // 画布拓扑非法（例如存在环形依赖）时直接判失败，不执行任何节点
+            if (planError != null) {
+                throw new BusinessException(400, planError);
+            }
+
             // Phase 2: Account acquisition and token injection
             String acquiredAccountCode = null;
             if (chain.getAccountCode() != null && !chain.getAccountCode().isEmpty()) {
@@ -285,55 +308,40 @@ public class ExecuteServiceImpl implements ExecuteService {
             } else {
                 // Has trace groups - use original executeMode logic
                 if (executeMode == 2) {
-                    // Parallel group mode
-                    Map<String, List<TestNodeConfig>> groupMap = nodes.stream()
-                            .filter(n -> n.getParallelGroup() != null && !n.getParallelGroup().isEmpty())
-                            .collect(Collectors.groupingBy(TestNodeConfig::getParallelGroup));
-
-                    List<TestNodeConfig> serialNodes = nodes.stream()
-                            .filter(n -> n.getParallelGroup() == null || n.getParallelGroup().isEmpty())
-                            .collect(Collectors.toList());
-
-                    for (TestNodeConfig node : serialNodes) {
+                    // 并发模式：按 X6 画布 DAG 分层，层内并发、层间串行
+                    for (List<TestNodeConfig> layer : dagLayers) {
                         if (context.isStopped()) {
-                            skipCount++;
-                            recordSkippedLog(context, node);
-                            continue;
-                        }
-                        NodeResult result = executeNode(context, node);
-                        if (result.success) {
-                            successCount++;
-                        } else {
-                            failCount++;
-                            context.setStopped(true);
-                            errorMessage = result.errorMessage;
-                        }
-                        if (!context.isStopped() && node.getDelaySeconds() != null && node.getDelaySeconds() > 0) {
-                            try { Thread.sleep(node.getDelaySeconds() * 1000L); } catch (InterruptedException ignored) {}
-                        }
-                    }
-
-                    List<Map.Entry<String, List<TestNodeConfig>>> sortedGroups = groupMap.entrySet().stream()
-                            .sorted(Comparator.comparing(e -> e.getValue().stream()
-                                    .mapToInt(TestNodeConfig::getSortNo).min().orElse(0)))
-                            .collect(Collectors.toList());
-
-                    for (Map.Entry<String, List<TestNodeConfig>> groupEntry : sortedGroups) {
-                        if (context.isStopped()) {
-                            skipCount += groupEntry.getValue().size();
-                            for (TestNodeConfig node : groupEntry.getValue()) {
+                            skipCount += layer.size();
+                            for (TestNodeConfig node : layer) {
                                 recordSkippedLog(context, node);
                             }
                             continue;
                         }
 
-                        List<Future<NodeResult>> futures = new ArrayList<>();
-                        ExecutorService groupExecutor = Executors.newFixedThreadPool(groupEntry.getValue().size());
-                        for (TestNodeConfig node : groupEntry.getValue()) {
-                            futures.add(groupExecutor.submit(() -> executeNode(context, node)));
+                        // 单节点层无需起线程池
+                        if (layer.size() == 1) {
+                            TestNodeConfig node = layer.get(0);
+                            NodeResult result = executeNode(context, node);
+                            if (result.success) {
+                                successCount++;
+                            } else {
+                                failCount++;
+                                context.setStopped(true);
+                                errorMessage = result.errorMessage;
+                            }
+                            if (!context.isStopped() && node.getDelaySeconds() != null && node.getDelaySeconds() > 0) {
+                                try { Thread.sleep(node.getDelaySeconds() * 1000L); } catch (InterruptedException ignored) {}
+                            }
+                            continue;
                         }
 
-                        boolean groupFailed = false;
+                        List<Future<NodeResult>> futures = new ArrayList<>();
+                        ExecutorService layerExecutor = Executors.newFixedThreadPool(layer.size());
+                        for (TestNodeConfig node : layer) {
+                            futures.add(layerExecutor.submit(() -> executeNode(context, node)));
+                        }
+
+                        boolean layerFailed = false;
                         for (Future<NodeResult> future : futures) {
                             try {
                                 NodeResult result = future.get(120, TimeUnit.SECONDS);
@@ -341,22 +349,22 @@ public class ExecuteServiceImpl implements ExecuteService {
                                     successCount++;
                                 } else {
                                     failCount++;
-                                    groupFailed = true;
+                                    layerFailed = true;
                                     errorMessage = result.errorMessage;
                                 }
                             } catch (Exception e) {
                                 failCount++;
-                                groupFailed = true;
+                                layerFailed = true;
                                 errorMessage = e.getMessage();
                             }
                         }
-                        groupExecutor.shutdown();
+                        layerExecutor.shutdown();
 
-                        if (groupFailed) {
+                        if (layerFailed) {
                             context.setStopped(true);
                         }
                         if (!context.isStopped()) {
-                            int maxDelay = groupEntry.getValue().stream()
+                            int maxDelay = layer.stream()
                                     .mapToInt(n -> n.getDelaySeconds() != null ? n.getDelaySeconds() : 0)
                                     .max().orElse(0);
                             if (maxDelay > 0) {
@@ -410,7 +418,7 @@ public class ExecuteServiceImpl implements ExecuteService {
         // Finalize
         context.setEndTime(new Date());
         long totalCostMs = context.getEndTime().getTime() - context.getStartTime().getTime();
-        String finalStatus = failCount > 0 ? "FAILED" : "SUCCESS";
+        String finalStatus = (failCount > 0 || errorMessage != null) ? "FAILED" : "SUCCESS";
 
         TestExecuteMain updateLog = new TestExecuteMain();
         updateLog.setExecutionId(executionId);
@@ -459,7 +467,7 @@ public class ExecuteServiceImpl implements ExecuteService {
         logEntry.setRequestMethod(config.getRequestMethod());
         logEntry.setStartTime(new Date());
         logEntry.setBizOperTraceId(config.getBizOperTraceId());
-        logEntry.setSortNo(config.getSortNo());
+        logEntry.setSortNo(Integer.valueOf(context.nextExecuteSeq()));
 
         long startTime = System.currentTimeMillis();
 
@@ -578,11 +586,9 @@ public class ExecuteServiceImpl implements ExecuteService {
             case "POST":
                 if (isFileUpload) {
                     HttpPost postFile = new HttpPost(url);
-                    java.io.File uploadFile = findUploadedFile(body);
-                    if (uploadFile != null && uploadFile.exists()) {
-                        org.apache.http.entity.mime.MultipartEntityBuilder builder = org.apache.http.entity.mime.MultipartEntityBuilder.create();
-                        builder.addBinaryBody("file", uploadFile, org.apache.http.entity.ContentType.APPLICATION_OCTET_STREAM, uploadFile.getName());
-                        postFile.setEntity(builder.build());
+                    org.apache.http.HttpEntity fileEntity = FileUploadUtil.buildFileMultipartEntity(body);
+                    if (fileEntity != null) {
+                        postFile.setEntity(fileEntity);
                     }
                     request = postFile;
                 } else {
@@ -596,11 +602,9 @@ public class ExecuteServiceImpl implements ExecuteService {
             case "PUT":
                 if (isFileUpload) {
                     HttpPut putFile = new HttpPut(url);
-                    java.io.File uploadFilePut = findUploadedFile(body);
-                    if (uploadFilePut != null && uploadFilePut.exists()) {
-                        org.apache.http.entity.mime.MultipartEntityBuilder builder = org.apache.http.entity.mime.MultipartEntityBuilder.create();
-                        builder.addBinaryBody("file", uploadFilePut, org.apache.http.entity.ContentType.APPLICATION_OCTET_STREAM, uploadFilePut.getName());
-                        putFile.setEntity(builder.build());
+                    org.apache.http.HttpEntity fileEntityPut = FileUploadUtil.buildFileMultipartEntity(body);
+                    if (fileEntityPut != null) {
+                        putFile.setEntity(fileEntityPut);
                     }
                     request = putFile;
                 } else {
@@ -716,23 +720,23 @@ public class ExecuteServiceImpl implements ExecuteService {
             throw new BusinessException(400, "链路无节点配置");
         }
 
-        nodes.sort(Comparator.comparing(TestNodeConfig::getSortNo));
+        TestChain chain = chainMapper.selectByChainCode(chainCode);
+        String graphData = chain != null ? chain.getGraphData() : null;
 
         ExecutionPlan plan = new ExecutionPlan();
         plan.setExecutionId(CodeGenerator.generateExecutionId());
         plan.setChainCode(chainCode);
         plan.setTotalNodes(nodes.size());
 
-        Map<String, List<TestNodeConfig>> groupMap = nodes.stream()
-                .filter(n -> n.getParallelGroup() != null && !n.getParallelGroup().isEmpty())
-                .collect(Collectors.groupingBy(TestNodeConfig::getParallelGroup));
-
-        if (groupMap.isEmpty()) {
+        // 每一层 = 一个执行组，层内节点可并发
+        List<List<TestNodeConfig>> layers = DagPlanner.planLayers(graphData, nodes);
+        int layerIndex = 0;
+        for (List<TestNodeConfig> layer : layers) {
             ExecutionGroup group = new ExecutionGroup();
-            group.setGroupName("");
-            group.setGroupSortNo(0);
+            group.setGroupName("L" + layerIndex);
+            group.setGroupSortNo(layerIndex);
             List<ExecuteNode> executeNodes = new ArrayList<>();
-            for (TestNodeConfig node : nodes) {
+            for (TestNodeConfig node : layer) {
                 ExecuteNode en = new ExecuteNode();
                 en.setConfig(node);
                 en.setNodeId(node.getNodeCode());
@@ -740,28 +744,7 @@ public class ExecuteServiceImpl implements ExecuteService {
             }
             group.setNodes(executeNodes);
             plan.getGroups().add(group);
-        } else {
-            List<Map.Entry<String, List<TestNodeConfig>>> sortedGroups = groupMap.entrySet().stream()
-                    .sorted(Comparator.comparing(e -> e.getValue().stream()
-                            .mapToInt(TestNodeConfig::getSortNo).min().orElse(0)))
-                    .collect(Collectors.toList());
-
-            for (Map.Entry<String, List<TestNodeConfig>> entry : sortedGroups) {
-                ExecutionGroup group = new ExecutionGroup();
-                group.setGroupName(entry.getKey());
-                group.setGroupSortNo(entry.getValue().stream()
-                        .mapToInt(TestNodeConfig::getSortNo).min().orElse(0));
-                List<ExecuteNode> executeNodes = new ArrayList<>();
-                for (TestNodeConfig node : entry.getValue()) {
-                    ExecuteNode en = new ExecuteNode();
-                    en.setConfig(node);
-                    en.setNodeId(node.getNodeCode());
-                    executeNodes.add(en);
-                }
-                group.setNodes(executeNodes);
-                plan.getGroups().add(group);
-            }
-            plan.getGroups().sort(Comparator.comparing(ExecutionGroup::getGroupSortNo));
+            layerIndex++;
         }
 
         return plan;
@@ -937,14 +920,6 @@ public class ExecuteServiceImpl implements ExecuteService {
             log.warn("[Execute] 获取账号token失败: accountCode={}", account.getAccountCode(), e);
         }
         return null;
-    }
-
-    private java.io.File findUploadedFile(String fileId) {
-        java.nio.file.Path dirPath = java.nio.file.Paths.get(System.getProperty("user.dir") + "/uploads");
-        java.io.File dir = dirPath.toFile();
-        if (!dir.exists()) return null;
-        java.io.File[] files = dir.listFiles((d, name) -> name.startsWith(fileId));
-        return (files != null && files.length > 0) ? files[0] : null;
     }
 
     private static class NodeResult {

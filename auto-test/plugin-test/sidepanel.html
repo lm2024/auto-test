@@ -4,9 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>捉接口 TraceFlow</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <!-- 内网/离线部署不要引入 Google Fonts CDN，否则白屏；已使用系统字体栈兜底 -->
   <style>
     /* ===== Reset & Base ===== */
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -603,8 +601,22 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
           平台配置
         </div>
-        <div class="form-g"><label>后端 API 地址</label><input type="text" id="cfgUrl" placeholder="http://localhost:9093"></div>
-        <div class="form-g"><label>前端页面地址</label><input type="text" id="cfgFrontendUrl" placeholder="http://localhost:9094"></div>
+        <div class="form-g readonly-note">前后端地址已在插件 <code>config.js</code> 中固定配置，不可在此修改。</div>
+      </div>
+      <div class="settings-group">
+        <div class="settings-group-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          抓包模式
+        </div>
+        <div class="form-g">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:500">
+            <input type="checkbox" id="cdpCapture" style="width:16px;height:16px"> 全量抓包（调试模式）
+          </label>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);padding:8px;background:var(--bg);border-radius:var(--radius-sm);margin-bottom:10px;line-height:1.6">
+          默认关闭：仅通过页面脚本钩子捕获业务接口，无浏览器调试横幅、请求更干净。<br>
+          开启后：使用 Chrome 调试协议(CDP)捕获全部请求（含图片/CSS/字体/埋点），但标签页会常驻显示「已启用调试功能」横幅。
+        </div>
       </div>
       <div class="settings-group">
         <div class="settings-group-title">
@@ -771,7 +783,7 @@
       <div class="dbg-section">
         <div class="dbg-section-title">请求头</div>
         <div id="dbgHeaders"></div>
-        <button onclick="addDbgHeader()" style="font-size:11px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);padding:4px 10px;cursor:pointer;color:var(--text-secondary);transition:all var(--transition)">+ 添加</button>
+        <button id="dbgAddHeaderBtn" style="font-size:11px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);padding:4px 10px;cursor:pointer;color:var(--text-secondary);transition:all var(--transition)">+ 添加</button>
       </div>
       <div class="dbg-section">
         <div class="dbg-section-title">请求体 (JSON)</div>
@@ -786,11 +798,12 @@
         <pre id="dbgResponseBody"></pre>
       </div>
       <div class="dialog-btns" style="margin-top:10px">
-        <button class="btn-solid btn-outline" onclick="document.getElementById('dbgDialog').classList.remove('open')">关闭</button>
+        <button class="btn-solid btn-outline" id="dbgCloseBtn">关闭</button>
       </div>
     </div>
   </div>
 
+  <script src="config.js"></script>
   <script src="auth.js"></script>
   <script src="platform-api.js"></script>
   <script src="sidepanel.js"></script>

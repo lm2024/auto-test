@@ -1,14 +1,19 @@
 package com.autotest.service.impl;
 
 import com.autotest.exception.BusinessException;
+import com.autotest.mapper.TestChainMapper;
 import com.autotest.mapper.TestNodeConfigMapper;
 import com.autotest.model.dto.NodeCreateDTO;
 import com.autotest.model.dto.NodeEditDTO;
 import com.autotest.model.dto.PluginInterfaceDTO;
+import com.autotest.model.entity.TestChain;
 import com.autotest.model.entity.TestNodeConfig;
+import com.autotest.model.vo.ClassifyResult;
 import com.autotest.model.vo.NodeVO;
 import com.autotest.service.NodeConfigService;
 import com.autotest.util.CodeGenerator;
+import com.autotest.util.GraphDataBuilder;
+import com.autotest.util.InterfaceClassifier;
 import com.autotest.util.JsonPathUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,10 +28,30 @@ public class NodeConfigServiceImpl implements NodeConfigService {
     @Autowired
     private TestNodeConfigMapper nodeConfigMapper;
 
+    @Autowired
+    private TestChainMapper chainMapper;
+
+    @Autowired
+    private InterfaceClassifier interfaceClassifier;
+
+    /**
+     * 按 URL 自动填充节点的内外网范围与归属系统，识别失败不影响主流程
+     */
+    private void applyClassification(TestNodeConfig node) {
+        try {
+            ClassifyResult result = interfaceClassifier.classify(node.getRequestUrl());
+            if (result != null) {
+                node.setInterfaceScope(result.getScope());
+                node.setTargetSystem(result.getSystemCode());
+            }
+        } catch (Exception ignored) {
+            // 识别失败保持空值，不阻断节点保存
+        }
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public NodeVO createNode(NodeCreateDTO dto) {
-        int maxSortNo = nodeConfigMapper.getMaxSortNo(dto.getChainCode());
         int maxNodeId = nodeConfigMapper.getMaxNodeId(dto.getChainCode());
 
         TestNodeConfig node = new TestNodeConfig();
@@ -35,8 +60,6 @@ public class NodeConfigServiceImpl implements NodeConfigService {
         node.setNodeCode(CodeGenerator.generateNodeCode(dto.getChainCode(), maxNodeId + 1));
         node.setNodeName(dto.getNodeName());
         node.setNodeType(dto.getNodeType() != null ? dto.getNodeType() : "HTTP");
-        node.setSortNo(dto.getSortNo() != null ? dto.getSortNo() : maxSortNo + 1);
-        node.setParallelGroup(dto.getParallelGroup());
         node.setRequestUrl(dto.getRequestUrl());
         node.setRequestMethod(dto.getRequestMethod());
         node.setRequestHeaders(dto.getRequestHeaders());
@@ -46,6 +69,7 @@ public class NodeConfigServiceImpl implements NodeConfigService {
         node.setAssertRules(dto.getAssertRules());
         node.setVariableMapping(dto.getVariableMapping());
         node.setDelaySeconds(dto.getDelaySeconds());
+        applyClassification(node);
 
         nodeConfigMapper.insert(node);
         return buildNodeVO(node);
@@ -62,9 +86,10 @@ public class NodeConfigServiceImpl implements NodeConfigService {
         TestNodeConfig node = new TestNodeConfig();
         node.setId(dto.getId());
         if (dto.getNodeName() != null) node.setNodeName(dto.getNodeName());
-        if (dto.getSortNo() != null) node.setSortNo(dto.getSortNo());
-        if (dto.getParallelGroup() != null) node.setParallelGroup(dto.getParallelGroup());
-        if (dto.getRequestUrl() != null) node.setRequestUrl(dto.getRequestUrl());
+        if (dto.getRequestUrl() != null) {
+            node.setRequestUrl(dto.getRequestUrl());
+            applyClassification(node);
+        }
         if (dto.getRequestMethod() != null) node.setRequestMethod(dto.getRequestMethod());
         if (dto.getRequestHeaders() != null) node.setRequestHeaders(dto.getRequestHeaders());
         if (dto.getBodyType() != null) node.setBodyType(dto.getBodyType());
@@ -106,7 +131,6 @@ public class NodeConfigServiceImpl implements NodeConfigService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> importNodes(String chainCode, List<PluginInterfaceDTO> interfaces) {
-        int maxSortNo = nodeConfigMapper.getMaxSortNo(chainCode);
         int maxNodeId = nodeConfigMapper.getMaxNodeId(chainCode);
 
         List<TestNodeConfig> nodes = new ArrayList<>();
@@ -123,12 +147,11 @@ public class NodeConfigServiceImpl implements NodeConfigService {
                 node.setNodeCode(CodeGenerator.generateNodeCode(chainCode, nodeId));
                 node.setNodeName(iface.getNodeName() != null ? iface.getNodeName() : "节点" + nodeId);
                 node.setNodeType("HTTP");
-                node.setSortNo(maxSortNo + i + 1);
-                node.setParallelGroup(iface.getParallelGroup());
                 node.setRequestUrl(iface.getUrl());
                 node.setRequestMethod(iface.getMethod());
                 node.setRequestHeaders(iface.getHeaders());
                 node.setBodyData(iface.getBodyData());
+                applyClassification(node);
                 nodes.add(node);
                 successCount++;
             } catch (Exception e) {
@@ -138,6 +161,7 @@ public class NodeConfigServiceImpl implements NodeConfigService {
 
         if (!nodes.isEmpty()) {
             nodeConfigMapper.batchInsert(nodes);
+            syncGraphData(chainCode, nodes);
         }
 
         Map<String, Object> result = new HashMap<>();
@@ -147,10 +171,27 @@ public class NodeConfigServiceImpl implements NodeConfigService {
             Map<String, Object> m = new HashMap<>();
             m.put("nodeCode", n.getNodeCode());
             m.put("nodeId", n.getNodeId());
-            m.put("sortNo", n.getSortNo());
             return m;
         }).collect(Collectors.toList()));
         return result;
+    }
+
+    /**
+     * 把新导入的节点追加到链路的 X6 画布数据尾部，保持画布与节点表一致
+     */
+    private void syncGraphData(String chainCode, List<TestNodeConfig> appended) {
+        try {
+            TestChain chain = chainMapper.selectByChainCode(chainCode);
+            if (chain == null) {
+                return;
+            }
+            TestChain update = new TestChain();
+            update.setChainCode(chainCode);
+            update.setGraphData(GraphDataBuilder.appendLinear(chain.getGraphData(), appended));
+            chainMapper.update(update);
+        } catch (Exception ignored) {
+            // 画布同步失败不影响节点导入结果
+        }
     }
 
     @Override
@@ -205,8 +246,8 @@ public class NodeConfigServiceImpl implements NodeConfigService {
         vo.setNodeCode(node.getNodeCode());
         vo.setNodeName(node.getNodeName());
         vo.setNodeType(node.getNodeType());
-        vo.setSortNo(node.getSortNo());
-        vo.setParallelGroup(node.getParallelGroup());
+        vo.setInterfaceScope(node.getInterfaceScope());
+        vo.setTargetSystem(node.getTargetSystem());
         vo.setRequestUrl(node.getRequestUrl());
         vo.setRequestMethod(node.getRequestMethod());
         vo.setRequestHeaders(node.getRequestHeaders());

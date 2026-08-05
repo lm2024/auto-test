@@ -53,6 +53,7 @@ API 自动化测试平台。前后端分离 + 浏览器插件 + WebSocket 实时
 - init.sql 有两份（backend/docker 与外层 docker），改动需保持一致
 - 安全密钥 account.aes-key / jwt.secret 是公开默认值；内网可信可暂不改，不可信须换
 - sso.* 整段默认关闭，可删
+- **浏览器插件 `plugin-test` 兼容坑（Chrome 114 以下）**：插件 UI 入口原用 `chrome.sidePanel`，该 API 需 **Chrome 114+**。在 Chrome 90/100 上 `chrome.sidePanel` 为 `undefined`，若在 Service Worker 顶层直接调用会抛 TypeError，导致后续所有监听器（点击图标、debugger 抓包、回放消息）**全部不注册**——表现为"能装上但点图标无反应、抓包全废、回放全废"。修复：用 `if (chrome.sidePanel)` 做存在性判断，入口改走 `action.onClicked → chrome.windows.create({type:"popup"})` 独立窗口（兼容全版本）。前后端地址已固化在插件 `config.js`，设置页不可改。
 
 官网
 https://github.com/colbymchenry/codegraph

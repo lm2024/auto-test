@@ -157,7 +157,7 @@
     el('settingsBtn').addEventListener('click', openSettings);
     el('authBtn').addEventListener('click', openAuthPanel);
     el('goPlatformBtn').addEventListener('click', function() {
-      var url = (settings.frontendUrl || 'http://localhost:9094') + '/chain/list';
+      var url = (getConfig().FRONTEND_URL || 'http://localhost:9094') + '/chain/list';
       window.open(url, '_blank');
     });
     el('saveSettingsBtn').addEventListener('click', saveSettings);
@@ -176,6 +176,10 @@
       el('editDialog').classList.remove('open'); editingIdx = -1; render();
     });
     el('dbgSend').addEventListener('click', sendDbgRequest);
+    var dbgAddBtn = document.getElementById('dbgAddHeaderBtn');
+    if (dbgAddBtn) dbgAddBtn.addEventListener('click', function() { addDbgHeader(); });
+    var dbgCloseBtn = document.getElementById('dbgCloseBtn');
+    if (dbgCloseBtn) dbgCloseBtn.addEventListener('click', function() { el('dbgDialog').classList.remove('open'); });
     el('selectAll').addEventListener('change', function() {
       var checked = this.checked;
       el('apiList').querySelectorAll('.api-check').forEach(function(c) { c.checked = checked; });
@@ -407,13 +411,18 @@
     openP('detail');
   }
 
+  // 固定配置读取：前后端地址来自 config.js（不可由用户修改）
+  function getConfig() {
+    return (window.AUTOTEST_CONFIG || { PLATFORM_URL: 'http://localhost:9093', FRONTEND_URL: 'http://localhost:9094' });
+  }
+
   function sec(title, data, field, idx) {
     return '<div class="detail-section"><div class="detail-section-hd">' + title + ' <button class="cpy-btn" data-f="' + field + '" data-i="' + idx + '">复制</button></div><pre>' + (fmt(data) || '(空)') + '</pre></div>';
   }
 
   // ========== Tab: 链路管理 ==========
   function loadChainList() {
-    var baseUrl = settings.platformUrl || 'http://localhost:9093';
+    var baseUrl = (getConfig().PLATFORM_URL || 'http://localhost:9093');
     var search = el('chainSearch') ? el('chainSearch').value.trim() : '';
     var method = el('chainMethodFilter') ? el('chainMethodFilter').value : '';
     var query = { pageSize: 100 };
@@ -564,7 +573,7 @@
   // ========== 回放引擎 ==========
   function startReplay(mode) {
     if (!selectedChain) { alert('请先选择一个链路'); return; }
-    var baseUrl = settings.platformUrl || 'http://localhost:9093';
+    var baseUrl = (getConfig().PLATFORM_URL || 'http://localhost:9093');
 
     // 加载链路详情
     window.PlatformApi.apiFetch('/api/plugin/chain/detail', { query: { chainCode: selectedChain.chainCode } })
@@ -773,10 +782,20 @@
         chrome.runtime.sendMessage({ type: 'CLEAR_APIS' });
         chrome.runtime.sendMessage({ type: 'START_RECORDING' });
 
-        setTimeout(function() {
+        function sendReplay() {
           addReplayLog('info', '正在发送宏操作到页面...');
           chrome.tabs.sendMessage(tab.id, { type: 'START_MACRO_REPLAY', actions: macroActions, settings: settings });
-        }, 2000);
+        }
+        // 等待新标签页加载完成后再发送（替换原固定 2s 等待，更稳）
+        var sent = false;
+        chrome.tabs.onUpdated.addListener(function onUp(tId, info) {
+          if (tId === tab.id && info.status === 'complete' && !sent) {
+            sent = true;
+            chrome.tabs.onUpdated.removeListener(onUp);
+            setTimeout(sendReplay, 800);
+          }
+        });
+        setTimeout(sendReplay, 5000); // 兜底：5s 后无论如何都发
 
         updateReplayActions(true);
         selectedChain = chain;
@@ -854,7 +873,14 @@
   window.addDbgHeader = function(k, v) {
     var row = document.createElement('div');
     row.className = 'dbg-kv-row';
-    row.innerHTML = '<input placeholder="Header名" value="' + enc(k || '') + '"><input placeholder="Header值" value="' + enc(v || '') + '"><button class="dbg-kv-btn" onclick="this.parentElement.remove()">×</button>';
+    var inK = document.createElement('input');
+    inK.placeholder = 'Header名'; inK.value = k || '';
+    var inV = document.createElement('input');
+    inV.placeholder = 'Header值'; inV.value = v || '';
+    var del = document.createElement('button');
+    del.className = 'dbg-kv-btn'; del.textContent = '×';
+    del.addEventListener('click', function() { row.remove(); });
+    row.appendChild(inK); row.appendChild(inV); row.appendChild(del);
     el('dbgHeaders').appendChild(row);
   };
 
@@ -909,7 +935,7 @@
     Object.keys(qp).forEach(function(k) { pathObj[method].parameters.push({ name: k, in: 'query', ...qp[k] }); });
     if (reqSchema) pathObj[method].requestBody = { required: true, content: { 'application/json': { schema: reqSchema, example: a.body } } };
     pathObj[method].responses[String(a.status || 200)] = { description: a.statusText || 'OK', content: { 'application/json': { schema: respSchema || { type: 'object' }, example: a.response } } };
-    return { openapi: '3.0.0', info: { title: 'API Documentation', version: '1.0.0', description: '自动录制生成' }, servers: [{ url: url.origin }], paths: {} };
+    return { openapi: '3.0.0', info: { title: 'API Documentation', version: '1.0.0', description: '自动录制生成' }, servers: [{ url: url.origin }], paths: pathObj };
   }
 
   function inferSchema(data) {
@@ -964,9 +990,8 @@
 
   // ========== 设置 ==========
   function openSettings() {
-    el('cfgUrl').value = settings.platformUrl || '';
-    el('cfgFrontendUrl').value = settings.frontendUrl || '';
     el('filterMode').value = settings.filterMode || 'off';
+    el('cdpCapture').checked = settings.cdpCapture === true;
     el('cfgKw').value = settings.ignoreKeywords || '';
     el('cfgDomains').value = settings.ignoreDomains || '';
     el('cfgMode').value = settings.idMode || 'AUTO_INCREMENT';
@@ -986,8 +1011,6 @@
     openP('settings');
   }
   function saveSettings() {
-    settings.platformUrl = el('cfgUrl').value.trim();
-    settings.frontendUrl = el('cfgFrontendUrl').value.trim();
     settings.filterMode = el('filterMode').value;
     settings.ignoreKeywords = el('cfgKw').value;
     settings.ignoreDomains = el('cfgDomains').value;
@@ -1003,7 +1026,10 @@
     settings.decryptRequestCode = el('cfgDecryptRequest').value;
     settings.decryptResponseCode = el('cfgDecryptResponse').value;
     settings.encryptAlgo = el('cfgEncryptAlgo').value;
+    settings.cdpCapture = el('cdpCapture').checked;
     chrome.storage.local.set({ settings: settings });
+    // 实时同步 CDP 抓包开关到后台（录制中开启会 attach，关闭会 detach）
+    chrome.runtime.sendMessage({ type: 'SET_CDP_CAPTURE', enabled: settings.cdpCapture });
     alert('设置已保存'); closeP('settings'); render();
   }
   function loadAuthTokenList() {
@@ -1032,7 +1058,7 @@
     });
   }
   function currentBaseUrl() {
-    var s = settings && settings.platformUrl ? settings.platformUrl : '';
+    var s = getConfig().PLATFORM_URL || '';
     return s.replace(/\/+$/, '');
   }
 
@@ -1040,7 +1066,7 @@
     var btn = el('authBtn');
     if (!btn || !window.PlatformAuth) return;
     var s = await getSettings();
-    var base = (s.platformUrl || '').replace(/\/+$/, '');
+    var base = (getConfig().PLATFORM_URL || '').replace(/\/+$/, '');
     var state = await window.PlatformAuth.getState(base);
     var labelLg = btn.querySelector('.btn-label-lg');
     var labelSm = btn.querySelector('.btn-label-sm');
@@ -1070,7 +1096,7 @@
   async function probeLogin() {
     if (!window.PlatformAuth || !window.PlatformApi) { updateAuthBadge(); return; }
     var s = await getSettings();
-    var base = (s.platformUrl || '').replace(/\/+$/, '');
+    var base = (getConfig().PLATFORM_URL || '').replace(/\/+$/, '');
     if (!base) { updateAuthBadge(); return; }
     var state = await window.PlatformAuth.getState(base);
     if (state === 'ANONYMOUS' || state === 'MISMATCH') { updateAuthBadge(); return; }
@@ -1279,7 +1305,7 @@
           if (d.code === 200) {
             var chainCode = d.data.chainCode || code;
             el('pushDialog').classList.remove('open');
-            var platformUrl = (settings.frontendUrl || 'http://localhost:9094') + '/chain/edit/' + chainCode;
+            var platformUrl = (getConfig().FRONTEND_URL || 'http://localhost:9094') + '/chain/edit/' + chainCode;
             if (confirm('推送成功！链路编码: ' + chainCode + '\n\n是否跳转到平台查看？')) {
               window.open(platformUrl, '_blank');
             }
@@ -1333,7 +1359,7 @@
               if (failed > 0) msg += '，失败 ' + failed + ' 条';
               msg += '\n链路编码: ' + allCodes.join(', ');
               if (confirm(msg + '\n\n是否跳转到平台查看？')) {
-                window.open((settings.frontendUrl || 'http://localhost:9094') + '/chain/list', '_blank');
+                window.open((getConfig().FRONTEND_URL || 'http://localhost:9094') + '/chain/list', '_blank');
               }
             } else {
               alert('全部推送失败');

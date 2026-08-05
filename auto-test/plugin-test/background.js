@@ -1,3 +1,9 @@
+// 加载固定配置（前后端地址等，不可由用户修改）。config.js 同时兼容
+// Service Worker(self) 与页面(window) 环境。
+try { importScripts('config.js'); } catch (e) { console.warn('[AutoTest][bg] config.js 加载失败', e); }
+var CFG = (typeof AUTOTEST_CONFIG !== 'undefined') ? AUTOTEST_CONFIG
+  : { PLATFORM_URL: 'http://localhost:9093', FRONTEND_URL: 'http://localhost:9094' };
+
 let isRecording = false;
 const debuggerTabs = new Set();
 const pendingReqs = {};
@@ -17,7 +23,7 @@ function generateTraceId() {
   return 'biz_' + ts + '_' + rand;
 }
 
-function activateWindow(interactionType, selector, pageUrl) {
+function activateWindow(interactionType, selector, pageUrl, tabId) {
   if (windowState === 'IDLE') {
     currentTrace = {
       traceId: generateTraceId(),
@@ -28,11 +34,13 @@ function activateWindow(interactionType, selector, pageUrl) {
       windowId: 'win_' + Date.now().toString(36),
       interactionType: interactionType,
       selector: selector,
-      pageUrl: pageUrl
+      pageUrl: pageUrl,
+      tabId: tabId != null ? tabId : null
     };
   } else {
     currentTrace.step++;
     currentTrace.expiresAt = Date.now() + WINDOW_MS;
+    if (tabId != null) currentTrace.tabId = tabId;
   }
   windowState = 'ACTIVE';
   resetWindowTimer();
@@ -81,17 +89,42 @@ chrome.storage.onChanged.addListener((changes) => {
   }
 });
 
-chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
-
-chrome.action.onClicked.addListener(() => {
-  chrome.sidePanel.setOptions({ enabled: true }).then(() => {
-    chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
+// 入口：独立窗口（选项 A）。chrome.sidePanel 需 Chrome 114+，
+// 低版本(90/100)不存在，直接调用会在顶层抛 TypeError，导致后续所有监听器
+// 无法注册 —— 这是 Chrome 114- 不兼容的根因，必须做存在性判断。
+function openPanelWindow() {
+  chrome.windows.create({
+    url: chrome.runtime.getURL('sidepanel.html'),
+    type: 'popup',
+    width: 460,
+    height: 760
+  }, function (win) {
+    if (chrome.runtime.lastError) {
+      console.warn('[AutoTest][bg] openPanelWindow 失败:', chrome.runtime.lastError.message);
+      return;
+    }
+    // 记忆窗口尺寸（可选增强）
+    chrome.storage.local.get(['panelWindowSize'], function (r) {
+      if (r.panelWindowSize) chrome.windows.update(win.id, r.panelWindowSize);
+    });
   });
+}
+
+if (chrome.sidePanel) {
+  // 仅在高版本关闭 sidePanel 自动打开，避免与独立窗口入口冲突
+  try { chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }).catch(function(){}); } catch (e) {}
+}
+
+chrome.action.onClicked.addListener(function () {
+  openPanelWindow();
 });
 
 function updateIcon() {
   const p = isRecording ? 'icons/icon_active.png' : 'icons/icon16.png';
-  chrome.action.setIcon({ path: { 16: p, 48: 'icons/icon48.png', 128: 'icons/icon128.png' } }).catch(() => {});
+  try {
+    var ri = chrome.action.setIcon({ path: { 16: p, 48: 'icons/icon48.png', 128: 'icons/icon128.png' } });
+    if (ri && typeof ri.catch === 'function') ri.catch(function(){});
+  } catch (e) {}
 }
 
 function safeSendMessageToTab(tabId, msg) {
@@ -147,10 +180,17 @@ function attachDebugger(tabId) {
 
 function detachDebugger(tabId) {
   if (!debuggerTabs.has(tabId)) return;
-  chrome.debugger.detach({ tabId }).then(() => debuggerTabs.delete(tabId)).catch(() => debuggerTabs.delete(tabId));
+  debuggerTabs.delete(tabId);
+  try {
+    var pd = chrome.debugger.detach({ tabId });
+    if (pd && typeof pd.catch === 'function') pd.catch(function(){});
+  } catch (e) {}
 }
 
+let cdpCaptureEnabled = false; // 默认关闭 CDP 全量抓包（避免调试横幅与噪音请求），仅设置开启时 attach
+
 function attachAll() {
+  if (!cdpCaptureEnabled) return;
   chrome.tabs.query({}, (tabs) => {
     tabs.forEach(tab => {
       if (tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('chrome-extension://')) {
@@ -161,7 +201,12 @@ function attachAll() {
 }
 
 function detachAll() {
-  debuggerTabs.forEach(id => { chrome.debugger.detach({ tabId: id }).catch(() => {}); });
+  debuggerTabs.forEach(function(id) {
+    try {
+      var pd = chrome.debugger.detach({ tabId: id });
+      if (pd && typeof pd.catch === 'function') pd.catch(function(){});
+    } catch (e) {}
+  });
   debuggerTabs.clear();
 }
 
@@ -213,17 +258,19 @@ chrome.debugger.onEvent.addListener((source, method, params) => {
         data.redirectLocation = location;
       }
     }
-    // 注入 bizOperTraceId 到 CDP 捕获的请求
+    // 注入 bizOperTraceId 到 CDP 捕获的请求（按 tabId 关联，避免跨标签页串号）
     if (currentTrace && currentTrace.windowActive && currentTrace.traceId) {
-      data.bizOperTraceId = currentTrace.traceId;
-      data.windowActive = true;
-      data.windowId = currentTrace.windowId;
-      data.triggerEvent = currentTrace.interactionType || 'auto';
-      data.targetDom = currentTrace.selector || '';
-      data.pageUrl = '';
-      data.ignore = false;
-      // 延长窗口
-      handleWindowExtend();
+      if (currentTrace.tabId == null || currentTrace.tabId === source.tabId) {
+        data.bizOperTraceId = currentTrace.traceId;
+        data.windowActive = true;
+        data.windowId = currentTrace.windowId;
+        data.triggerEvent = currentTrace.interactionType || 'auto';
+        data.targetDom = currentTrace.selector || '';
+        data.pageUrl = '';
+        data.ignore = false;
+        // 延长窗口
+        handleWindowExtend();
+      }
     }
     chrome.debugger.sendCommand({ tabId: source.tabId }, 'Network.getResponseBody', { requestId: params.requestId }, (resp) => {
       if (chrome.runtime.lastError) {
@@ -314,6 +361,7 @@ let sandboxIframe = null;
 let sandboxCallbacks = {};
 
 function initSandbox() {
+  if (typeof document === 'undefined') return; // Service Worker 无 DOM，跳过
   if (sandboxIframe) return;
   sandboxIframe = document.createElement('iframe');
   sandboxIframe.src = chrome.runtime.getURL('sandbox.html');
@@ -332,6 +380,9 @@ function initSandbox() {
 }
 
 function decryptInSandbox(code, data) {
+  if (typeof document === 'undefined' || typeof window === 'undefined') {
+    return Promise.reject(new Error('解密沙箱在 Service Worker 中不可用（需页面环境）'));
+  }
   return new Promise((resolve, reject) => {
     initSandbox();
     const id = 'dec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
@@ -395,13 +446,8 @@ function getType(u) {
 
 function saveApi(data) {
   if (!shouldCapture(data.url)) return;
-  if (data.apiType === 'static') return;
-  // 时间窗口过滤：如果当前没有活跃窗口，且请求没有 bizOperTraceId，则不保存
-  if (windowState === 'IDLE' && !data.bizOperTraceId) {
-    // 允许没有窗口时也保存（兼容旧模式），但标记为未分组
-    data.bizOperTraceId = data.bizOperTraceId || '';
-    data.windowActive = false;
-  }
+  // 仅保存业务请求：fetch/XHR 或 API 类型；过滤文档/样式/图片/字体/脚本/媒体/埋点等噪音
+  if (data.resourceType !== 'fetch_xhr' && data.apiType !== 'api') return;
   chrome.storage.local.get(['recordedApis'], (r) => {
     const apis = r.recordedApis || [];
     const dup = apis.some(a => a.url === data.url && a.method === data.method && Math.abs(a.timestamp - data.timestamp) < 2000);
@@ -419,6 +465,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     isRecording = true;
     chrome.storage.local.get(['settings'], (r) => {
       currentSettings = r.settings || {};
+      cdpCaptureEnabled = currentSettings.cdpCapture === true;
+      // 默认关闭 CDP 全量抓包：仅当设置开启时才 attach debugger（避免调试横幅与噪音请求）
+      if (cdpCaptureEnabled) attachAll();
     });
     chrome.storage.local.set({ isRecordingApi: true, isRecordingMacro: true });
     updateIcon();
@@ -426,7 +475,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     injectContentScripts();
     broadcast({ type: 'START_RECORDING' });
     broadcast({ type: 'START_MACRO_RECORDING' });
-    attachAll();
+    // attachAll() 已移入上面 storage 回调中按需执行（受 cdpCapture 开关控制）
     // 初始化 Trace 状态
     windowState = 'IDLE';
     currentTrace = null;
@@ -445,10 +494,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     broadcast({ type: 'BIZ_TRACE_UPDATE', trace: null });
     detachAll();
     sendResponse({ ok: true });
+  } else if (msg.type === 'SET_CDP_CAPTURE') {
+    cdpCaptureEnabled = msg.enabled === true;
+    if (cdpCaptureEnabled) { if (isRecording) attachAll(); }
+    else { detachAll(); }
+    sendResponse({ ok: true });
   } else if (msg.type === 'TRIGGER_INTERACTION') {
-    // 用户交互触发 → 激活窗口
+    // 用户交互触发 → 激活窗口（记录触发所在 tab，用于后续按 tab 关联请求）
     if (isRecording) {
-      activateWindow(msg.interactionType, msg.selector, msg.pageUrl);
+      var trigTabId = (sender && sender.tab) ? sender.tab.id : null;
+      activateWindow(msg.interactionType, msg.selector, msg.pageUrl, trigTabId);
     }
     sendResponse({ ok: true });
   } else if (msg.type === 'WINDOW_EXTEND') {
@@ -526,7 +581,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     // 从已登录的平台前端页面读取 localStorage 中的登录态（autotest_token / autotest_user）
     chrome.storage.local.get(['settings'], (r) => {
       var settings = r.settings || {};
-      var frontendUrl = (settings.frontendUrl || settings.platformUrl || '').replace(/\/+$/, '');
+      var frontendUrl = (CFG.FRONTEND_URL || '').replace(/\/+$/, '');
       if (!frontendUrl) { sendResponse({ ok: false, error: '未配置前端地址' }); return; }
       var origin;
       try { origin = new URL(frontendUrl).origin; } catch (e) { sendResponse({ ok: false, error: '地址解析失败' }); return; }
@@ -538,7 +593,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         if (!target) { sendResponse({ ok: false, error: '未找到已登录的平台页面' }); return; }
         chrome.scripting.executeScript({
           target: { tabId: target.id },
-          func: () => ({
+          function: () => ({
             token: localStorage.getItem('autotest_token'),
             user: localStorage.getItem('autotest_user')
           })
@@ -574,11 +629,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   } catch(e) {}
   try {
     if (msg.type === 'HIDE_SIDE_PANEL') {
-      chrome.sidePanel.setOptions({ enabled: false }).then(() => {
+      if (chrome.sidePanel) {
+        chrome.sidePanel.setOptions({ enabled: false }).then(function() {
+          sendResponse({ ok: true });
+        }).catch(function(e) {
+          sendResponse({ ok: false, error: e.message });
+        });
+      } else {
         sendResponse({ ok: true });
-      }).catch((e) => {
-        sendResponse({ ok: false, error: e.message });
-      });
+      }
       return true;
     }
   } catch(e) {}
@@ -587,7 +646,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 // 页面加载时自动注入
 chrome.tabs.onUpdated.addListener((tabId, info) => {
-  if (info.status === 'complete' && isRecording) {
+  if (info.status === 'complete' && isRecording && cdpCaptureEnabled) {
     attachDebugger(tabId);
   }
 });

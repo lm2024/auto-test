@@ -1,2224 +1,540 @@
 <template>
   <div class="chain-edit">
-    <div class="toolbar">
-      <div class="toolbar-left">
-        <t-button theme="default" variant="outline" @click="$router.back()">
+    <!-- 顶部工具栏 -->
+    <div class="ce-toolbar">
+      <div class="tb-left">
+        <t-button theme="default" variant="text" @click="goBack">
           <template #icon><ChevronLeftIcon /></template>返回
         </t-button>
-        <t-divider layout="vertical" />
-        <span class="chain-title">链路编排</span>
-        <t-divider layout="vertical" />
-        <t-select v-model="currentVersion" placeholder="选择版本" size="small" @change="onVersionChange" style="width: 160px" clearable>
-          <t-option v-for="v in versions" :key="v.version" :label="'v' + v.version" :value="v.version" />
-        </t-select>
-        <div class="version-diff-summary" v-if="diffSummary">
-          <span class="diff-badge diff-added">新增 {{ diffSummary.added }}</span>
-          <span class="diff-badge diff-removed">删除 {{ diffSummary.removed }}</span>
-          <span class="diff-badge diff-modified">修改 {{ diffSummary.modified }}</span>
-          <span class="diff-badge diff-unchanged">未变 {{ diffSummary.unchanged }}</span>
-        </div>
+        <span class="chain-name">{{ chainName }}</span>
+        <t-tag size="small" theme="default" variant="light">{{ chainCode }}</t-tag>
       </div>
-      <div class="toolbar-right">
-        <t-space :size="4">
-          <t-button :theme="viewMode === 'list' ? 'primary' : 'default'" :variant="viewMode === 'list' ? 'base' : 'outline'" @click="viewMode = 'list'" size="small">
-            <template #icon><ViewListIcon /></template> 列表视图
-          </t-button>
-          <t-button :theme="viewMode === 'trace' ? 'primary' : 'default'" :variant="viewMode === 'trace' ? 'base' : 'outline'" @click="viewMode = 'trace'; loadTraceGroups()" size="small">
-            <template #icon><LinkIcon /></template> 分组视图
-          </t-button>
-        </t-space>
-        <t-button theme="default" variant="outline" @click="undo" :disabled="!canUndo">
-          <template #icon><RollbackIcon /></template>撤销
+      <div class="tb-right">
+        <t-button theme="primary" variant="outline" size="small" @click="addNode">
+          <template #icon><AddIcon /></template>新增节点
         </t-button>
-        <t-button theme="default" variant="outline" @click="redo" :disabled="!canRedo">
-          <template #icon><RollfrontIcon /></template>重做
+        <t-button theme="primary" variant="outline" size="small" @click="autoLayoutGraph">
+          <template #icon><SwapIcon /></template>自动布局
         </t-button>
-        <t-button theme="default" variant="outline" @click="autoLayout">
-          <template #icon><GridViewIcon /></template>自动布局
+        <t-button theme="primary" variant="outline" size="small" :loading="saving" @click="saveGraphData">
+          <template #icon><SaveIcon /></template>保存画布
         </t-button>
-        <t-divider layout="vertical" />
-        <t-button theme="warning" @click="generateTestData" :loading="aiLoading">
-          <template #icon><AiIcon /></template>AI生成测试数据
+        <t-button theme="primary" variant="outline" size="small" @click="previewLayers">
+          <template #icon><LayersIcon /></template>预览执行顺序
         </t-button>
-        <t-button theme="success" @click="executeChain" :disabled="nodes.length === 0">
-          <template #icon><PlayIcon /></template>执行
+        <t-button theme="primary" variant="outline" size="small" :loading="aiLoading" @click="generateData">
+          <template #icon><LightbulbIcon /></template>AI 生成数据
         </t-button>
-        <t-button theme="primary" @click="saveAll">
-          <template #icon><CheckIcon /></template>保存
+        <t-button theme="primary" variant="outline" size="small" @click="importVisible = true">
+          <template #icon><DownloadIcon /></template>导入
+        </t-button>
+        <t-button theme="primary" variant="outline" size="small" @click="varVisible = true">
+          <template #icon><RootListIcon /></template>变量
+        </t-button>
+        <t-button v-if="selectedNode" theme="primary" variant="outline" size="small" @click="openDebug">
+          <template #icon><BugIcon /></template>调试
+        </t-button>
+        <t-button theme="primary" size="small" :loading="executing" @click="runChain">
+          <template #icon><PlayCircleIcon /></template>执行
         </t-button>
       </div>
     </div>
 
-    <div class="main-area">
-      <div class="left-panel" :style="{ width: leftPanelWidth + 'px' }">
-        <div class="panel-section">
-          <div class="panel-title">
-            <AppIcon />
-            <span>节点库</span>
-          </div>
-          <div class="node-item" draggable @dragstart="onDragStart">
-            <LinkIcon class="node-icon http" />
-            <div class="node-item-info">
-              <span class="node-item-name">HTTP请求</span>
-              <span class="node-item-desc">发送HTTP请求</span>
-            </div>
-          </div>
-          <t-button theme="primary" variant="outline" @click="openImportDialog" style="width:100%;margin-top:12px">
-            <template #icon><UploadIcon /></template>批量导入
+    <!-- 画布区 -->
+    <div class="ce-body">
+      <!-- 左侧节点列表 -->
+      <div class="ce-nodelist" :class="{ collapsed: listCollapsed }">
+        <div class="nl-head">
+          <span class="nl-title">节点列表 <em>({{ nodeList.length }})</em></span>
+          <t-button theme="default" variant="text" size="small" @click="listCollapsed = !listCollapsed">
+            <template #icon><ChevronLeftIcon v-if="!listCollapsed" /><ChevronRightIcon v-else /></template>
           </t-button>
         </div>
-
-        <div class="panel-section" style="margin-top:16px">
-          <div class="panel-title">
-            <ViewListIcon />
-            <span>节点列表</span>
-            <t-tag size="small" theme="default" style="margin-left:auto">{{ nodes.length }}</t-tag>
-          </div>
-          <div class="node-list">
-            <div v-for="(node, index) in sortedNodes" :key="node.nodeCode"
-                 class="node-list-item"
-                 :class="{ active: selectedNode?.nodeCode === node.nodeCode, ['change-' + (nodeChangeMap[node.nodeCode] || '')]: nodeChangeMap[node.nodeCode] }"
-                 draggable="true"
-                 @dragstart="onListDragStart($event, node.nodeCode)"
-                 @dragover.prevent
-                 @drop="onListDrop($event, node.nodeCode)"
-                 @click="selectNode(node)">
-              <MoveIcon class="list-drag-handle" />
-              <t-tag size="small" :theme="methodType(node.requestMethod)" class="method-tag">{{ node.requestMethod }}</t-tag>
-              <span class="node-list-name">{{ node.nodeName || node.nodeCode }}</span>
-            </div>
-            <div v-if="nodes.length === 0" class="empty-list">暂无节点</div>
-          </div>
+        <div v-show="!listCollapsed" class="nl-search">
+          <t-input
+            v-model="nodeSearch"
+            placeholder="搜索节点名 / URL / 方法"
+            size="small"
+            clearable
+          >
+            <template #prefix-icon><SearchIcon /></template>
+          </t-input>
         </div>
-
-        <div class="panel-section" style="margin-top:16px" v-if="chainCode">
-          <VersionHistory :chainCode="chainCode" :selectedVersion="currentVersion" @select-version="onVersionChange" />
-        </div>
-      </div>
-
-      <!-- Left-Center Resizer -->
-      <div class="panel-resizer left-resizer" @mousedown="startResizeLeft"></div>
-
-      <!-- TraceId分组视图 -->
-      <div class="center-panel trace-group-view" v-if="viewMode === 'trace'" ref="traceCanvasRef" @dragover.prevent>
-        <div v-if="traceGroups.length === 0" class="empty-canvas">
-          <LinkIcon class="empty-icon" />
-          <div class="empty-title">暂无分组数据</div>
-          <div class="empty-desc">链路节点未携带 bizOperTraceId 信息</div>
-        </div>
-        <div v-for="(group, gIdx) in traceGroups" :key="group.traceId" class="trace-group-card">
-          <div class="trace-group-header">
-            <div class="trace-group-info">
-              <t-tag size="small" theme="primary" variant="dark">TraceId</t-tag>
-              <span class="trace-group-id">{{ group.traceId === '__ungrouped__' ? '未分组' : group.traceId }}</span>
-            </div>
-            <div class="trace-group-meta">
-              <t-tag size="small" v-if="group.triggerEvent" theme="default">{{ group.triggerEvent }}</t-tag>
-              <span class="trace-group-url" v-if="group.pageUrl">{{ group.pageUrl }}</span>
-              <t-tag size="small" theme="success">{{ group.nodeCount }} 个节点</t-tag>
+        <div v-show="!listCollapsed" class="nl-body">
+          <div
+            v-for="n in nodeList"
+            :key="n.nodeCode"
+            class="nl-item"
+            :class="{ active: selectedNodeCode === n.nodeCode }"
+            @click="selectFromList(n.nodeCode)"
+          >
+            <span class="nl-method" :class="'m-' + (n.requestMethod || 'GET').toLowerCase()">{{ n.requestMethod || 'GET' }}</span>
+            <div class="nl-text">
+              <div class="nl-name" :title="n.nodeName">{{ n.nodeName || '未命名节点' }}</div>
+              <div class="nl-url" :title="displayUrl(n)">{{ displayUrl(n) }}</div>
             </div>
           </div>
-          <div class="trace-group-nodes">
-            <div v-for="(node, nIdx) in group.nodes" :key="node.nodeCode" class="trace-node-card"
-                 :class="{ selected: selectedNode?.nodeCode === node.nodeCode, ignored: node.isIgnored }"
-                 @click="selectNode(node)">
-              <div class="trace-node-index">{{ nIdx + 1 }}</div>
-              <div class="trace-node-info">
-                <div class="trace-node-name">{{ node.nodeName || node.nodeCode }}</div>
-                <div class="trace-node-url">{{ node.requestUrl }}</div>
-              </div>
-              <div class="trace-node-right">
-                <t-tag size="small" :theme="methodType(node.requestMethod)" variant="dark">{{ node.requestMethod }}</t-tag>
-                <span v-if="node.isIgnored" class="trace-node-ignored">已忽略</span>
-              </div>
-            </div>
-          </div>
-          <div class="trace-group-footer">
-            <t-button size="small" theme="primary" variant="outline" @click="runTraceGroup(group.traceId)">执行此分组</t-button>
-          </div>
+          <div v-if="!nodeList.length" class="nl-empty">{{ nodeSearch ? '没有匹配的节点' : '暂无节点，点「新增节点」开始' }}</div>
         </div>
       </div>
 
-      <div class="center-panel" v-if="viewMode === 'list'" ref="canvasRef" @dragover.prevent>
-        <div v-if="nodes.length === 0" class="empty-canvas" @drop="onDrop" @dragover.prevent>
-          <LinkIcon class="empty-icon" />
-          <div class="empty-title">拖拽节点到此处</div>
-          <div class="empty-desc">或点击左侧「批量导入」添加接口</div>
-        </div>
-        <template v-for="(node, index) in sortedNodes" :key="node.nodeCode">
-          <div class="node-card"
-               :class="{ selected: selectedNode?.nodeCode === node.nodeCode, ['status-' + (nodeStatusMap[node.nodeCode] || '').toLowerCase()]: true, 'drag-over': dragOverIndex === index, ['change-' + (nodeChangeMap[node.nodeCode] || '')]: true }"
-               draggable="true"
-               @dragstart="onNodeDragStart($event, index)"
-               @dragend="onNodeDragEnd"
-               @dragover="onNodeDragOver($event, index)"
-               @dragleave="onNodeDragLeave"
-               @drop="onNodeDrop($event, index)"
-               @click="selectNode(node)">
-            <div class="node-card-header">
-              <div class="node-card-left">
-                <MoveIcon class="drag-handle" />
-                <div class="node-index">{{ index + 1 }}</div>
-                <div class="node-card-info">
-                  <div class="node-card-name">{{ node.nodeName || node.nodeCode }}</div>
-                  <div class="node-card-url">{{ node.requestUrl }}</div>
-                </div>
-              </div>
-              <div class="node-card-right">
-                <t-tag size="small" :theme="methodType(node.requestMethod)" variant="dark">{{ node.requestMethod }}</t-tag>
-                <div v-if="nodeChangeMap[node.nodeCode]" class="change-indicator" :class="nodeChangeMap[node.nodeCode]">
-                  {{ nodeChangeMap[node.nodeCode] === 'added' ? '+' : nodeChangeMap[node.nodeCode] === 'removed' ? '-' : '~' }}
-                </div>
-                <div v-if="nodeStatusMap[node.nodeCode]" class="status-badge" :class="'badge-' + nodeStatusMap[node.nodeCode].toLowerCase()">
-                  {{ nodeStatusMap[node.nodeCode] }}
-                </div>
-              </div>
-            </div>
-            <div v-if="node.bodyType === 'file'" class="node-card-file">
-              <FileIcon />
-              <span>文件上传</span>
-            </div>
-            <div v-if="node.bodyData" class="node-card-data">
-              <FileIcon />
-              <span>已填充测试数据</span>
-            </div>
-          </div>
-          <div v-if="index < sortedNodes.length - 1" class="connection-arrow">
-            <div class="arrow-line"></div>
-            <ArrowDownIcon class="arrow-icon" />
-          </div>
-        </template>
-        <div v-if="nodes.length > 0" class="add-node-area" @drop.stop="onDrop" @dragover.prevent>
-          <t-button theme="primary" variant="outline" @click="addNode">
-            <template #icon><AddIcon /></template>新增节点
-          </t-button>
-        </div>
-      </div>
+      <div ref="canvasRef" class="ce-canvas"></div>
 
-      <!-- Center-Right Resizer -->
-      <div class="panel-resizer right-resizer" @mousedown="startResizeRight" v-if="selectedNode"></div>
-
+      <!-- 右侧属性面板 -->
       <transition name="slide-right">
-        <div class="right-panel" :style="{ width: rightPanelWidth + 'px' }" v-if="selectedNode">
-          <div class="panel-header">
-            <div class="panel-title-row">
-              <SettingIcon class="config-icon" />
-              <span>属性配置</span>
-            </div>
-            <t-button theme="default" variant="text" shape="square" @click="selectedNode = null">
-              <template #icon><CloseIcon /></template>
-            </t-button>
-          </div>
-
-          <t-tabs v-model="activeTab" class="config-tabs">
-            <t-tab-panel label="基础信息" value="basic">
-              <div class="config-section">
-                <div class="config-label">节点名称</div>
-                <t-input v-model="selectedNode.nodeName" placeholder="请输入节点名称" clearable />
-              </div>
-              <div class="config-row">
-                <div class="config-label">排序号</div>
-                <t-input-number v-model="selectedNode.sortNo" :min="1" size="small" />
-              </div>
-              <div class="config-row">
-                <div class="config-label">并行分组</div>
-                <t-input v-model="selectedNode.parallelGroup" placeholder="为空则串行" size="small" clearable />
-              </div>
-              <div class="config-row">
-                <div class="config-label">等待时间</div>
-                <div class="config-inline">
-                  <t-input-number v-model="selectedNode.delaySeconds" :min="0" :max="3600" size="small" />
-                  <span class="config-hint">秒，执行后等待再执行下一节点</span>
-                </div>
-              </div>
-            </t-tab-panel>
-
-            <t-tab-panel label="请求配置" value="request">
-              <div class="config-section">
-                <div class="config-label">请求方法</div>
-                <t-select v-model="selectedNode.requestMethod" style="width:100%">
-                  <t-option label="GET" value="GET" />
-                  <t-option label="POST" value="POST" />
-                  <t-option label="PUT" value="PUT" />
-                  <t-option label="DELETE" value="DELETE" />
-                  <t-option label="PATCH" value="PATCH" />
-                </t-select>
-              </div>
-              <div class="config-section">
-                <div class="config-label">URL</div>
-                <t-input v-model="selectedNode.requestUrl" placeholder="https://api.example.com/endpoint" clearable />
-              </div>
-              <div class="config-section">
-                <div class="config-label">
-                  请求体类型
-                  <t-tooltip content="JSON: 发送JSON数据 | 文件: 上传文件(Multipart)" placement="top">
-                    <HelpCircleIcon class="help-icon" />
-                  </t-tooltip>
-                </div>
-                <t-radio-group v-model="selectedNode.bodyType" size="small">
-                  <t-radio-button value="json">JSON</t-radio-button>
-                  <t-radio-button value="file">文件上传</t-radio-button>
-                  <t-radio-button value="form">Form Data</t-radio-button>
-                </t-radio-group>
-              </div>
-
-              <template v-if="selectedNode.bodyType === 'json'">
-                <div class="config-section">
-                  <div class="config-label">请求头</div>
-                  <MonacoEditor v-model="selectedNode.requestHeaders" language="json" :height="120" />
-                  <div class="config-actions">
-                    <t-button size="small" theme="default" variant="text" @click="formatJson('requestHeaders')">格式化</t-button>
-                    <t-button size="small" theme="default" variant="text" @click="copyText(selectedNode.requestHeaders)">复制</t-button>
-                  </div>
-                </div>
-                <div class="config-section">
-                  <div class="config-label">请求体</div>
-                  <MonacoEditor v-model="selectedNode.bodyData" language="json" :height="220" />
-                  <div class="config-actions">
-                    <t-button size="small" theme="default" variant="text" @click="formatJson('bodyData')">格式化</t-button>
-                    <t-button size="small" theme="default" variant="text" @click="copyText(selectedNode.bodyData)">复制</t-button>
-                  </div>
-                </div>
-              </template>
-
-              <template v-else-if="selectedNode.bodyType === 'file'">
-                <div class="config-section">
-                  <div class="config-label">文件上传</div>
-                  <div class="file-upload-area" v-if="!selectedNode._uploadedFile">
-                    <t-upload
-                      ref="fileUploadRef"
-                      v-model="uploadFileList"
-                      theme="custom"
-                      draggable
-                      :auto-upload="true"
-                      action="/api/upload/file"
-                      :data="{ nodeCode: selectedNode.nodeCode }"
-                      :before-upload="beforeFileUpload"
-                      accept=".xlsx,.xls,.csv,.json,.txt,.xml,.pdf,.doc,.docx,.zip,.rar"
-                      :max="1"
-                      @success="handleFileUploadSuccess"
-                      @fail="handleFileUploadError"
-                    >
-                      <template #dragContent>
-                        <CloudUploadIcon class="upload-icon" />
-                        <div class="upload-text">拖拽文件到此处，或<em>点击上传</em></div>
-                        <div class="upload-tip">支持 Excel、CSV、JSON、XML 等文件，最大 50MB</div>
-                      </template>
-                    </t-upload>
-                  </div>
-                  <div class="file-info" v-else>
-                    <div class="file-card">
-                      <FileIcon class="file-icon" />
-                      <div class="file-detail">
-                        <div class="file-name">{{ selectedNode._uploadedFile.fileName }}</div>
-                        <div class="file-size">{{ formatFileSize(selectedNode._uploadedFile.size) }}</div>
-                      </div>
-                      <t-button theme="danger" variant="text" @click="removeUploadedFile">
-                        <template #icon><DeleteIcon /></template>移除
-                      </t-button>
-                    </div>
-                  </div>
-                  <div class="config-hint-box">
-                    <InfoCircleIcon />
-                    <span>文件将作为 Multipart 请求体发送，文件ID会保存到节点配置中</span>
-                  </div>
-                </div>
-                <div class="config-section">
-                  <div class="config-label">请求头</div>
-                  <MonacoEditor v-model="selectedNode.requestHeaders" language="json" :height="120" />
-                </div>
-              </template>
-
-              <template v-else>
-                <div class="config-section">
-                  <div class="config-label">请求头</div>
-                  <MonacoEditor v-model="selectedNode.requestHeaders" language="json" :height="120" />
-                  <div class="config-actions">
-                    <t-button size="small" theme="default" variant="text" @click="formatJson('requestHeaders')">格式化</t-button>
-                  </div>
-                </div>
-                <div class="config-section">
-                  <div class="config-label">Form Data</div>
-                  <MonacoEditor v-model="selectedNode.bodyData" language="json" :height="180" />
-                </div>
-              </template>
-            </t-tab-panel>
-
-            <t-tab-panel label="提取规则" value="extract">
-              <div class="config-section">
-                <div class="config-label">从响应中提取变量</div>
-                <div class="config-hint-box" style="margin-bottom:14px">
-                  <InfoCircleIcon />
-                  <span>提取响应数据保存为变量，供后续节点使用（如：提取 token、用户ID 等）</span>
-                </div>
-                <div v-for="(rule, idx) in extractRuleList" :key="idx" class="rule-row">
-                  <div class="rule-row-header">
-                    <span class="rule-index">#{{ idx + 1 }}</span>
-                    <t-button variant="text" theme="danger" size="small" shape="square" @click="removeExtractRule(idx)">
-                      <template #icon><DeleteIcon /></template>
-                    </t-button>
-                  </div>
-                  <div class="rule-fields">
-                    <div class="rule-field">
-                      <div class="rule-field-label">变量名称</div>
-                      <t-input v-model="rule.varName" size="small" placeholder="例如: token, userId" clearable />
-                    </div>
-                    <div class="rule-field">
-                      <div class="rule-field-label">提取路径</div>
-                      <t-input v-model="rule.jsonPath" size="small" placeholder="例如: $.data.token" clearable />
-                    </div>
-                  </div>
-                  <div class="rule-field">
-                    <div class="rule-field-label">路径说明</div>
-                    <div class="path-examples">
-                      <t-tag size="small" theme="default" @click="rule.jsonPath = '$.data.id'">$.data.id</t-tag>
-                      <t-tag size="small" theme="default" @click="rule.jsonPath = '$.data.token'">$.data.token</t-tag>
-                      <t-tag size="small" theme="default" @click="rule.jsonPath = '$.data.items[0].name'">$.data.items[0].name</t-tag>
-                      <t-tag size="small" theme="default" @click="rule.jsonPath = '$.data.list.length'">$.data.list.length</t-tag>
-                    </div>
-                  </div>
-                </div>
-                <t-button theme="primary" variant="outline" size="small" @click="addExtractRule" style="width:100%;margin-top:8px">
-                  <template #icon><AddIcon /></template>添加提取规则
-                </t-button>
-              </div>
-            </t-tab-panel>
-
-            <t-tab-panel label="断言规则" value="assert">
-              <div class="config-section">
-                <div class="config-label">验证响应结果</div>
-                <div class="config-hint-box" style="margin-bottom:14px">
-                  <InfoCircleIcon />
-                  <span>设置验证条件，执行后自动检查是否符合预期</span>
-                </div>
-
-                <div class="assert-group">
-                  <div class="assert-group-title">
-                    <DesktopIcon />
-                    <span>状态码检查</span>
-                  </div>
-                  <div class="rule-fields">
-                    <div class="rule-field" style="flex:0 0 120px">
-                      <t-select v-model="assertStatusMode" size="small" style="width:100%">
-                        <t-option label="等于" value="eq" />
-                        <t-option label="不等于" value="ne" />
-                        <t-option label="在范围内" value="in" />
-                      </t-select>
-                    </div>
-                    <div class="rule-field">
-                      <t-input v-model="assertStatusCode" size="small" placeholder="例如: 200" clearable />
-                    </div>
-                  </div>
-                  <div class="path-examples">
-                    <t-tag size="small" theme="default" @click="assertStatusCode='200'">200 成功</t-tag>
-                    <t-tag size="small" theme="default" @click="assertStatusCode='201'">201 创建</t-tag>
-                    <t-tag size="small" theme="default" @click="assertStatusCode='400'">400 参数错误</t-tag>
-                    <t-tag size="small" theme="default" @click="assertStatusCode='401'">401 未授权</t-tag>
-                    <t-tag size="small" theme="default" @click="assertStatusCode='404'">404 不存在</t-tag>
-                    <t-tag size="small" theme="default" @click="assertStatusCode='500'">500 服务器错误</t-tag>
-                  </div>
-                </div>
-
-                <div class="assert-group">
-                  <div class="assert-group-title">
-                    <ChartLineIcon />
-                    <span>响应体字段检查</span>
-                  </div>
-                  <div v-for="(rule, idx) in assertBodyRules" :key="idx" class="rule-row">
-                    <div class="rule-row-header">
-                      <span class="rule-index">#{{ idx + 1 }}</span>
-                      <t-button variant="text" theme="danger" size="small" shape="square" @click="removeAssertBodyRule(idx)">
-                        <template #icon><DeleteIcon /></template>
-                      </t-button>
-                    </div>
-                    <div class="rule-fields">
-                      <div class="rule-field">
-                        <div class="rule-field-label">字段路径</div>
-                        <t-input v-model="rule.path" size="small" placeholder="例如: $.data.code" clearable />
-                      </div>
-                      <div class="rule-field" style="flex:0 0 100px">
-                        <div class="rule-field-label">比较方式</div>
-                        <t-select v-model="rule.operator" size="small" style="width:100%">
-                          <t-option label="等于" value="eq" />
-                          <t-option label="不等于" value="ne" />
-                          <t-option label="包含" value="contains" />
-                          <t-option label="大于" value="gt" />
-                          <t-option label="小于" value="lt" />
-                          <t-option label="不为空" value="notNull" />
-                        </t-select>
-                      </div>
-                      <div class="rule-field">
-                        <div class="rule-field-label">期望值</div>
-                        <t-input v-model="rule.expected" size="small" placeholder="期望值" clearable :disabled="rule.operator === 'notNull'" />
-                      </div>
-                    </div>
-                    <div class="path-examples">
-                      <t-tag size="small" theme="default" @click="rule.path='$.code'">$.code 状态码</t-tag>
-                      <t-tag size="small" theme="default" @click="rule.path='$.message'">$.message 消息</t-tag>
-                      <t-tag size="small" theme="default" @click="rule.path='$.data.id'">$.data.id 数据ID</t-tag>
-                      <t-tag size="small" theme="default" @click="rule.path='$.data.list.length'">$.data.list.length 列表长度</t-tag>
-                    </div>
-                  </div>
-                  <t-button theme="primary" variant="outline" size="small" @click="addAssertBodyRule" style="width:100%;margin-top:8px">
-                    <template #icon><AddIcon /></template>添加字段检查
-                  </t-button>
-                </div>
-              </div>
-            </t-tab-panel>
-
-            <t-tab-panel label="差异对比" value="diff" v-if="diffData && diffData.nodes">
-              <div class="config-section">
-                <div class="config-label">
-                  变更状态
-                  <t-tag v-if="getNodeDiffType(selectedNode)" :theme="diffTagType(getNodeDiffType(selectedNode))" size="small" style="margin-left:6px">
-                    {{ diffLabel(getNodeDiffType(selectedNode)) }}
-                  </t-tag>
-                  <t-tag v-else theme="default" size="small" style="margin-left:6px">无对比数据</t-tag>
-                </div>
-              </div>
-              <FieldDiff v-if="getNodeFieldChanges(selectedNode).length > 0" :changes="getNodeFieldChanges(selectedNode)" />
-              <div v-else class="config-section" style="color:var(--text-mute);font-size:13px;padding:12px 0">
-                该节点与上一版本无字段差异
-              </div>
-              <AiAnalysis v-if="diffData.aiAnalysis" :analysis="diffData.aiAnalysis" />
-            </t-tab-panel>
-          </t-tabs>
-
-          <div class="panel-footer">
-            <t-button theme="default" variant="outline" @click="moveNodeUp" :disabled="isFirstNode" size="small">
-              <template #icon><ArrowUpIcon /></template>上移
-            </t-button>
-            <t-button theme="default" variant="outline" @click="moveNodeDown" :disabled="isLastNode" size="small">
-              <template #icon><ArrowDownIcon /></template>下移
-            </t-button>
-            <t-divider layout="vertical" />
-            <t-button theme="primary" @click="saveNode" style="flex:1">
-              <template #icon><CheckIcon /></template>保存节点
-            </t-button>
-            <t-button theme="danger" @click="deleteNode" style="flex:1">
-              <template #icon><DeleteIcon /></template>删除节点
-            </t-button>
-          </div>
+        <div class="ce-side" :style="{ width: selectedNode ? '380px' : '0' }" v-show="selectedNode">
+          <NodeConfigPanel
+            :node="selectedNode"
+            :chain-code="chainCode"
+            @close="deselect"
+            @save="onNodeSaved"
+            @delete="onNodeDeleted"
+            @debug="openDebug"
+            @update:node="onNodeLiveChange"
+          />
         </div>
       </transition>
-
-      <div class="right-panel empty-right" v-if="!selectedNode">
-        <div class="empty-config">
-          <SettingIcon class="empty-config-icon" />
-          <div class="empty-config-title">选择节点配置</div>
-          <div class="empty-config-desc">点击左侧节点列表或画布中的节点</div>
-        </div>
-      </div>
     </div>
 
-    <!-- 批量导入对话框 -->
-    <t-dialog v-model:visible="importDialogVisible" header="批量导入接口" width="750px" :close-on-overlay-click="false" class="import-dialog">
-      <t-tabs v-model="importTab">
-        <t-tab-panel label="Swagger/OpenAPI" value="swagger">
-          <t-form label-width="100px">
-            <t-form-item label="API文档URL" name="swaggerUrl">
-              <t-input v-model="swaggerUrl" placeholder="https://petstore.swagger.io/v2/swagger.json" />
-            </t-form-item>
-            <t-form-item>
-              <t-button theme="primary" @click="importFromSwagger" :loading="importLoading">解析并导入</t-button>
-            </t-form-item>
-          </t-form>
-          <div v-if="swaggerResult.length" style="margin-top:15px">
-            <div style="font-weight:600;margin-bottom:10px">解析结果 ({{ swaggerResult.length }}个接口)</div>
-            <t-table :data="swaggerResult" :columns="importColumns" row-key="url" bordered size="small" max-height="300" />
-            <t-button theme="primary" style="margin-top:10px" @click="confirmSwaggerImport">确认导入选中</t-button>
+    <ImportDialog :visible="importVisible" :chain-code="chainCode" @close="importVisible = false" @imported="afterImport" />
+    <GlobalVarPanel :visible="varVisible" :chain-code="chainCode" @close="varVisible = false" />
+    <NodeDebugDrawer :visible="debugVisible" :node="selectedNode" :chain-code="chainCode" @close="debugVisible = false" />
+
+    <t-dialog v-model:visible="layersVisible" header="分层执行顺序预览" width="520px" :footer="false">
+      <div v-if="layers.length" class="layers-preview">
+        <div v-for="(layer, i) in layers" :key="i" class="layer-row">
+          <div class="layer-idx">第 {{ i + 1 }} 层</div>
+          <div class="layer-nodes">
+            <t-tag v-for="code in layer" :key="code" size="small" theme="primary" variant="light">
+              {{ nodeName(code) }}
+            </t-tag>
           </div>
-        </t-tab-panel>
-
-        <t-tab-panel label="JSON文件" value="json">
-          <t-upload
-            ref="jsonUploadRef"
-            v-model="jsonFileList"
-            theme="custom"
-            draggable
-            :auto-upload="false"
-            accept=".json"
-            :max="1"
-            @change="handleJsonFile"
-          >
-            <template #dragContent>
-              <CloudUploadIcon style="font-size:40px;color:#909399" />
-              <div>拖拽JSON文件到此处，或<em>点击上传</em></div>
-              <div style="color:#909399;font-size:12px;margin-top:6px">支持格式：Postman Collection、Insomnia Export、自定义JSON</div>
-            </template>
-          </t-upload>
-          <div v-if="jsonPreview.length" style="margin-top:15px">
-            <div style="font-weight:600;margin-bottom:10px">预览 ({{ jsonPreview.length }}个接口)</div>
-            <t-table :data="jsonPreview" :columns="importColumns" row-key="url" bordered size="small" max-height="250" />
-            <t-button theme="primary" style="margin-top:10px" @click="confirmJsonImport">确认导入选中</t-button>
-          </div>
-        </t-tab-panel>
-
-        <t-tab-panel label="cURL命令" value="curl">
-          <MonacoEditor v-model="curlCommand" language="shell" :height="180" />
-          <t-button theme="primary" style="margin-top:10px" @click="importFromCurl" :loading="importLoading">解析并导入</t-button>
-        </t-tab-panel>
-
-        <t-tab-panel label="直接粘贴JSON" value="paste">
-          <MonacoEditor v-model="pasteJson" language="json" :height="240" />
-          <t-button theme="primary" style="margin-top:10px" @click="importFromPaste" :loading="importLoading">解析并导入</t-button>
-        </t-tab-panel>
-      </t-tabs>
-
-      <template #footer>
-        <t-button theme="default" variant="outline" @click="importDialogVisible = false">取消</t-button>
-      </template>
+        </div>
+        <div class="layer-tip">共 {{ layers.length }} 层，同层节点可并发执行，层间串行。</div>
+      </div>
+      <t-empty v-else description="暂无可预览的执行顺序" />
     </t-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, computed, provide, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { MessagePlugin } from 'tdesign-vue-next'
 import {
-  ChevronLeftIcon, RollbackIcon, RollfrontIcon, GridViewIcon, AiIcon, PlayIcon, CheckIcon,
-  LinkIcon, AppIcon, UploadIcon, ViewListIcon, FileIcon, SettingIcon, CloseIcon, DeleteIcon,
-  AddIcon, CloudUploadIcon, InfoCircleIcon, ArrowDownIcon, HelpCircleIcon, MoveIcon,
-  ArrowUpIcon, DesktopIcon, ChartLineIcon
+  ChevronLeftIcon, ChevronRightIcon, AddIcon, SaveIcon, LightbulbIcon, DownloadIcon, RootListIcon,
+  BugIcon, PlayCircleIcon, SwapIcon, LayersIcon, SearchIcon
 } from 'tdesign-icons-vue-next'
-import api from '../api'
-import FieldDiff from '../components/FieldDiff.vue'
-import AiAnalysis from '../components/AiAnalysis.vue'
-import VersionHistory from '../components/VersionHistory.vue'
-import MonacoEditor from '../components/MonacoEditor.vue'
+import chainApi from '../api/chain'
+import nodeApi from '../api/node'
+import { createGraph, addHttpNode, autoLayout, NODE_SHAPE } from '../graph/graph'
+import NodeConfigPanel from '../components/chain/NodeConfigPanel.vue'
+import ImportDialog from '../components/chain/ImportDialog.vue'
+import GlobalVarPanel from '../components/chain/GlobalVarPanel.vue'
+import NodeDebugDrawer from '../components/chain/NodeDebugDrawer.vue'
 
 const route = useRoute()
 const router = useRouter()
+
 const chainCode = route.params.chainCode
+const chainName = ref(chainCode)
+const canvasRef = ref(null)
 
-const nodes = ref([])
+let graph = null
+const nodeDataMap = reactive({})
+const selectedNodeCode = ref(null)
 const selectedNode = ref(null)
-const activeTab = ref('basic')
+
+const saving = ref(false)
 const aiLoading = ref(false)
-const canUndo = ref(false)
-const canRedo = ref(false)
+const executing = ref(false)
+const importVisible = ref(false)
+const varVisible = ref(false)
+const debugVisible = ref(false)
+const layersVisible = ref(false)
+const layers = ref([])
+const listCollapsed = ref(false)
+const nodeSearch = ref('')
 
-// Panel resize
-const leftPanelWidth = ref(260)
-const rightPanelWidth = ref(440)
-let isResizingLeft = false
-let isResizingRight = false
-let startX = 0
-let startWidth = 0
+// 注：HttpNode 由 @antv/x6-vue-shape 挂在独立 Vue 上下文，收不到本组件的 provide；
+// 选中态/数据均通过节点自身 data 传递（见 selectNode / HttpNode）。
 
-const startResizeLeft = (e) => {
-  isResizingLeft = true
-  startX = e.clientX
-  startWidth = leftPanelWidth.value
-  document.addEventListener('mousemove', onResizeLeft)
-  document.addEventListener('mouseup', stopResizeLeft)
-  document.body.style.cursor = 'col-resize'
-  document.body.style.userSelect = 'none'
+function nodeName(code) {
+  const n = nodeDataMap[code]
+  return n ? n.nodeName || code : code
 }
 
-const onResizeLeft = (e) => {
-  if (!isResizingLeft) return
-  const diff = e.clientX - startX
-  const newWidth = Math.min(Math.max(startWidth + diff, 200), 400)
-  leftPanelWidth.value = newWidth
-}
-
-const stopResizeLeft = () => {
-  isResizingLeft = false
-  document.removeEventListener('mousemove', onResizeLeft)
-  document.removeEventListener('mouseup', stopResizeLeft)
-  document.body.style.cursor = ''
-  document.body.style.userSelect = ''
-}
-
-const startResizeRight = (e) => {
-  isResizingRight = true
-  startX = e.clientX
-  startWidth = rightPanelWidth.value
-  document.addEventListener('mousemove', onResizeRight)
-  document.addEventListener('mouseup', stopResizeRight)
-  document.body.style.cursor = 'col-resize'
-  document.body.style.userSelect = 'none'
-}
-
-const onResizeRight = (e) => {
-  if (!isResizingRight) return
-  const diff = startX - e.clientX
-  const newWidth = Math.min(Math.max(startWidth + diff, 300), 600)
-  rightPanelWidth.value = newWidth
-}
-
-const stopResizeRight = () => {
-  isResizingRight = false
-  document.removeEventListener('mousemove', onResizeRight)
-  document.removeEventListener('mouseup', stopResizeRight)
-  document.body.style.cursor = ''
-  document.body.style.userSelect = ''
-}
-const nodeStatusMap = ref({})
-const dragIndex = ref(null)
-const dragOverIndex = ref(null)
-const viewMode = ref('list')
-const traceGroups = ref([])
-
-const importDialogVisible = ref(false)
-const importTab = ref('swagger')
-const importLoading = ref(false)
-const swaggerUrl = ref('')
-const swaggerResult = ref([])
-const jsonPreview = ref([])
-const curlCommand = ref('')
-const pasteJson = ref('')
-const jsonUploadRef = ref(null)
-const fileUploadRef = ref(null)
-const jsonFileList = ref([])
-const uploadFileList = ref([])
-
-// t-table 列定义（导入预览）
-const importColumns = [
-  { colKey: 'row-select', type: 'multiple', width: 46 },
-  { colKey: 'nodeName', title: '名称' },
-  { colKey: 'method', title: '方法', width: 80 },
-  { colKey: 'url', title: 'URL', ellipsis: true }
-]
-
-const extractRuleList = ref([])
-const assertStatusMode = ref('eq')
-const assertStatusCode = ref('')
-const assertBodyRules = ref([])
-
-// Version management
-const versions = ref([])
-const currentVersion = ref(0)
-const diffSummary = ref(null)
-const diffData = ref(null)
-
-const sortedNodes = computed(() => {
-  return [...nodes.value].sort((a, b) => (a.sortNo || 0) - (b.sortNo || 0))
-})
-
-const selectedNodeIndex = computed(() => {
-  if (!selectedNode.value) return -1
-  return sortedNodes.value.findIndex(n => n.nodeCode === selectedNode.value.nodeCode)
-})
-
-// Node change map for diff highlighting
-const nodeChangeMap = computed(() => {
-  if (!diffData.value || !diffData.value.nodes) return {}
-  const map = {}
-  diffData.value.nodes.forEach(n => {
-    if (n.changeType && n.changeType !== 'UNCHANGED') {
-      map[n.nodeCode] = n.changeType.toLowerCase()
-    }
+// 左侧节点列表：按 nodeId 稳定排序，并按 nodeSearch 过滤（节点名 / URL / 请求方法）
+const nodeList = computed(() => {
+  const all = Object.values(nodeDataMap).sort((a, b) => (a.nodeId || 0) - (b.nodeId || 0))
+  const kw = nodeSearch.value.trim().toLowerCase()
+  if (!kw) return all
+  return all.filter((n) => {
+    const name = (n.nodeName || '').toLowerCase()
+    const url = (n.requestUrl || n.pageUrl || '').toLowerCase()
+    const method = (n.requestMethod || '').toLowerCase()
+    return name.includes(kw) || url.includes(kw) || method.includes(kw)
   })
-  return map
 })
 
-const isFirstNode = computed(() => selectedNodeIndex.value <= 0)
-const isLastNode = computed(() => selectedNodeIndex.value >= sortedNodes.value.length - 1)
-
-const moveNodeUp = () => {
-  const idx = selectedNodeIndex.value
-  if (idx <= 0) return
-  const sorted = sortedNodes.value
-  const cur = sorted[idx]
-  const prev = sorted[idx - 1]
-  const tmpSort = cur.sortNo
-  cur.sortNo = prev.sortNo
-  prev.sortNo = tmpSort
-  const ci = nodes.value.findIndex(n => n.nodeCode === cur.nodeCode)
-  const pi = nodes.value.findIndex(n => n.nodeCode === prev.nodeCode)
-  if (ci !== -1) nodes.value[ci] = { ...cur }
-  if (pi !== -1) nodes.value[pi] = { ...prev }
-  saveAll()
+// 节点 URL 显示：优先请求 URL，录制类节点回退页面 URL
+function displayUrl(n) {
+  if (!n) return '未配置 URL'
+  return n.requestUrl || n.pageUrl || '未配置 URL'
 }
 
-const moveNodeDown = () => {
-  const idx = selectedNodeIndex.value
-  if (idx < 0 || idx >= sortedNodes.value.length - 1) return
-  const sorted = sortedNodes.value
-  const cur = sorted[idx]
-  const next = sorted[idx + 1]
-  const tmpSort = cur.sortNo
-  cur.sortNo = next.sortNo
-  next.sortNo = tmpSort
-  const ci = nodes.value.findIndex(n => n.nodeCode === cur.nodeCode)
-  const ni = nodes.value.findIndex(n => n.nodeCode === next.nodeCode)
-  if (ci !== -1) nodes.value[ci] = { ...cur }
-  if (ni !== -1) nodes.value[ni] = { ...next }
-  saveAll()
+// 从列表点击：选中节点并把画布居中到该节点
+function selectFromList(code) {
+  selectNode(code)
+  centerOnNode(code)
 }
 
-const onNodeDragStart = (e, index) => {
-  dragIndex.value = index
-  e.dataTransfer.effectAllowed = 'move'
-  e.dataTransfer.setData('text/plain', index)
-  e.target.style.opacity = '0.4'
-}
-
-const onNodeDragEnd = (e) => {
-  e.target.style.opacity = '1'
-  dragIndex.value = null
-  dragOverIndex.value = null
-}
-
-const onNodeDragOver = (e, index) => {
-  e.preventDefault()
-  e.dataTransfer.dropEffect = 'move'
-  dragOverIndex.value = index
-}
-
-const onNodeDragLeave = () => {
-  dragOverIndex.value = null
-}
-
-const onNodeDrop = (e, dropIndex) => {
-  e.preventDefault()
-  dragOverIndex.value = null
-  const fromIndex = dragIndex.value
-  if (fromIndex === null || fromIndex === dropIndex) return
-
-  const sorted = sortedNodes.value
-  const fromNode = sorted[fromIndex]
-  const toNode = sorted[dropIndex]
-  if (!fromNode || !toNode) return
-
-  const fromSortNo = fromNode.sortNo || 0
-  const toSortNo = toNode.sortNo || 0
-
-  fromNode.sortNo = toSortNo
-  toNode.sortNo = fromSortNo
-
-  const fromIdx = nodes.value.findIndex(n => n.nodeCode === fromNode.nodeCode)
-  const toIdx = nodes.value.findIndex(n => n.nodeCode === toNode.nodeCode)
-  if (fromIdx !== -1) nodes.value[fromIdx] = { ...fromNode }
-  if (toIdx !== -1) nodes.value[toIdx] = { ...toNode }
-
-  saveAll()
-  dragIndex.value = null
-}
-
-const onListDragStart = (e, nodeCode) => {
-  e.dataTransfer.effectAllowed = 'move'
-  e.dataTransfer.setData('text/plain', nodeCode)
-}
-
-const onListDrop = (e, targetCode) => {
-  e.preventDefault()
-  const sourceCode = e.dataTransfer.getData('text/plain')
-  if (!sourceCode || sourceCode === targetCode) return
-
-  const sorted = sortedNodes.value
-  const sourceIdx = sorted.findIndex(n => n.nodeCode === sourceCode)
-  const targetIdx = sorted.findIndex(n => n.nodeCode === targetCode)
-  if (sourceIdx === -1 || targetIdx === -1) return
-
-  const newSortNo = sorted[targetIdx].sortNo || 0
-  const sourceNode = nodes.value.find(n => n.nodeCode === sourceCode)
-  if (sourceNode) {
-    sourceNode.sortNo = newSortNo
-    const idx = nodes.value.findIndex(n => n.nodeCode === sourceCode)
-    nodes.value[idx] = { ...sourceNode }
-    saveAll()
-  }
-}
-
-const loadNodes = async () => {
-  const res = await api.get('/node/list', { params: { chainCode } })
-  nodes.value = res.data || []
-}
-
-const loadTraceGroups = async () => {
-  if (!chainCode) return
+function centerOnNode(code) {
+  if (!graph) return
+  const cell = graph.getCellById(code)
+  if (!cell || !cell.isNode()) return
   try {
-    const res = await api.get('/chain/trace-groups', { params: { chainCode } })
-    traceGroups.value = res.data || []
-  } catch (e) {
-    console.error('加载Trace分组失败:', e)
-  }
-}
-
-const runTraceGroup = async (traceId) => {
-  try {
-    const res = await api.post('/chain/runByTrace', null, {
-      params: { chainCode, traceId, parallel: false }
-    })
-    const executionId = res.data.executionId
-    MessagePlugin.success('分组执行已启动')
-    router.push('/execute/detail/' + executionId)
-  } catch (e) {
-    MessagePlugin.error('执行失败: ' + (e.message || '未知错误'))
-  }
-}
-
-const selectNode = (node) => {
-  const n = { ...node }
-  if (n.bodyType === 'file' && n.bodyData && n.bodyData.startsWith('FILE_')) {
-    n._uploadedFile = { fileId: n.bodyData, fileName: '已上传文件' }
-  }
-  selectedNode.value = n
-  uploadFileList.value = []
-  parseExtractRules()
-  parseAssertRules()
-}
-
-const parseExtractRules = () => {
-  try {
-    const raw = selectedNode.value?.extractRules
-    if (!raw) { extractRuleList.value = []; return }
-    const obj = JSON.parse(raw)
-    const rules = obj.rules || []
-    extractRuleList.value = rules.map(r => ({ varName: r.varName || '', jsonPath: r.jsonPath || '' }))
-  } catch { extractRuleList.value = [] }
-}
-
-const parseAssertRules = () => {
-  try {
-    const raw = selectedNode.value?.assertRules
-    if (!raw) { assertStatusCode.value = ''; assertStatusMode.value = 'eq'; assertBodyRules.value = []; return }
-    const obj = JSON.parse(raw)
-    if (obj.statusCode !== undefined && obj.statusCode !== null && obj.statusCode !== '') {
-      assertStatusCode.value = String(obj.statusCode)
-      assertStatusMode.value = 'eq'
-    } else {
-      assertStatusCode.value = ''
-      assertStatusMode.value = 'eq'
+    if (typeof graph.centerCell === 'function') {
+      graph.centerCell(cell)
+      return
     }
-    const bodyRules = obj.body || {}
-    assertBodyRules.value = Object.entries(bodyRules).map(([path, expected]) => ({
-      path, operator: 'eq', expected: String(expected)
-    }))
-  } catch { assertStatusCode.value = ''; assertBodyRules.value = [] }
-}
-
-const syncExtractRules = () => {
-  if (!selectedNode.value) return
-  const rules = extractRuleList.value.filter(r => r.varName && r.jsonPath)
-  selectedNode.value.extractRules = rules.length > 0 ? JSON.stringify({ rules }) : ''
-}
-
-const syncAssertRules = () => {
-  if (!selectedNode.value) return
-  const obj = {}
-  if (assertStatusCode.value !== '' && assertStatusCode.value !== null) {
-    obj.statusCode = parseInt(assertStatusCode.value) || assertStatusCode.value
-  }
-  const bodyRules = {}
-  assertBodyRules.value.forEach(r => {
-    if (r.path) {
-      if (r.operator === 'notNull') {
-        bodyRules[r.path] = '__NOT_NULL__'
-      } else {
-        const val = r.expected
-        bodyRules[r.path] = isNaN(val) ? val : Number(val)
-      }
-    }
-  })
-  if (Object.keys(bodyRules).length > 0) obj.body = bodyRules
-  selectedNode.value.assertRules = Object.keys(obj).length > 0 ? JSON.stringify(obj) : ''
-}
-
-const addExtractRule = () => {
-  extractRuleList.value.push({ varName: '', jsonPath: '' })
-}
-
-const removeExtractRule = (idx) => {
-  extractRuleList.value.splice(idx, 1)
-  syncExtractRules()
-}
-
-const addAssertBodyRule = () => {
-  assertBodyRules.value.push({ path: '', operator: 'eq', expected: '' })
-}
-
-const removeAssertBodyRule = (idx) => {
-  assertBodyRules.value.splice(idx, 1)
-  syncAssertRules()
-}
-
-const methodType = (m) => {
-  const map = { GET: 'success', POST: 'primary', PUT: 'warning', DELETE: 'danger', PATCH: 'default' }
-  return map[m] || 'default'
-}
-
-const formatJson = (field) => {
-  try {
-    const val = selectedNode.value[field]
-    selectedNode.value[field] = JSON.stringify(JSON.parse(val), null, 2)
-  } catch (e) {
-    MessagePlugin.warning('JSON格式错误')
+  } catch (e) { /* fallthrough */ }
+  // 兜底：手动平移使节点居中
+  const bbox = cell.getBBox()
+  const canvas = canvasRef.value
+  if (canvas && bbox) {
+    const tf = graph.getTransform()
+    const zoom = tf.zoom || 1
+    const dx = canvas.clientWidth / 2 - (bbox.x + bbox.width / 2) * zoom - tf.x
+    const dy = canvas.clientHeight / 2 - (bbox.y + bbox.height / 2) * zoom - tf.y
+    graph.translate(tf.x + dx, tf.y + dy)
   }
 }
 
-const copyText = (text) => {
-  navigator.clipboard.writeText(text)
-  MessagePlugin.success('已复制')
-}
-
-const formatFileSize = (bytes) => {
-  if (!bytes) return '0 B'
-  const units = ['B', 'KB', 'MB', 'GB']
-  let i = 0
-  let size = bytes
-  while (size >= 1024 && i < units.length - 1) { size /= 1024; i++ }
-  return size.toFixed(1) + ' ' + units[i]
-}
-
-const handleFileUploadSuccess = (context) => {
-  const response = context?.response || {}
-  if (response.code === 200) {
-    selectedNode.value.bodyData = response.data.fileId
-    selectedNode.value._uploadedFile = response.data
-    MessagePlugin.success('文件上传成功')
-  } else {
-    MessagePlugin.error(response.message || '上传失败')
-  }
-}
-
-const handleFileUploadError = () => {
-  MessagePlugin.error('文件上传失败')
-}
-
-const beforeFileUpload = (file) => {
-  const maxSize = 50 * 1024 * 1024
-  if (file.size > maxSize) {
-    MessagePlugin.error('文件大小不能超过50MB')
-    return false
-  }
-  return true
-}
-
-const removeUploadedFile = () => {
-  selectedNode.value.bodyData = ''
-  selectedNode.value._uploadedFile = null
-  uploadFileList.value = []
-}
-
-const saveNode = async () => {
-  syncExtractRules()
-  syncAssertRules()
-  const data = { ...selectedNode.value }
-  delete data._uploadedFile
-  await api.post('/node/edit', data)
-  MessagePlugin.success('保存成功')
-  loadNodes()
-}
-
-const deleteNode = async () => {
-  await api.post('/node/delete', null, { params: { id: selectedNode.value.id } })
-  MessagePlugin.success('删除成功')
-  selectedNode.value = null
-  loadNodes()
-}
-
-const saveAll = async () => {
-  for (const node of nodes.value) {
-    const data = { ...node }
-    delete data._uploadedFile
-    await api.post('/node/edit', data)
-  }
-  MessagePlugin.success('全部保存成功')
-}
-
-const onDragStart = (e) => {
-  e.dataTransfer.setData('text/plain', 'httpNode')
-}
-
-const onDrop = async (e) => {
-  const data = e.dataTransfer.getData('text/plain')
-  if (data !== 'httpNode') return
-  try {
-    await api.post('/node/create', { chainCode, nodeName: '新节点', requestMethod: 'GET', requestUrl: 'http://' })
-    await loadNodes()
-  } catch (e) {
-    MessagePlugin.error('新增失败: ' + (e.response?.data?.message || e.message))
-  }
-}
-
-const addNode = async () => {
-  try {
-    await api.post('/node/create', { chainCode, nodeName: '新节点', requestMethod: 'GET', requestUrl: 'http://' })
-    await loadNodes()
-    MessagePlugin.success('已新增节点')
-  } catch (e) {
-    MessagePlugin.error('新增失败: ' + (e.response?.data?.message || e.message))
-  }
-}
-
-const openImportDialog = () => {
-  swaggerUrl.value = ''
-  swaggerResult.value = []
-  jsonPreview.value = []
-  curlCommand.value = ''
-  pasteJson.value = ''
-  jsonFileList.value = []
-  importDialogVisible.value = true
-}
-
-const importFromSwagger = async () => {
-  if (!swaggerUrl.value) {
-    MessagePlugin.warning('请输入Swagger URL')
-    return
-  }
-  importLoading.value = true
-  try {
-    const resp = await fetch(swaggerUrl.value)
-    const spec = await resp.json()
-    const result = []
-    const paths = spec.paths || {}
-    const baseUrl = spec.servers?.[0]?.url || ''
-    for (const [path, methods] of Object.entries(paths)) {
-      for (const [method, detail] of Object.entries(methods)) {
-        if (['get','post','put','delete','patch'].includes(method.toLowerCase())) {
-          result.push({
-            nodeName: detail.summary || detail.operationId || path,
-            method: method.toUpperCase(),
-            url: baseUrl + path,
-            headers: JSON.stringify(detail.requestBody?.content?.['application/json'] ? { 'Content-Type': 'application/json' } : {}),
-            bodyData: ''
-          })
-        }
-      }
-    }
-    swaggerResult.value = result
-    MessagePlugin.success(`解析到 ${result.length} 个接口`)
-  } catch (e) {
-    MessagePlugin.error('解析失败: ' + e.message)
-  } finally {
-    importLoading.value = false
-  }
-}
-
-const confirmSwaggerImport = async () => {
-  const list = swaggerResult.value.map((item, i) => ({ ...item, sort: i + 1, parallelGroup: '' }))
-  await api.post('/node/import', { chainCode, interfaces: list })
-  MessagePlugin.success(`导入 ${list.length} 个接口成功`)
-  importDialogVisible.value = false
-  loadNodes()
-}
-
-const handleJsonFile = (files, context) => {
-  if (context?.trigger === 'remove') {
-    jsonPreview.value = []
-    return
-  }
-  const raw = context?.file?.raw || files?.[0]?.raw
-  if (!raw) return
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    try {
-      const data = JSON.parse(e.target.result)
-      const result = parseImportData(data)
-      jsonPreview.value = result
-      MessagePlugin.success(`解析到 ${result.length} 个接口`)
-    } catch (err) {
-      MessagePlugin.error('JSON解析失败: ' + err.message)
-    }
-  }
-  reader.readAsText(raw)
-}
-
-const parseImportData = (data) => {
-  if (Array.isArray(data)) {
-    return data.map(item => ({
-      nodeName: item.nodeName || item.name || item.title || '未命名',
-      method: (item.method || 'GET').toUpperCase(),
-      url: item.url || item.request?.url || '',
-      headers: typeof item.headers === 'string' ? item.headers : JSON.stringify(item.headers || {}),
-      bodyData: item.bodyData || item.body || item.request?.body || ''
-    }))
-  }
-  if (data.item || data.requests) {
-    const items = data.item || data.requests || []
-    return items.map(item => ({
-      nodeName: item.name || item.nodeName || '未命名',
-      method: (item.request?.method || item.method || 'GET').toUpperCase(),
-      url: item.request?.url || item.url || '',
-      headers: JSON.stringify(item.request?.header || item.headers || {}),
-      bodyData: item.request?.body?.raw || item.bodyData || ''
-    }))
-  }
-  if (data.paths) {
-    const result = []
-    for (const [path, methods] of Object.entries(data.paths)) {
-      for (const [method, detail] of Object.entries(methods)) {
-        if (['get','post','put','delete','patch'].includes(method.toLowerCase())) {
-          result.push({
-            nodeName: detail.summary || detail.operationId || path,
-            method: method.toUpperCase(),
-            url: path,
-            headers: '{}',
-            bodyData: ''
-          })
-        }
-      }
-    }
-    return result
-  }
-  return []
-}
-
-const confirmJsonImport = async () => {
-  const list = jsonPreview.value.map((item, i) => ({ ...item, sort: i + 1, parallelGroup: '' }))
-  await api.post('/node/import', { chainCode, interfaces: list })
-  MessagePlugin.success(`导入 ${list.length} 个接口成功`)
-  importDialogVisible.value = false
-  loadNodes()
-}
-
-const importFromCurl = async () => {
-  if (!curlCommand.value.trim()) {
-    MessagePlugin.warning('请输入cURL命令')
-    return
-  }
-  importLoading.value = true
-  try {
-    const result = parseCurl(curlCommand.value)
-    await api.post('/node/import', { chainCode, interfaces: [result] })
-    MessagePlugin.success('导入成功')
-    importDialogVisible.value = false
-    loadNodes()
-  } catch (e) {
-    MessagePlugin.error('解析失败: ' + e.message)
-  } finally {
-    importLoading.value = false
-  }
-}
-
-const parseCurl = (cmd) => {
-  const lines = cmd.replace(/\\\n/g, ' ').replace(/\\/g, ' ').split(/\s+/)
-  let method = 'GET', url = '', headers = {}, body = ''
-  for (let i = 0; i < lines.length; i++) {
-    const t = lines[i].trim()
-    if (t === '-X' && lines[i+1]) { method = lines[++i].replace(/['"]/g, '').toUpperCase() }
-    else if (t.startsWith('-H') && lines[i+1]) {
-      const h = lines[++i].replace(/^['"]|['"]$/g, '')
-      const [k, ...v] = h.split(':')
-      if (k) headers[k.trim()] = v.join(':').trim()
-    }
-    else if ((t === '-d' || t === '--data') && lines[i+1]) {
-      body = lines[++i].replace(/^['"]|['"]$/g, '')
-      if (method === 'GET') method = 'POST'
-    }
-    else if (t.startsWith('http')) { url = t.replace(/['"]/g, '') }
-  }
+function toDisplay(n) {
   return {
-    nodeName: url ? new URL(url).pathname.split('/').filter(Boolean).pop() || 'cURL导入' : 'cURL导入',
-    method,
-    url,
-    headers: JSON.stringify(headers),
-    bodyData: body
+    nodeCode: n.nodeCode, nodeName: n.nodeName, requestUrl: n.requestUrl, pageUrl: n.pageUrl,
+    requestMethod: n.requestMethod, interfaceScope: n.interfaceScope, targetSystem: n.targetSystem
   }
 }
 
-const importFromPaste = async () => {
-  if (!pasteJson.value.trim()) {
-    MessagePlugin.warning('请粘贴JSON数据')
-    return
-  }
-  importLoading.value = true
+async function load() {
+  let detail = null
   try {
-    const data = JSON.parse(pasteJson.value)
-    const list = (Array.isArray(data) ? data : [data]).map((item, i) => ({
-      nodeName: item.nodeName || item.name || '未命名',
-      method: (item.method || 'GET').toUpperCase(),
-      url: item.url || '',
-      headers: typeof item.headers === 'string' ? item.headers : JSON.stringify(item.headers || {}),
-      bodyData: item.bodyData || item.body || '',
-      sort: i + 1,
-      parallelGroup: ''
-    }))
-    await api.post('/node/import', { chainCode, interfaces: list })
-    MessagePlugin.success(`导入 ${list.length} 个接口成功`)
-    importDialogVisible.value = false
-    loadNodes()
+    detail = await chainApi.getDetail(chainCode)
+    if (detail.code === 200 && detail.data) {
+      chainName.value = detail.data.chainName || chainCode
+    }
+  } catch (e) { /* 详情失败不影响画布加载 */ }
+
+  try {
+    const listRes = await nodeApi.list(chainCode)
+    if (listRes.code === 200) {
+      const nodes = listRes.data || []
+      nodes.forEach((n) => { nodeDataMap[n.nodeCode] = n })
+      renderCanvas(detail?.data?.graphData)
+    } else {
+      MessagePlugin.error(listRes.message || '节点加载失败')
+    }
   } catch (e) {
-    MessagePlugin.error('JSON解析失败: ' + e.message)
-  } finally {
-    importLoading.value = false
+    MessagePlugin.error('节点加载失败: ' + (e.response?.data?.message || e.message))
   }
 }
 
-const autoLayout = () => {
+function renderCanvas(graphData) {
+  if (!graph) return
+  let parsed = null
+  try {
+    parsed = graphData ? JSON.parse(graphData) : null
+  } catch {
+    parsed = null
+  }
+  if (parsed && parsed.cells && parsed.cells.length) {
+    // 画布 JSON(graph_data) 可能缺 requestUrl/pageUrl，用节点配置表补全后再渲染，
+    // 避免画布节点显示“未配置 URL”（vue-shape 组件挂载后不会因 setData 自动刷新）
+    parsed.cells.forEach((cell) => {
+      if (cell && cell.shape === NODE_SHAPE && cell.data && nodeDataMap[cell.id]) {
+        const d = nodeDataMap[cell.id]
+        cell.data = {
+          ...cell.data,
+          nodeCode: d.nodeCode,
+          nodeName: d.nodeName,
+          requestUrl: d.requestUrl,
+          pageUrl: d.pageUrl,
+          requestMethod: d.requestMethod,
+          interfaceScope: d.interfaceScope,
+          targetSystem: d.targetSystem
+        }
+      }
+    })
+    graph.fromJSON(parsed)
+  } else {
+    // 无画布数据：按节点表平铺为无连线节点
+    Object.values(nodeDataMap).forEach((n, i) => {
+      addHttpNode(graph, n.nodeCode, toDisplay(n), { x: 80 + (i % 4) * 260, y: 80 + Math.floor(i / 4) * 110 })
+    })
+  }
+}
+
+function selectNode(code) {
+  // 清除上一个选中节点的高亮标记
+  if (selectedNodeCode.value && selectedNodeCode.value !== code && graph) {
+    const prev = graph.getCellById(selectedNodeCode.value)
+    if (prev && prev.isNode()) prev.setData({ ...prev.getData(), selected: false })
+  }
+  selectedNodeCode.value = code
+  selectedNode.value = nodeDataMap[code] ? { ...nodeDataMap[code] } : null
+  // 在 X6 节点自身 data 上落选中标记，HttpNode 通过 getNode + change:data 自行刷新高亮
+  if (graph) {
+    const cell = graph.getCellById(code)
+    if (cell && cell.isNode()) cell.setData({ ...cell.getData(), selected: true })
+  }
+}
+function deselect() {
+  if (selectedNodeCode.value && graph) {
+    const prev = graph.getCellById(selectedNodeCode.value)
+    if (prev && prev.isNode()) prev.setData({ ...prev.getData(), selected: false })
+  }
+  selectedNodeCode.value = null
+  selectedNode.value = null
+}
+
+async function addNode() {
+  try {
+    const res = await nodeApi.create({ chainCode, nodeName: '新节点', requestMethod: 'GET', requestUrl: 'http://' })
+    if (res.code === 200) {
+      const n = res.data
+      nodeDataMap[n.nodeCode] = n
+      addHttpNode(graph, n.nodeCode, toDisplay(n))
+      selectNode(n.nodeCode)
+      MessagePlugin.success('已新增节点')
+    } else {
+      MessagePlugin.error(res.message || '新增失败')
+    }
+  } catch (e) {
+    MessagePlugin.error('新增失败: ' + (e.response?.data?.message || e.message))
+  }
+}
+
+function onNodeSaved(payload) {
+  if (payload && payload.nodeCode) {
+    nodeDataMap[payload.nodeCode] = { ...nodeDataMap[payload.nodeCode], ...payload }
+    const cell = graph.getCellById(payload.nodeCode)
+    if (cell && cell.isNode()) cell.setData({ ...cell.getData(), ...toDisplay(nodeDataMap[payload.nodeCode]) })
+  }
+}
+
+function onNodeLiveChange(payload) {
+  if (!payload || !payload.nodeCode) return
+  nodeDataMap[payload.nodeCode] = { ...nodeDataMap[payload.nodeCode], ...payload }
+  const cell = graph.getCellById(payload.nodeCode)
+  if (cell && cell.isNode()) cell.setData(toDisplay(nodeDataMap[payload.nodeCode]))
+}
+
+async function onNodeDeleted(id) {
+  const code = selectedNodeCode.value
+  try {
+    const res = await nodeApi.remove(id)
+    if (res.code === 200) {
+      if (code && graph.getCellById(code)) graph.removeCell(code)
+      delete nodeDataMap[code]
+      deselect()
+      MessagePlugin.success('已删除节点')
+    } else {
+      MessagePlugin.error(res.message || '删除失败')
+    }
+  } catch (e) {
+    MessagePlugin.error('删除失败: ' + (e.response?.data?.message || e.message))
+  }
+}
+
+function autoLayoutGraph() {
+  autoLayout(graph)
   MessagePlugin.success('已自动布局')
 }
 
-const undo = () => MessagePlugin.info('撤销')
-const redo = () => MessagePlugin.info('重做')
-
-const generateTestData = async () => {
-  if (nodes.value.length === 0) {
-    MessagePlugin.warning('请先添加节点')
-    return
-  }
-  aiLoading.value = true
+async function saveGraphData() {
+  if (!graph) return
+  saving.value = true
   try {
-    const res = await api.post('/ai/data/generate', { chainCode, idGenerateMode: 'AUTO_INCREMENT', idStep: 1 })
-    const nodeData = res.data.nodeData
-    const message = res.data.message || '测试数据生成成功'
-    let updatedCount = 0
-    for (const node of nodes.value) {
-      if (nodeData[node.nodeCode] && nodeData[node.nodeCode].bodyData) {
-        node.bodyData = nodeData[node.nodeCode].bodyData
-        updatedCount++
-      }
-    }
-    if (updatedCount > 0) {
-      await saveAll()
-      MessagePlugin.success(`${message}，已写入 ${updatedCount} 个节点的请求体，请在右侧「请求配置」中查看`)
+    const data = JSON.stringify(graph.toJSON())
+    const res = await chainApi.saveGraph(chainCode, data)
+    if (res.code === 200) {
+      const cnt = res.data?.layerCount || 0
+      MessagePlugin.success(`画布已保存（${cnt} 层执行计划）`)
     } else {
-      MessagePlugin.warning('未生成到有效数据，请检查节点是否配置了请求URL')
+      MessagePlugin.error(res.message || '保存失败')
     }
   } catch (e) {
-    MessagePlugin.error('AI生成失败: ' + (e.message || '未知错误'))
+    MessagePlugin.error('保存失败: ' + (e.response?.data?.message || e.message))
+  } finally {
+    saving.value = false
+  }
+}
+
+async function previewLayers() {
+  try {
+    const res = await chainApi.previewLayers(chainCode)
+    if (res.code === 200) {
+      layers.value = res.data || []
+      layersVisible.value = true
+    } else {
+      MessagePlugin.error(res.message || '预览失败')
+    }
+  } catch (e) {
+    MessagePlugin.error('预览失败: ' + (e.response?.data?.message || e.message))
+  }
+}
+
+async function generateData() {
+  aiLoading.value = true
+  try {
+    const res = await chainApi.generateTestData(chainCode)
+    if (res.code === 200) {
+      const nodeData = res.data?.nodeData || {}
+      let updated = 0
+      Object.values(nodeDataMap).forEach((n) => {
+        if (nodeData[n.nodeCode] && nodeData[n.nodeCode].bodyData) {
+          nodeDataMap[n.nodeCode].bodyData = nodeData[n.nodeCode].bodyData
+          updated++
+        }
+      })
+      if (updated > 0) await saveAllNodes()
+      MessagePlugin.success(`已生成并写入 ${updated} 个节点的测试数据`)
+    } else {
+      MessagePlugin.error(res.message || '生成失败')
+    }
+  } catch (e) {
+    MessagePlugin.error('生成失败: ' + (e.response?.data?.message || e.message))
   } finally {
     aiLoading.value = false
   }
 }
 
-const executeChain = async () => {
-  const res = await api.post('/execute/run', { chainCode })
-  const executionId = res.data.executionId
-  MessagePlugin.success('执行已启动')
-  router.push('/execute/detail/' + executionId)
+async function saveAllNodes() {
+  for (const n of Object.values(nodeDataMap)) {
+    if (n.id) await nodeApi.edit(n)
+  }
 }
 
-// Version management
-async function loadVersions() {
+async function runChain() {
+  executing.value = true
   try {
-    const { data } = await api.get('/chain/versions', { params: { chainCode, all: 'false' } })
-    if (data.code === 200) {
-      versions.value = data.data.list || []
-      if (versions.value.length > 0 && !currentVersion.value) {
-        currentVersion.value = versions.value[0].version
-      }
+    const res = await chainApi.execute(chainCode)
+    if (res.code === 200) {
+      const executionId = res.data?.executionId
+      MessagePlugin.success('执行已启动')
+      router.push('/execute/detail/' + executionId)
+    } else {
+      MessagePlugin.error(res.message || '执行失败')
     }
   } catch (e) {
-    console.error('加载版本列表失败:', e)
+    MessagePlugin.error('执行失败: ' + (e.response?.data?.message || e.message))
+  } finally {
+    executing.value = false
   }
 }
 
-async function onVersionChange(version) {
-  if (!version) {
-    diffSummary.value = null
-    diffData.value = null
-    return
-  }
-  try {
-    const { data } = await api.get('/chain/version/diff', {
-      params: { chainCode, version }
-    })
-    if (data.code === 200) {
-      diffData.value = data.data
-      diffSummary.value = data.data.summary || null
-    }
-  } catch (e) {
-    console.error('加载Diff失败:', e)
-  }
+function afterImport() {
+  // 重新拉取节点并刷新画布
+  Object.keys(nodeDataMap).forEach((k) => delete nodeDataMap[k])
+  graph.clearCells()
+  load()
 }
 
-function getNodeDiffType(node) {
-  if (!diffData.value || !diffData.value.nodes || !node) return null
-  const found = diffData.value.nodes.find(n => n.nodeCode === node.nodeCode)
-  return found ? found.changeType : null
+function openDebug() {
+  if (!selectedNode.value) return
+  debugVisible.value = true
 }
 
-function getNodeFieldChanges(node) {
-  if (!diffData.value || !diffData.value.nodes || !node) return []
-  const found = diffData.value.nodes.find(n => n.nodeCode === node.nodeCode)
-  return found && found.fieldChanges ? found.fieldChanges : []
+function goBack() {
+  router.push('/chain/list')
 }
 
-function diffTagType(type) {
-  if (type === 'ADDED') return 'success'
-  if (type === 'REMOVED') return 'danger'
-  if (type === 'MODIFIED') return 'warning'
-  return 'default'
-}
+onMounted(async () => {
+  await nextTick()
+  graph = createGraph(canvasRef.value)
+  graph.on('node:click', ({ node }) => selectNode(node.id))
+  graph.on('blank:click', () => deselect())
+  await load()
+})
 
-function diffLabel(type) {
-  if (type === 'ADDED') return '新增'
-  if (type === 'REMOVED') return '已删除'
-  if (type === 'MODIFIED') return '已修改'
-  if (type === 'UNCHANGED') return '未变化'
-  return type
-}
-
-onMounted(() => {
-  loadNodes()
-  loadVersions()
+onBeforeUnmount(() => {
+  if (graph) graph.dispose()
 })
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
-
-/* ── Layout ── */
-.chain-edit {
-  height: calc(100vh - 60px);
-  display: flex;
-  flex-direction: column;
-  background: linear-gradient(135deg, var(--bg) 0%, var(--bg) 50%, var(--bg) 100%);
-}
-
-/* ── Toolbar ── */
-.toolbar {
-  padding: 12px 20px;
-  background: var(--surface);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(62, 207, 142, 0.08);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.04);
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.toolbar-left, .toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.chain-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text);
-  margin-left: 4px;
-}
-
-.toolbar :deep(.el-button) {
-  border-radius: 10px;
-  font-weight: 500;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  white-space: nowrap;
-}
-
-.toolbar :deep(.el-button--primary) {
-  background: linear-gradient(135deg, var(--primary), var(--primary-soft));
-  border: none;
-  box-shadow: 0 2px 8px rgba(62, 207, 142, 0.3);
-}
-
-.toolbar :deep(.el-button--success) {
-  background: linear-gradient(135deg, var(--sb-success), var(--primary-soft));
-  border: none;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
-}
-
-.toolbar :deep(.el-button--warning) {
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25);
-}
-
-.toolbar :deep(.el-button:hover) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-/* ── Main Area ── */
-.main-area {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
-}
-
-/* ── Left Panel ── */
-.left-panel {
-  min-width: 200px;
-  max-width: 400px;
-  background: var(--surface);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  padding: 18px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  flex-shrink: 0;
-}
-
-/* ── Panel Resizer ── */
-.panel-resizer {
-  width: 6px;
-  cursor: col-resize;
-  background: rgba(62, 207, 142, 0.1);
-  transition: background 0.2s, width 0.2s;
-  flex-shrink: 0;
-  position: relative;
-}
-
-.panel-resizer::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 2px;
-  height: 40px;
-  background: rgba(62, 207, 142, 0.3);
-  border-radius: 1px;
-  transition: all 0.2s;
-}
-
-.panel-resizer:hover {
-  background: rgba(62, 207, 142, 0.2);
-  width: 8px;
-}
-
-.panel-resizer:hover::after {
-  background: rgba(62, 207, 142, 0.6);
-  height: 60px;
-}
-
-.panel-resizer:active {
-  background: rgba(62, 207, 142, 0.3);
-}
-
-.panel-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  margin-bottom: 14px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid rgba(62, 207, 142, 0.08);
-}
-
-/* ── Node Item (Drag Source) ── */
-.node-item {
-  padding: 14px;
-  border: 1px solid rgba(62, 207, 142, 0.1);
-  border-radius: 12px;
-  cursor: grab;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  background: linear-gradient(135deg, rgba(62, 207, 142, 0.03), rgba(74, 222, 128, 0.02));
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
-}
-
-.node-item:hover {
-  border-color: rgba(62, 207, 142, 0.3);
-  background: linear-gradient(135deg, rgba(62, 207, 142, 0.06), rgba(74, 222, 128, 0.04));
-  box-shadow: 0 2px 8px rgba(62, 207, 142, 0.1);
-  transform: translateX(2px);
-}
-
-.node-item:active { cursor: grabbing; }
-
-.node-icon { font-size: 24px; color: var(--primary); }
-
-.node-item-info { display: flex; flex-direction: column; }
-.node-item-name { font-size: 13px; font-weight: 500; color: var(--text); }
-.node-item-desc { font-size: 11px; color: var(--text-mute); margin-top: 2px; }
-
-/* ── Node List ── */
-.node-list {
-  max-height: 280px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.node-list-item {
-  padding: 8px 12px;
-  border-radius: 10px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.15s ease;
-}
-
-.node-list-item:hover { background: rgba(62, 207, 142, 0.06); }
-.node-list-item.active { background: rgba(62, 207, 142, 0.12); }
-
-.list-drag-handle {
-  cursor: grab;
-  color: var(--text-mute);
-  font-size: 14px;
-  flex-shrink: 0;
-  transition: color 0.2s;
-}
-
-.list-drag-handle:hover { color: var(--primary); }
-
-.method-tag { min-width: 42px; text-align: center; }
-
-:deep(.method-tag) {
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 11px;
-}
-
-.node-list-name {
-  font-size: 13px;
-  color: var(--text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.empty-list {
-  text-align: center;
-  color: var(--text-mute);
-  padding: 24px;
-  font-size: 13px;
-}
-
-/* ── Center Panel (Canvas) ── */
-.center-panel {
-  flex: 1;
-  overflow-y: auto;
-  padding: 28px;
-  position: relative;
-  background-image:
-    radial-gradient(circle, rgba(62, 207, 142, 0.15) 1px, transparent 1px);
-  background-size: 24px 24px;
-}
-
-/* ── Empty Canvas ── */
-.empty-canvas {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 80px 0;
-}
-
-.empty-icon { font-size: 56px; color: var(--sb-accent-soft); margin-bottom: 16px; }
-.empty-title { font-size: 17px; color: var(--primary); margin-bottom: 8px; font-weight: 600; }
-.empty-desc { font-size: 13px; color: var(--text-mute); }
-
-/* ── Node Cards ── */
-.node-card {
-  background: var(--surface);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 2px solid rgba(62, 207, 142, 0.12);
-  border-radius: 14px;
-  padding: 16px 20px;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  max-width: 540px;
-  margin-left: auto;
-  margin-right: auto;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  position: relative;
-}
-
-.node-card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 14px;
-  background: linear-gradient(135deg, rgba(62, 207, 142, 0.03), transparent);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.25s;
-}
-
-.node-card:hover {
-  border-color: rgba(62, 207, 142, 0.35);
-  box-shadow: 0 4px 20px rgba(62, 207, 142, 0.12);
-  transform: translateY(-2px);
-}
-
-.node-card:hover::after { opacity: 1; }
-
-.node-card.drag-over {
-  border-color: var(--primary);
-  border-style: dashed;
-  background: rgba(62, 207, 142, 0.06);
-}
-
-.drag-handle {
-  cursor: grab;
-  color: var(--sb-accent-soft);
-  font-size: 16px;
-  margin-right: 4px;
-  transition: color 0.2s;
-}
-
-.drag-handle:hover { color: var(--primary); }
-.node-card:active .drag-handle { cursor: grabbing; }
-
-.node-card.selected {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(62, 207, 142, 0.15), 0 4px 16px rgba(62, 207, 142, 0.1);
-}
-
-.node-card.status-success { border-color: var(--sb-success); }
-.node-card.status-failed { border-color: var(--sb-danger); }
-
-.node-card.status-running {
-  border-color: var(--primary);
-  animation: pulseNode 2s infinite;
-}
-
-@keyframes pulseNode {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(62, 207, 142, 0.3); }
-  50% { box-shadow: 0 0 0 6px rgba(62, 207, 142, 0); }
-}
-
-/* ── Node Card Header ── */
-.node-card-header { display: flex; justify-content: space-between; align-items: center; }
-.node-card-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
-
-.node-index {
-  width: 30px; height: 30px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, rgba(62, 207, 142, 0.08), rgba(74, 222, 128, 0.05));
-  display: flex; align-items: center; justify-content: center;
-  font-size: 12px; font-weight: 600; color: var(--primary); flex-shrink: 0;
-  transition: all 0.2s;
-}
-
-.node-card.selected .node-index {
-  background: linear-gradient(135deg, var(--primary), var(--primary-soft));
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(62, 207, 142, 0.3);
-}
-
-.node-card-info { min-width: 0; }
-.node-card-name { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
-.node-card-url {
-  font-size: 12px; color: var(--text-mute);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 340px;
-}
-
-.node-card-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-
-/* ── Status Badges ── */
-.status-badge {
-  font-size: 11px; padding: 3px 10px; border-radius: 10px; font-weight: 500;
-}
-
-.badge-success { background: rgba(16, 185, 129, 0.1); color: var(--sb-success); }
-.badge-failed { background: rgba(239, 68, 68, 0.1); color: var(--sb-danger); }
-.badge-running { background: rgba(62, 207, 142, 0.1); color: var(--primary); }
-
-/* ── Node Card Data ── */
-.node-card-file {
-  margin-top: 8px; padding: 8px 12px;
-  background: rgba(62, 207, 142, 0.04);
-  border-radius: 8px;
-  display: flex; align-items: center; gap: 6px;
-  font-size: 12px; color: var(--text-mute);
-}
-
-.node-card-data {
-  margin-top: 8px; padding: 8px 12px;
-  background: rgba(16, 185, 129, 0.06);
-  border-radius: 8px;
-  display: flex; align-items: center; gap: 6px;
-  font-size: 12px; color: var(--sb-success);
-  border: 1px solid rgba(16, 185, 129, 0.15);
-}
-
-/* ── Connection Arrow ── */
-.connection-arrow {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 8px 0;
-  max-width: 540px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.arrow-line {
-  width: 2px;
-  height: 20px;
-  background: linear-gradient(180deg, var(--sb-accent-soft), var(--sb-accent-soft-2));
-  border-radius: 1px;
-}
-
-.arrow-icon {
-  font-size: 18px;
-  color: var(--sb-accent-soft-2);
-  margin-top: -2px;
-}
-
-.add-node-area { text-align: center; margin-top: 18px; }
-
-/* ── Right Panel (Config) ── */
-.right-panel {
-  min-width: 300px;
-  max-width: 600px;
-  background: var(--surface);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.empty-right { align-items: center; justify-content: center; }
-
-.empty-config { text-align: center; color: var(--sb-accent-soft); }
-.empty-config-icon { font-size: 56px; margin-bottom: 14px; }
-.empty-config-title { font-size: 15px; color: var(--primary); margin-bottom: 6px; font-weight: 600; }
-.empty-config-desc { font-size: 13px; color: var(--text-mute); }
-
-/* ── Panel Header ── */
-.panel-header {
-  padding: 14px 20px;
-  border-bottom: 1px solid rgba(62, 207, 142, 0.08);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: rgba(62, 207, 142, 0.02);
-}
-
-.panel-title-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.config-icon { color: var(--primary); }
-
-/* ── Config Tabs ── */
-.config-tabs {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0 20px;
-}
-
-.config-tabs :deep(.el-tabs__header) { margin-bottom: 18px; }
-.config-tabs :deep(.el-tabs__active-bar) { background: var(--primary); }
-.config-tabs :deep(.el-tabs__nav-wrap::after) { height: 1px; }
-
-/* ── Config Sections ── */
-.config-section { margin-bottom: 20px; }
-
-.config-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.help-icon { font-size: 14px; color: var(--sb-accent-soft); cursor: help; transition: color 0.2s; }
-.help-icon:hover { color: var(--primary); }
-
-.config-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-.config-row .config-label { margin-bottom: 0; min-width: 70px; }
-.config-inline { display: flex; align-items: center; gap: 8px; }
-
-.config-hint { font-size: 12px; color: var(--text-mute); }
-.config-actions { display: flex; gap: 4px; margin-top: 4px; }
-
-/* ── Code Editor ── */
-.code-editor :deep(textarea) {
-  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
-  font-size: 13px;
-  line-height: 1.5;
-  border-radius: 10px;
-}
-
-/* ── File Upload ── */
-.file-upload-area { border-radius: 12px; overflow: hidden; }
-.file-upload-area :deep(.el-upload-dragger) {
-  padding: 32px;
-  border: 2px dashed rgba(62, 207, 142, 0.2);
-  border-radius: 12px;
-  transition: all 0.2s;
-}
-
-.file-upload-area :deep(.el-upload-dragger:hover) {
-  border-color: var(--primary);
-  background: rgba(62, 207, 142, 0.03);
-}
-
-.upload-icon { font-size: 40px; color: var(--sb-accent-soft); }
-.upload-text { color: var(--text-mute); margin-top: 10px; font-size: 13px; }
-.upload-text em { color: var(--primary); font-style: normal; }
-.upload-tip { color: var(--text-mute); font-size: 12px; margin-top: 8px; }
-
-/* ── File Card ── */
-.file-card {
-  display: flex; align-items: center; gap: 14px;
-  padding: 14px;
-  background: linear-gradient(135deg, rgba(62, 207, 142, 0.04), rgba(74, 222, 128, 0.02));
-  border: 1px solid rgba(62, 207, 142, 0.1);
-  border-radius: 12px;
-  transition: all 0.2s;
-}
-
-.file-card:hover {
-  box-shadow: 0 2px 8px rgba(62, 207, 142, 0.08);
-  border-color: rgba(62, 207, 142, 0.2);
-}
-
-.file-icon { font-size: 32px; color: var(--primary); }
-.file-detail { flex: 1; min-width: 0; }
-.file-name { font-size: 13px; font-weight: 500; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.file-size { font-size: 12px; color: var(--text-mute); margin-top: 2px; }
-
-/* ── Config Hint Box ── */
-.config-hint-box {
-  display: flex; align-items: flex-start; gap: 6px;
-  padding: 10px 14px;
-  background: linear-gradient(135deg, rgba(62, 207, 142, 0.04), rgba(74, 222, 128, 0.02));
-  border: 1px solid rgba(62, 207, 142, 0.08);
-  border-radius: 10px;
-  font-size: 12px; color: var(--text-mute); margin-top: 8px; line-height: 1.5;
-}
-
-/* ── Rule Row ── */
-.rule-row {
-  background: linear-gradient(135deg, rgba(62, 207, 142, 0.03), rgba(74, 222, 128, 0.01));
-  border: 1px solid rgba(62, 207, 142, 0.1);
-  border-radius: 12px;
-  padding: 14px;
-  margin-bottom: 12px;
-  transition: all 0.2s;
-}
-
-.rule-row:hover {
-  box-shadow: 0 2px 8px rgba(62, 207, 142, 0.06);
-  border-color: rgba(62, 207, 142, 0.18);
-}
-
-.rule-row-header {
-  display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
-}
-
-.rule-index {
-  font-size: 12px; font-weight: 600; color: var(--primary);
-  background: rgba(62, 207, 142, 0.1);
-  padding: 3px 10px; border-radius: 10px;
-}
-
-.rule-fields { display: flex; gap: 10px; }
-.rule-field { flex: 1; min-width: 0; }
-.rule-field-label { font-size: 12px; color: var(--text-mute); margin-bottom: 4px; }
-
-.path-examples { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.path-examples .el-tag {
-  cursor: pointer;
-  border-radius: 8px;
-  transition: all 0.2s;
-}
-.path-examples .el-tag:hover { opacity: 0.8; transform: translateY(-1px); }
-
-/* ── Assert Group ── */
-.assert-group {
-  background: linear-gradient(135deg, rgba(62, 207, 142, 0.03), rgba(74, 222, 128, 0.01));
-  border: 1px solid rgba(62, 207, 142, 0.1);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 14px;
-}
-
-.assert-group-title {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 12px;
-}
-
-/* ── Panel Footer ── */
-.panel-footer {
-  padding: 14px 20px;
-  border-top: 1px solid rgba(62, 207, 142, 0.08);
-  display: flex;
-  gap: 10px;
-  background: rgba(62, 207, 142, 0.02);
-}
-
-/* ── Scrollbars ── */
-.left-panel::-webkit-scrollbar,
-.config-tabs::-webkit-scrollbar { width: 5px; }
-.left-panel::-webkit-scrollbar-track,
-.config-tabs::-webkit-scrollbar-track { background: transparent; }
-.left-panel::-webkit-scrollbar-thumb,
-.config-tabs::-webkit-scrollbar-thumb {
-  background: rgba(62, 207, 142, 0.2);
-  border-radius: 3px;
-}
-.left-panel::-webkit-scrollbar-thumb:hover,
-.config-tabs::-webkit-scrollbar-thumb:hover {
-  background: rgba(62, 207, 142, 0.4);
-}
-
-.center-panel::-webkit-scrollbar { width: 6px; }
-.center-panel::-webkit-scrollbar-track { background: transparent; }
-.center-panel::-webkit-scrollbar-thumb {
-  background: rgba(62, 207, 142, 0.25);
-  border-radius: 3px;
-}
-
-/* ── Dialog Overrides ── */
-:deep(.el-dialog) {
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-:deep(.el-dialog__header) {
-  padding: 18px 24px;
-  border-bottom: 1px solid rgba(62, 207, 142, 0.08);
-  background: linear-gradient(135deg, rgba(62, 207, 142, 0.03), transparent);
-}
-
-:deep(.el-dialog__body) {
-  padding: 24px;
-}
-
-/* ── Element Plus Overrides ── */
-:deep(.el-input__wrapper),
-:deep(.el-select .el-input__wrapper),
-:deep(.el-textarea__inner) {
-  border-radius: 10px;
-  background: var(--surface);
-  border: 1px solid var(--sb-border-strong);
-  box-shadow: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-:deep(.el-input__wrapper:hover),
-:deep(.el-textarea__inner:hover) {
-  border-color: var(--sb-accent-soft-2);
-  box-shadow: none;
-}
-
-:deep(.el-input__wrapper.is-focus),
-:deep(.el-textarea__inner:focus) {
-  box-shadow: 0 0 0 2px rgba(62, 207, 142, 0.15);
-  border-color: var(--primary);
-}
-
-:deep(.el-tabs__content) {
-  border-radius: 10px;
-}
-
-:deep(.el-tabs__active-bar) { background: var(--primary); }
-:deep(.el-tabs__item) {
-  font-weight: 500;
-  color: var(--text-mute);
-  transition: color 0.2s;
-}
-:deep(.el-tabs__item.is-active) {
-  color: var(--primary);
-  font-weight: 600;
-}
-
-/* ── Version Diff Summary ── */
-.version-diff-summary {
-  display: flex;
-  gap: 8px;
-  margin-left: 8px;
-}
-.diff-badge {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 6px;
-}
-.diff-added { color: var(--sb-success); background: var(--sb-success-bg); }
-.diff-removed { color: var(--sb-danger); background: var(--sb-danger-bg); }
-.diff-modified { color: var(--sb-warning); background: var(--sb-warning-bg); }
-.diff-unchanged { color: var(--text-mute); background: var(--surface-2); }
-
-/* ── Node Change Highlighting ── */
-.node-card.change-added {
-  border: 2px solid var(--sb-success);
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
-}
-.node-card.change-modified {
-  border: 2px solid var(--sb-warning);
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
-}
-.node-card.change-removed {
-  border: 2px solid var(--sb-danger);
-  opacity: 0.6;
-}
-.node-card.change-unchanged {
-  border: 1px solid rgba(62, 207, 142, 0.1);
-}
-.change-indicator {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 700;
-  color: #fff;
-}
-.change-indicator.added { background: var(--sb-success); }
-.change-indicator.modified { background: var(--sb-warning); }
-.change-indicator.removed { background: var(--sb-danger); }
-
-/* ── Node List Change Items ── */
-.node-list-item.change-added {
-  border-left: 3px solid var(--sb-success);
-}
-.node-list-item.change-modified {
-  border-left: 3px solid var(--sb-warning);
-}
-.node-list-item.change-removed {
-  border-left: 3px solid var(--sb-danger);
-  opacity: 0.6;
-}
-
-/* ── Trace Group View ── */
-.trace-group-view {
-  padding: 24px;
-  display: block;
-}
-
-.trace-group-card {
-  background: var(--surface);
-  border: 1px solid rgba(62, 207, 142, 0.12);
-  border-radius: 14px;
-  margin-bottom: 20px;
-  overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-}
-
-.trace-group-header {
-  padding: 14px 18px;
-  background: linear-gradient(135deg, rgba(62, 207, 142, 0.06), rgba(74, 222, 128, 0.03));
-  border-bottom: 1px solid rgba(62, 207, 142, 0.08);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.trace-group-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.trace-group-id {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-  font-family: 'SF Mono', 'Fira Code', monospace;
-}
-
-.trace-group-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.trace-group-url {
-  font-size: 12px;
-  color: var(--text-mute);
-  max-width: 300px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.trace-group-nodes {
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.trace-node-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  border: 1px solid rgba(62, 207, 142, 0.08);
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.2s;
-  background: var(--surface);
-}
-
-.trace-node-card:hover {
-  border-color: rgba(62, 207, 142, 0.25);
-  background: rgba(62, 207, 142, 0.02);
-}
-
-.trace-node-card.selected {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(62, 207, 142, 0.15);
-}
-
-.trace-node-card.ignored {
-  opacity: 0.5;
-  background: var(--surface-2);
-}
-
-.trace-node-index {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: rgba(62, 207, 142, 0.08);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--primary);
-  flex-shrink: 0;
-}
-
-.trace-node-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.trace-node-name {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text);
-}
-
-.trace-node-url {
-  font-size: 11px;
-  color: var(--text-mute);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  margin-top: 2px;
-}
-
-.trace-node-right {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.trace-node-ignored {
-  font-size: 11px;
-  color: var(--text-mute);
-  font-style: italic;
-}
-
-.trace-group-footer {
-  padding: 10px 18px;
-  border-top: 1px solid rgba(62, 207, 142, 0.08);
-  display: flex;
-  justify-content: flex-end;
-}
+.chain-edit { height: calc(100vh - 60px); display: flex; flex-direction: column; background: var(--surface, #fff); color: var(--text, #2c3e50); }
+.ce-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; gap: 12px;
+  background: var(--primary-soft, #e6f4f1);
+  border-bottom: 1px solid var(--accent-border, #b8ddd4);
+}
+.tb-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.chain-name { font-size: 15px; font-weight: 600; color: var(--text, #2c3e50); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tb-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ce-body { flex: 1 1 auto; display: flex; min-height: 0; position: relative; }
+
+/* 左侧节点列表 */
+.ce-nodelist {
+  flex: 0 0 248px; display: flex; flex-direction: column; min-height: 0;
+  border-right: 1px solid var(--border, #e5e6eb); background: var(--surface, #fff);
+  transition: flex-basis 0.2s ease;
+}
+.ce-nodelist.collapsed { flex-basis: 40px; }
+.nl-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px; border-bottom: 1px solid var(--border, #e5e6eb);
+}
+.nl-title { font-size: 13px; font-weight: 600; color: var(--text, #1d2129); white-space: nowrap; }
+.nl-title em { font-style: normal; color: var(--text-mute, #86909c); font-weight: 400; }
+.ce-nodelist.collapsed .nl-title { display: none; }
+.nl-search { padding: 8px; border-bottom: 1px solid var(--border, #e5e6eb); }
+.nl-body { flex: 1 1 auto; overflow: auto; padding: 8px; }
+.nl-item {
+  display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px;
+  border-radius: 8px; cursor: pointer; border: 1px solid transparent;
+  transition: background 0.15s, border-color 0.15s;
+}
+.nl-item:hover { background: var(--primary-soft, rgba(74, 158, 142, 0.08)); }
+.nl-item.active {
+  background: var(--primary-soft, rgba(74, 158, 142, 0.12));
+  border-color: var(--primary, #4a9e8e);
+  box-shadow: 0 0 0 2px rgba(74, 158, 142, 0.25);
+}
+.nl-method {
+  flex: 0 0 auto; font-size: 10px; font-weight: 700; color: #fff;
+  border-radius: 4px; padding: 1px 5px; line-height: 16px; margin-top: 1px;
+}
+.nl-method.m-get { background: #2ba471; }
+.nl-method.m-post { background: #4a9e8e; }
+.nl-method.m-put { background: #d97706; }
+.nl-method.m-delete { background: #d54941; }
+.nl-method.m-patch { background: #8a5cf6; }
+.nl-text { flex: 1 1 auto; min-width: 0; }
+.nl-name {
+  font-size: 13px; color: var(--text, #1d2129); font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.nl-url {
+  font-size: 11px; color: var(--text-secondary, #4e5969);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;
+}
+.nl-item.active .nl-url { color: var(--primary-dark, #3d8475); }
+.nl-empty { padding: 20px 12px; font-size: 12px; color: var(--text-mute, #86909c); text-align: center; }
+
+.ce-canvas { flex: 1 1 auto; min-width: 0; position: relative; cursor: grab; }
+.ce-canvas:active { cursor: grabbing; }
+.ce-side {
+  flex: 0 0 auto; border-left: 1px solid var(--border, #e5e6eb); overflow: hidden;
+  transition: width 0.2s ease; background: var(--surface, #fff);
+}
+.slide-right-enter-active, .slide-right-leave-active { transition: width 0.2s ease; }
+.layers-preview { display: flex; flex-direction: column; gap: 10px; max-height: 60vh; overflow: auto; }
+.layer-row { display: flex; gap: 10px; align-items: flex-start; }
+.layer-idx { flex: 0 0 60px; font-size: 13px; font-weight: 600; color: var(--text-secondary, #5a6c7d); padding-top: 2px; }
+.layer-nodes { display: flex; flex-wrap: wrap; gap: 6px; }
+.layer-tip { font-size: 12px; color: var(--text-mute, #8494a7); margin-top: 6px; }
 </style>

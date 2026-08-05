@@ -41,12 +41,9 @@
     var retryOn401 = options.retryOn401 !== false; // 默认 401 触发登录 + 重放
     var silent = !!options.silent;
 
-    var store = await new Promise(function (res) {
-      chrome.storage.local.get(['settings'], function (r) { res(r.settings || {}); });
-    });
-    var base = (store.platformUrl || '').replace(/\/+$/, '');
+    var base = (window.AUTOTEST_CONFIG && window.AUTOTEST_CONFIG.PLATFORM_URL || '').replace(/\/+$/, '');
     if (!base) {
-      var e1 = new Error('请先在设置中配置后端 API 地址');
+      var e1 = new Error('后端 API 地址未配置（请在插件 config.js 中指定 PLATFORM_URL）');
       e1.type = 'NO_BASE_URL'; throw e1;
     }
 

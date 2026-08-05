@@ -5,15 +5,15 @@
  */
 
 :root {
-  /* ── 品牌色（蓝）── */
-  --td-brand-color: #0052d9;
-  --td-brand-color-hover: #266fe8;
-  --td-brand-color-active: #003cab;
-  --td-brand-color-light: #ecf2fe;
-  --td-brand-color-light-hover: #d4e2fc;
-  --td-brand-color-light-active: #b5c7eb;
-  --td-brand-color-focus: #b5c7eb;
-  --td-brand-color-disabled: #b5c7eb;
+  /* ── 品牌色（蓝绿，对应 ThemePreview 新主题）── */
+  --td-brand-color: #4a9e8e;
+  --td-brand-color-hover: #5db8a7;
+  --td-brand-color-active: #3d8475;
+  --td-brand-color-light: #e6f4f1;
+  --td-brand-color-light-hover: #d4ece7;
+  --td-brand-color-light-active: #b8ddd4;
+  --td-brand-color-focus: #b8ddd4;
+  --td-brand-color-disabled: #b8ddd4;
 
   /* ── 字体 ── */
   --td-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -26,14 +26,14 @@
 /* 暗色：跟随 .t-theme-dark（由 App.vue 切换），同时兼容 .dark */
 .t-theme-dark,
 html.dark {
-  --td-brand-color: #4582e6;
-  --td-brand-color-hover: #5b94ea;
-  --td-brand-color-active: #003cab;
-  --td-brand-color-light: #1c2a4a;
-  --td-brand-color-light-hover: #20304f;
-  --td-brand-color-light-active: #142042;
-  --td-brand-color-focus: #2a3f66;
-  --td-brand-color-disabled: #3a4a66;
+  --td-brand-color: #5db8a7;
+  --td-brand-color-hover: #6fc4b5;
+  --td-brand-color-active: #4a9e8e;
+  --td-brand-color-light: rgba(93, 184, 167, 0.14);
+  --td-brand-color-light-hover: rgba(93, 184, 167, 0.2);
+  --td-brand-color-light-active: rgba(93, 184, 167, 0.26);
+  --td-brand-color-focus: rgba(93, 184, 167, 0.22);
+  --td-brand-color-disabled: rgba(93, 184, 167, 0.3);
 }
 
 /* 全局滚动条（主色点缀，双态通用） */

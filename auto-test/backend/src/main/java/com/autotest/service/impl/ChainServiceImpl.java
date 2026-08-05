@@ -10,7 +10,11 @@ import com.autotest.model.vo.ChainVO;
 import com.autotest.model.vo.NodeVO;
 import com.autotest.service.ChainService;
 import com.autotest.service.NodeConfigService;
+import com.autotest.model.vo.ClassifyResult;
 import com.autotest.util.CodeGenerator;
+import com.autotest.util.DagPlanner;
+import com.autotest.util.GraphDataBuilder;
+import com.autotest.util.InterfaceClassifier;
 import com.autotest.util.JsonPathUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +36,24 @@ public class ChainServiceImpl implements ChainService {
     @Autowired
     private TestNodeConfigMapper nodeConfigMapper;
 
+    @Autowired
+    private InterfaceClassifier interfaceClassifier;
+
+    /**
+     * 按 URL 自动填充节点的内外网范围与归属系统，识别失败不影响主流程
+     */
+    private void applyClassification(TestNodeConfig node) {
+        try {
+            ClassifyResult result = interfaceClassifier.classify(node.getRequestUrl());
+            if (result != null) {
+                node.setInterfaceScope(result.getScope());
+                node.setTargetSystem(result.getSystemCode());
+            }
+        } catch (Exception e) {
+            log.warn("[Chain] 接口内外网识别失败: url={}, {}", node.getRequestUrl(), e.getMessage());
+        }
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ChainVO createChain(ChainCreateDTO dto) {
@@ -50,7 +72,6 @@ public class ChainServiceImpl implements ChainService {
         chain.setExecuteMode(dto.getExecuteMode() != null ? dto.getExecuteMode() : 1);
         chain.setDescription(dto.getDescription());
         chain.setStatus(1);
-        chain.setCurrentVersion(1);
         if (dto.getCategoryId() != null) chain.setCategoryId(dto.getCategoryId());
         chainMapper.insert(chain);
 
@@ -130,7 +151,52 @@ public class ChainServiceImpl implements ChainService {
         List<TestNodeConfig> nodes = nodeConfigMapper.selectByChainCode(chainCode);
         vo.setNodeList(nodes.stream().map(this::buildNodeVO).collect(Collectors.toList()));
         vo.setNodeCount(nodes.size());
+        // 详情接口才带画布数据；老库可能为空，此时按节点顺序生成一份线性画布兜底
+        String graph = chain.getGraphData();
+        if (graph == null || graph.trim().isEmpty()) {
+            graph = GraphDataBuilder.buildLinear(nodes);
+        }
+        vo.setGraphData(graph);
         return vo;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public List<List<String>> saveGraph(String chainCode, String graphData) {
+        TestChain existing = chainMapper.selectByChainCode(chainCode);
+        if (existing == null) {
+            throw new BusinessException(404, "链路不存在");
+        }
+        String graph = (graphData == null || graphData.trim().isEmpty())
+                ? "{\"cells\":[]}" : graphData.trim();
+
+        // 落库前先跑一次拓扑排序，环形依赖直接拒绝，避免把坏画布写进库
+        List<TestNodeConfig> nodes = nodeConfigMapper.selectByChainCode(chainCode);
+        List<List<String>> layers = toCodeLayers(DagPlanner.planLayers(graph, nodes));
+
+        TestChain update = new TestChain();
+        update.setChainCode(chainCode);
+        update.setGraphData(graph);
+        chainMapper.update(update);
+        return layers;
+    }
+
+    @Override
+    public List<List<String>> previewLayers(String chainCode) {
+        TestChain chain = chainMapper.selectByChainCode(chainCode);
+        if (chain == null) {
+            throw new BusinessException(404, "链路不存在");
+        }
+        List<TestNodeConfig> nodes = nodeConfigMapper.selectByChainCode(chainCode);
+        return toCodeLayers(DagPlanner.planLayers(chain.getGraphData(), nodes));
+    }
+
+    private List<List<String>> toCodeLayers(List<List<TestNodeConfig>> layers) {
+        List<List<String>> result = new ArrayList<>();
+        for (List<TestNodeConfig> layer : layers) {
+            result.add(layer.stream().map(TestNodeConfig::getNodeCode).collect(Collectors.toList()));
+        }
+        return result;
     }
 
     @Override
@@ -157,7 +223,7 @@ public class ChainServiceImpl implements ChainService {
         newChain.setExecuteMode(original.getExecuteMode());
         newChain.setDescription(original.getDescription());
         newChain.setStatus(1);
-        newChain.setCurrentVersion(1);
+        newChain.setGraphData(original.getGraphData());
         chainMapper.insert(newChain);
 
         // Copy nodes
@@ -171,8 +237,6 @@ public class ChainServiceImpl implements ChainService {
                 newNode.setNodeCode(CodeGenerator.generateNodeCode(newChainCode, newNodes.size() + 1));
                 newNode.setNodeName(node.getNodeName());
                 newNode.setNodeType(node.getNodeType());
-                newNode.setSortNo(node.getSortNo());
-                newNode.setParallelGroup(node.getParallelGroup());
                 newNode.setRequestUrl(node.getRequestUrl());
                 newNode.setRequestMethod(node.getRequestMethod());
                 newNode.setRequestHeaders(node.getRequestHeaders());
@@ -199,7 +263,6 @@ public class ChainServiceImpl implements ChainService {
         chain.setChainName(dto.getChainName());
         chain.setExecuteMode(1); // Default serial
         chain.setStatus(1);
-        chain.setCurrentVersion(1);
         chainMapper.insert(chain);
 
         // Create nodes and identify dependencies
@@ -216,8 +279,6 @@ public class ChainServiceImpl implements ChainService {
             node.setNodeCode(CodeGenerator.generateNodeCode(chainCode, nodeId));
             node.setNodeName(iface.getNodeName() != null ? iface.getNodeName() : "节点" + nodeId);
             node.setNodeType("MACRO".equals(iface.getMethod()) ? "MACRO" : "HTTP");
-            node.setSortNo(iface.getSort() != null ? iface.getSort() : nodeId);
-            node.setParallelGroup(iface.getParallelGroup());
             node.setRequestUrl(iface.getUrl());
             node.setRequestMethod(iface.getMethod());
             node.setRequestHeaders(iface.getHeaders());
@@ -229,6 +290,7 @@ public class ChainServiceImpl implements ChainService {
             node.setPageUrl(iface.getPageUrl());
             node.setWindowId(iface.getWindowId());
             node.setIsIgnored(iface.getIsIgnored() != null && iface.getIsIgnored() ? 1 : 0);
+            applyClassification(node);
             nodes.add(node);
 
             // Identify parameter dependencies with previous nodes
@@ -278,6 +340,12 @@ public class ChainServiceImpl implements ChainService {
 
         nodeConfigMapper.batchInsert(nodes);
 
+        // 录制顺序即初始执行顺序：自动生成一条线性 DAG 画布
+        TestChain graphUpdate = new TestChain();
+        graphUpdate.setChainCode(chainCode);
+        graphUpdate.setGraphData(GraphDataBuilder.buildLinear(nodes));
+        chainMapper.update(graphUpdate);
+
         ChainVO vo = getChainDetail(chainCode);
         vo.setNodeList(vo.getNodeList() != null ? vo.getNodeList() : new ArrayList<>());
         return vo;
@@ -291,7 +359,6 @@ public class ChainServiceImpl implements ChainService {
             throw new BusinessException(404, "链路不存在");
         }
 
-        int maxSortNo = nodeConfigMapper.getMaxSortNo(dto.getChainCode());
         int maxNodeId = nodeConfigMapper.getMaxNodeId(dto.getChainCode());
 
         List<TestNodeConfig> newNodes = new ArrayList<>();
@@ -304,8 +371,6 @@ public class ChainServiceImpl implements ChainService {
             node.setNodeCode(CodeGenerator.generateNodeCode(dto.getChainCode(), nodeId));
             node.setNodeName(iface.getNodeName() != null ? iface.getNodeName() : "节点" + nodeId);
             node.setNodeType("HTTP");
-            node.setSortNo(maxSortNo + i + 1);
-            node.setParallelGroup(iface.getParallelGroup());
             node.setRequestUrl(iface.getUrl());
             node.setRequestMethod(iface.getMethod());
             node.setRequestHeaders(iface.getHeaders());
@@ -316,10 +381,18 @@ public class ChainServiceImpl implements ChainService {
             node.setPageUrl(iface.getPageUrl());
             node.setWindowId(iface.getWindowId());
             node.setIsIgnored(iface.getIsIgnored() != null && iface.getIsIgnored() ? 1 : 0);
+            applyClassification(node);
             newNodes.add(node);
         }
 
         nodeConfigMapper.batchInsert(newNodes);
+
+        // 追加节点接到原画布末尾
+        TestChain graphUpdate = new TestChain();
+        graphUpdate.setChainCode(dto.getChainCode());
+        graphUpdate.setGraphData(GraphDataBuilder.appendLinear(existing.getGraphData(), newNodes));
+        chainMapper.update(graphUpdate);
+
         return getChainDetail(dto.getChainCode());
     }
 
@@ -361,8 +434,8 @@ public class ChainServiceImpl implements ChainService {
         vo.setNodeCode(node.getNodeCode());
         vo.setNodeName(node.getNodeName());
         vo.setNodeType(node.getNodeType());
-        vo.setSortNo(node.getSortNo());
-        vo.setParallelGroup(node.getParallelGroup());
+        vo.setInterfaceScope(node.getInterfaceScope());
+        vo.setTargetSystem(node.getTargetSystem());
         vo.setRequestUrl(node.getRequestUrl());
         vo.setRequestMethod(node.getRequestMethod());
         vo.setRequestHeaders(node.getRequestHeaders());

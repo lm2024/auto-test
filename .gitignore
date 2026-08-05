@@ -20,3 +20,4 @@ fix-codex-web-search.sh
 .workbuddy/
 
 .mimocode/.cron-lock
+.npm-cache/

@@ -12,8 +12,9 @@ public class TestChain {
     private Date updateTime;
     private String createBy;
     private Integer status;
-    private Integer currentVersion;
-    private String chainFingerprint;
+
+    /** X6 画布图数据（graph.toJSON() 的 JSON 字符串），编排的唯一真相来源 */
+    private String graphData;
 
     // 阶段二新增字段
     private String bizOperTraceId;
@@ -44,10 +45,8 @@ public class TestChain {
     public void setCreateBy(String createBy) { this.createBy = createBy; }
     public Integer getStatus() { return status; }
     public void setStatus(Integer status) { this.status = status; }
-    public Integer getCurrentVersion() { return currentVersion; }
-    public void setCurrentVersion(Integer currentVersion) { this.currentVersion = currentVersion; }
-    public String getChainFingerprint() { return chainFingerprint; }
-    public void setChainFingerprint(String chainFingerprint) { this.chainFingerprint = chainFingerprint; }
+    public String getGraphData() { return graphData; }
+    public void setGraphData(String graphData) { this.graphData = graphData; }
 
     // 阶段二新增字段 getter/setter
     public String getBizOperTraceId() { return bizOperTraceId; }

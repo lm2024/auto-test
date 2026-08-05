@@ -265,7 +265,7 @@ onUnmounted(() => { if (ws) ws.close() })
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+/* 内网/离线部署不要引入 Google Fonts CDN，否则白屏；已使用系统字体栈兜底 */
 
 /* ── Layout ── */
 .execute-detail {

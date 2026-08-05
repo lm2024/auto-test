@@ -24,4 +24,17 @@ public interface ChainService {
     ChainVO copyChain(String chainCode);
     ChainVO pluginCreateChain(PluginChainCreateDTO dto);
     ChainVO pluginAppendChain(PluginChainAppendDTO dto);
+
+    /**
+     * 保存 X6 画布数据（编排与执行顺序的唯一真相来源）。
+     * 保存前会做一次 DAG 校验，存在环形依赖直接拒绝落库。
+     *
+     * @return 拓扑分层预览，layers[i] 为第 i 层可并发执行的 nodeCode 列表
+     */
+    List<List<String>> saveGraph(String chainCode, String graphData);
+
+    /**
+     * 只读地取一次拓扑分层，供前端"执行顺序预览"使用
+     */
+    List<List<String>> previewLayers(String chainCode);
 }

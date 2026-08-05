@@ -60,6 +60,16 @@ const routes = [
     component: () => import('../views/ScheduledTask.vue')
   },
   {
+    path: '/system/registry',
+    name: 'SystemRegistry',
+    component: () => import('../views/SystemRegistry.vue')
+  },
+  {
+    path: '/call-graph',
+    name: 'CallGraph',
+    component: () => import('../views/CallGraph.vue')
+  },
+  {
     path: '/theme-preview',
     name: 'ThemePreview',
     component: () => import('../views/ThemePreview.vue'),

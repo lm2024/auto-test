@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.autotest.mapper.CallGraphMapper">
+
+    <resultMap id="CallGraphRowMap" type="com.autotest.model.vo.CallGraphRow">
+        <result column="chain_code" property="chainCode"/>
+        <result column="chain_name" property="chainName"/>
+        <result column="request_url" property="requestUrl"/>
+        <result column="request_method" property="requestMethod"/>
+        <result column="interface_scope" property="interfaceScope"/>
+        <result column="target_system" property="targetSystem"/>
+    </resultMap>
+
+    <select id="selectCallRows" resultMap="CallGraphRowMap">
+        SELECT
+            n.chain_code AS chain_code,
+            c.chain_name AS chain_name,
+            n.request_url AS request_url,
+            n.request_method AS request_method,
+            n.interface_scope AS interface_scope,
+            n.target_system AS target_system
+        FROM test_node_config n
+        LEFT JOIN test_chain c ON c.chain_code = n.chain_code
+        WHERE n.request_url IS NOT NULL AND n.request_url != ''
+        <if test="chainCode != null and chainCode != ''">
+            AND n.chain_code = #{chainCode}
+        </if>
+        ORDER BY n.chain_code ASC, n.node_id ASC
+    </select>
+</mapper>

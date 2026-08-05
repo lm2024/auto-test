@@ -66,7 +66,6 @@ public class NodeConfigController {
                 dto.setHeaders((String) item.get("headers"));
                 dto.setBodyData((String) item.get("bodyData"));
                 dto.setSort(item.get("sort") != null ? ((Number) item.get("sort")).intValue() : null);
-                dto.setParallelGroup((String) item.get("parallelGroup"));
                 interfaces.add(dto);
             }
         }

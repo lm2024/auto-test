@@ -1,0 +1,6 @@
+﻿init.sql | Attr=Archive | Len=287535
+init.sql | OPEN_RW_FAIL: 使用“4”个参数调用“Open”时发生异常:“对路径“C:\Users\Li\Downloads\GitHub\auto-test\docker\init.sql”的访问被拒绝。”
+init.sql.bak | Attr=Archive | Len=287535
+init.sql.bak | OPEN_RW_FAIL: 使用“4”个参数调用“Open”时发生异常:“对路径“C:\Users\Li\Downloads\GitHub\auto-test\docker\init.sql.bak”的访问被拒绝。”
+migration_260804_dag.sql | Attr=Archive | Len=8113
+migration_260804_dag.sql | OPEN_RW_OK

@@ -213,6 +213,7 @@ var macroRecorder = (function() {
 // ========== 宏回放器 ==========
 var macroReplayer = (function() {
   var stopped = false;
+  var currentRun = null; // { actions, settings, index }
 
   function wait(ms) {
     return new Promise(function(resolve) { setTimeout(resolve, ms); });
@@ -268,16 +269,20 @@ var macroReplayer = (function() {
     el.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
-  async function executeAction(action, settings) {
+  // 执行单步；返回 { ok, error }
+  async function executeAction(action, settings, index) {
     var actionDelay = (settings && settings.macroActionDelay) || 500;
 
     if (action.type === 'navigate') {
+      // 跨页面跳转：保存断点，跳转后由 content.js 启动时自动续跑
+      if (currentRun) {
+        try { chrome.storage.local.set({ autoTestReplayResume: { actions: currentRun.actions, settings: currentRun.settings, index: index + 1 } }); } catch (e) {}
+      }
       window.location.href = action.url || action.pageUrl;
-      await waitForPageLoad();
-      return;
+      return { ok: true };
     }
 
-    if (!action.element || !action.element.selector) return;
+    if (!action.element || !action.element.selector) return { ok: false, error: '缺少元素选择器' };
 
     try {
       var el = await waitForElement(action.element.selector, 8000);
@@ -304,37 +309,74 @@ var macroReplayer = (function() {
           el.dispatchEvent(new KeyboardEvent('keydown', { key: action.key, bubbles: true }));
           el.dispatchEvent(new KeyboardEvent('keyup', { key: action.key, bubbles: true }));
           break;
+        default:
+          return { ok: false, error: '未知操作类型: ' + action.type };
       }
+      return { ok: true };
     } catch (err) {
-      console.warn('[AutoTest] Action failed:', action.type, action.element.selector, err.message);
+      return { ok: false, error: err.message };
     }
   }
 
-  async function start(actions, settings) {
-    stopped = false;
+  async function runFrom(startIdx) {
+    var actions = currentRun.actions;
+    var settings = currentRun.settings;
     var results = [];
 
-    for (var i = 0; i < actions.length; i++) {
+    for (var i = startIdx; i < actions.length; i++) {
       if (stopped) break;
       var action = actions[i];
+      currentRun.index = i;
 
-      // 如果URL变化了，等待页面加载
+      // 如果 URL 变化了，等待页面加载
       if (action.pageUrl && action.pageUrl !== window.location.href) {
         await waitForPageLoad(15000);
         await wait(500);
       }
 
-      results.push({ index: i, type: action.type, selector: action.element ? action.element.selector : '', status: 'success' });
-      await executeAction(action, settings);
+      // 先真实执行，再按实际结果记录状态（修复"假成功"问题）
+      var r = await executeAction(action, settings, i);
+      results.push({ index: i, type: action.type, selector: action.element ? action.element.selector : '', status: r.ok ? 'success' : 'failed', error: r.error || '' });
+
+      if (action.type === 'navigate') {
+        // 已保存断点并触发跳转，本页回放在此结束；新页面加载后自动续跑
+        return { total: actions.length, executed: results.length, stopped: stopped, results: results };
+      }
       await wait(300);
     }
 
-    return { total: actions.length, executed: results.length, stopped: stopped, results: results };
+    var result = { total: actions.length, executed: results.length, stopped: stopped, results: results };
+    safeSendMessage({ type: 'MACRO_REPLAY_DONE', result: result });
+    return result;
+  }
+
+  async function start(actions, settings) {
+    stopped = false;
+    currentRun = { actions: actions, settings: settings, index: 0 };
+    return runFrom(0);
+  }
+
+  // 续跑：跨页面跳转后由下方 bootstrap 调用
+  async function resume(actions, settings, index) {
+    stopped = false;
+    currentRun = { actions: actions, settings: settings, index: index };
+    return runFrom(index);
   }
 
   function stop() {
     stopped = true;
   }
 
-  return { start: start, stop: stop };
+  return { start: start, resume: resume, stop: stop };
 })();
+
+// 跨页面回放续跑：若上一页跳转前保存了断点，则在新页面自动继续（补全多页回放）
+safeStorageGet(['autoTestReplayResume'], function(r) {
+  if (r.autoTestReplayResume) {
+    var resume = r.autoTestReplayResume;
+    try { chrome.storage.local.remove('autoTestReplayResume'); } catch (e) {}
+    if (resume && resume.actions) {
+      macroReplayer.resume(resume.actions, resume.settings || {}, resume.index || 0);
+    }
+  }
+});

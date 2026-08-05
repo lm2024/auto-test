@@ -7,8 +7,6 @@ public class NodeCreateDTO {
     private String chainCode;
     private String nodeName;
     private String nodeType = "HTTP";
-    private Integer sortNo;
-    private String parallelGroup;
     private String requestUrl;
     private String requestMethod;
     private String requestHeaders;
@@ -25,10 +23,6 @@ public class NodeCreateDTO {
     public void setNodeName(String nodeName) { this.nodeName = nodeName; }
     public String getNodeType() { return nodeType; }
     public void setNodeType(String nodeType) { this.nodeType = nodeType; }
-    public Integer getSortNo() { return sortNo; }
-    public void setSortNo(Integer sortNo) { this.sortNo = sortNo; }
-    public String getParallelGroup() { return parallelGroup; }
-    public void setParallelGroup(String parallelGroup) { this.parallelGroup = parallelGroup; }
     public String getRequestUrl() { return requestUrl; }
     public void setRequestUrl(String requestUrl) { this.requestUrl = requestUrl; }
     public String getRequestMethod() { return requestMethod; }

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.autotest.mapper.SysSystemRegistryMapper">
+
+    <resultMap id="BaseResultMap" type="com.autotest.model.entity.SysSystemRegistry">
+        <id column="id" property="id"/>
+        <result column="system_code" property="systemCode"/>
+        <result column="system_name" property="systemName"/>
+        <result column="scope" property="scope"/>
+        <result column="domain_patterns" property="domainPatterns"/>
+        <result column="ip_ranges" property="ipRanges"/>
+        <result column="category" property="category"/>
+        <result column="description" property="description"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_system_registry
+            (system_code, system_name, scope, domain_patterns, ip_ranges, category, description)
+        VALUES
+            (#{systemCode}, #{systemName}, #{scope}, #{domainPatterns}, #{ipRanges}, #{category}, #{description})
+    </insert>
+
+    <update id="update">
+        UPDATE sys_system_registry
+        <set>
+            <if test="systemCode != null">system_code = #{systemCode},</if>
+            <if test="systemName != null">system_name = #{systemName},</if>
+            <if test="scope != null">scope = #{scope},</if>
+            <if test="domainPatterns != null">domain_patterns = #{domainPatterns},</if>
+            <if test="ipRanges != null">ip_ranges = #{ipRanges},</if>
+            <if test="category != null">category = #{category},</if>
+            <if test="description != null">description = #{description},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM sys_system_registry WHERE id = #{id}
+    </delete>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT * FROM sys_system_registry WHERE id = #{id}
+    </select>
+
+    <select id="selectBySystemCode" resultMap="BaseResultMap">
+        SELECT * FROM sys_system_registry WHERE system_code = #{systemCode}
+    </select>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT * FROM sys_system_registry ORDER BY id ASC
+    </select>
+</mapper>
