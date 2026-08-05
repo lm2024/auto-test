@@ -14,6 +14,33 @@
   var apiBtnState = 'idle'; // idle | recording | stopped
   var stoppedTimer = null;
 
+  // 页面路径 → 中文名映射（用户提供清单后填入；未配置时显示路径本身）
+  var PAGE_NAME_MAP = {};
+
+  // 触发事件 → 中文标签
+  function eventLabel(ev) {
+    var map = {
+      click: '点击', dblclick: '双击', contextmenu: '右键',
+      change: '选择', select: '选择',
+      keydown: '回车', keyup: '键盘', keypress: '键盘',
+      submit: '提交', input: '输入',
+      scroll: '滚动', wheel: '滚动',
+      mouseover: '悬停', mouseenter: '悬停', hover: '悬停',
+      focus: '聚焦', blur: '失焦',
+      dragstart: '拖拽', drop: '拖放',
+      auto: '自动触发'
+    };
+    return map[ev] || '自动触发';
+  }
+
+  // 页面 URL → 中文页面名（映射表优先，兜底显示路径）
+  function pageLabel(url) {
+    if (!url) return '';
+    var path;
+    try { path = new URL(url).pathname; } catch (e) { path = String(url).substring(0, 30); }
+    return PAGE_NAME_MAP[path] || path;
+  }
+
   function el(id) { return document.getElementById(id); }
   function narrow() { return window.innerWidth <= 360; }
 
@@ -112,7 +139,6 @@
   }
 
   function bindAll() {
-    el('hidePanelBtn').addEventListener('click', hidePanel);
     el('recordApiBtn').addEventListener('click', function() {
       var isRec = apiBtnState === 'recording';
       apiBtnState = isRec ? 'stopped' : 'recording';
@@ -155,7 +181,15 @@
     el('settingsOverlay').addEventListener('click', function() { closeP('settings'); });
     el('settingsClose').addEventListener('click', function() { closeP('settings'); });
     el('settingsBtn').addEventListener('click', openSettings);
-    el('authBtn').addEventListener('click', openAuthPanel);
+    el('authBtn').addEventListener('click', onAuthBtnClick);
+    el('authLogoutBtn').addEventListener('click', doLogout);
+    document.addEventListener('click', function (e) {
+      var m = el('authMenu');
+      if (!m || !m.classList.contains('open')) return;
+      var btn = el('authBtn');
+      if (m.contains(e.target) || (btn && btn.contains(e.target))) return;
+      closeAuthMenu();
+    });
     el('goPlatformBtn').addEventListener('click', function() {
       var url = (getConfig().FRONTEND_URL || 'http://localhost:9094') + '/chain/list';
       window.open(url, '_blank');
@@ -312,20 +346,20 @@
     for (var i = 0; i < list.childNodes.length; i++) { if (list.childNodes[i] !== empty) toRemove.push(list.childNodes[i]); }
     toRemove.forEach(function(n) { list.removeChild(n); });
 
-    // 渲染分组
+    // 渲染分组（按录制时间顺序编号：操作 1 / 2 / 3…，原始链路 ID 放悬停提示）
     var groupKeys = Object.keys(groups);
-    groupKeys.forEach(function(traceId) {
+    groupKeys.forEach(function(traceId, gi) {
       var g = groups[traceId];
       var groupDiv = document.createElement('div');
       groupDiv.className = 'trace-group';
-      var shortTrace = traceId.length > 20 ? traceId.substring(0, 20) + '...' : traceId;
-      var eventLabel = g.event === 'click' ? '点击' : g.event === 'change' ? '选择' : g.event === 'keydown' ? '回车' : g.event === 'submit' ? '提交' : g.event;
-      var shortPage = g.pageUrl ? (function() { try { return new URL(g.pageUrl).pathname; } catch(e) { return g.pageUrl.substring(0, 30); } })() : '';
-      groupDiv.innerHTML = '<div class="trace-group-header">'
-        + '<span class="trace-id" title="' + enc(traceId) + '">' + enc(shortTrace) + '</span>'
-        + '<span class="trace-event">' + enc(eventLabel) + '</span>'
-        + '<span class="trace-page" title="' + enc(g.pageUrl) + '">' + enc(shortPage) + '</span>'
-        + '<span class="trace-count">' + g.items.length + ' 条</span>'
+      var evLabel = eventLabel(g.event);
+      var pageName = pageLabel(g.pageUrl);
+      var titleAttr = '操作链路ID: ' + traceId + (g.pageUrl ? ' · 页面: ' + g.pageUrl : '');
+      groupDiv.innerHTML = '<div class="trace-group-header" title="' + enc(titleAttr) + '">'
+        + '<span class="trace-id">操作 ' + (gi + 1) + '</span>'
+        + '<span class="trace-event">' + enc(evLabel) + '</span>'
+        + '<span class="trace-page">' + enc(pageName) + '</span>'
+        + '<span class="trace-count">' + g.items.length + ' 个接口</span>'
         + '</div><div class="trace-group-body"></div>';
       var body = groupDiv.querySelector('.trace-group-body');
       g.items.forEach(function(a) { body.appendChild(createApiItem(a, checkedIdxs)); });
@@ -949,43 +983,53 @@
   }
 
   // ========== 生成文档 ==========
+  function defaultDocName(method, path) {
+    // 全路径段拼成驼峰命名：/api/category/tree → apiCategoryTree
+    var segs = String(path || '').split('?')[0].split('/').filter(Boolean);
+    var name = segs.map(function (s) {
+      return s.split(/[-_]+/).filter(Boolean).map(function (p) {
+        return p.charAt(0).toUpperCase() + p.slice(1);
+      }).join('');
+    }).join('');
+    if (name) name = name.charAt(0).toLowerCase() + name.slice(1);
+    return name || (method + ' 接口');
+  }
   function genDoc() {
     var selected = getChecked();
     if (selected.length === 0) { alert('请先选择要生成文档的接口'); return; }
     var grouped = {};
     selected.forEach(function(a) {
       try {
-        var url = new URL(a.url), path = url.pathname, method = a.method || 'GET';
-        var key = method + ' ' + path;
+        var url = new URL(a.url), method = a.method || 'GET';
+        // 仅当完整 URL 完全一致（含来源域名与查询参数，忽略 # 锚点）才合并为同一接口
+        var path = url.pathname + (url.search || '');
+        var key = method + ' ' + url.origin + path;
         if (!grouped[key]) grouped[key] = { method: method, path: path, baseUrl: url.origin, examples: [] };
         grouped[key].examples.push(a);
       } catch(e) {}
     });
-    var docs = Object.values(grouped);
-    var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>API文档</title><style>'
-      + 'body{font-family:"Noto Sans SC",sans-serif;max-width:1200px;margin:0 auto;padding:20px;background:#F8FAFC}'
-      + '.h{background:linear-gradient(135deg,#1E293B,#334155);color:#fff;padding:30px;border-radius:12px;text-align:center;margin-bottom:20px}'
-      + '.card{background:#fff;border-radius:10px;margin-bottom:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08)}'
-      + '.card-h{padding:16px;border-bottom:1px solid #eee;display:flex;align-items:center;gap:10px}'
-      + '.m{padding:4px 10px;border-radius:4px;color:#fff;font-weight:700;font-size:12px}'
-      + '.m-GET{background:#16A34A}.m-POST{background:#2563EB}.m-PUT{background:#D97706}.m-DELETE{background:#DC2626}'
-      + '.card-b{padding:16px}'
-      + 'pre{background:#1e1e1e;color:#d4d4d4;padding:12px;border-radius:6px;overflow-x:auto;font-size:12px}'
-      + '</style></head><body>'
-      + '<div class="h"><h1>API接口文档</h1><p>生成时间: ' + new Date().toLocaleString() + ' | 接口数量: ' + docs.length + '</p></div>';
-    docs.forEach(function(d) {
-      html += '<div class="card"><div class="card-h"><span class="m m-' + d.method + '">' + d.method + '</span><strong>' + d.path + '</strong><span style="color:#999;font-size:12px;margin-left:auto">' + d.baseUrl + '</span></div><div class="card-b">';
-      d.examples.forEach(function(ex) {
-        html += '<div style="margin-bottom:10px">';
-        if (ex.body) html += '<div style="margin-bottom:6px"><strong>请求体:</strong><pre>' + esc(JSON.stringify(typeof ex.body === 'string' ? ex.body : ex.body, null, 2)) + '</pre></div>';
-        if (ex.response) html += '<div style="margin-bottom:6px"><strong>响应体:</strong><pre>' + esc(JSON.stringify(ex.response, null, 2)) + '</pre></div>';
-        if (ex.headers) html += '<div><strong>响应头:</strong><pre>' + esc(JSON.stringify(ex.responseHeaders || ex.headers, null, 2)) + '</pre></div>';
-        html += '</div>';
-      });
-      html += '</div></div>';
+    // 构建可编辑文档模型（doc-viewer.html 读取）
+    var model = {
+      title: 'API 接口文档',
+      generatedAt: new Date().toLocaleString(),
+      docs: Object.values(grouped).map(function(g) {
+        return {
+          method: g.method,
+          path: g.path,
+          baseUrl: g.baseUrl,
+          name: defaultDocName(g.method, g.path),
+          examples: g.examples.map(function(ex) {
+            return {
+              body: (ex.body === undefined ? '' : ex.body),
+              response: (ex.response === undefined ? '' : ex.response)
+            };
+          })
+        };
+      })
+    };
+    chrome.storage.local.set({ docViewerData: model }, function() {
+      chrome.tabs.create({ url: chrome.runtime.getURL('doc-viewer.html') });
     });
-    html += '</body></html>';
-    var w = window.open('', '_blank'); w.document.write(html); w.document.close();
   }
 
   // ========== 设置 ==========
@@ -1113,9 +1157,46 @@
     }
   }
 
+  function isAuthed() {
+    var b = el('authBtn');
+    return !!b && b.classList.contains('btn-authed');
+  }
+  function onAuthBtnClick(e) {
+    e.stopPropagation();
+    if (isAuthed()) {
+      toggleAuthMenu();
+    } else {
+      closeAuthMenu();
+      openAuthPanel();
+    }
+  }
+  function toggleAuthMenu() {
+    var m = el('authMenu');
+    if (!m) return;
+    var open = m.classList.toggle('open');
+    if (open) {
+      var obj = (window.PlatformAuth && window.PlatformAuth.get) ? window.PlatformAuth.get() : null;
+      Promise.resolve(obj).then(function (o) {
+        var u = o && o.user && o.user.username ? o.user.username : '';
+        var mu = el('authMenuUser');
+        if (mu) mu.textContent = u ? ('当前登录：' + u) : '已登录';
+      });
+    }
+  }
+  function closeAuthMenu() {
+    var m = el('authMenu');
+    if (m) m.classList.remove('open');
+  }
+  async function doLogout() {
+    closeAuthMenu();
+    if (window.PlatformAuth) await window.PlatformAuth.clear();
+    updateAuthBadge();
+  }
+
   function openAuthPanel() {
     var body = el('authBody');
     if (!body) return;
+    closeAuthMenu();
     body.innerHTML =
       '<div class="auth-form">'
       + '<div class="auth-hint" id="authMsg"></div>'
@@ -1379,15 +1460,6 @@
     var data = { chainName: '录制接口-' + new Date().toLocaleDateString(), interfaceList: list.map(function(a, i) { return { nodeName: a.nodeName || getName(a.url), method: a.method || 'GET', url: a.url, headers: a.headers ? JSON.stringify(a.headers) : '', bodyData: a.body || '', responseData: typeof a.response === 'string' ? a.response : JSON.stringify(a.response || ''), sort: i + 1, parallelGroup: '' }; }) };
     var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     var u = URL.createObjectURL(blob); var a = document.createElement('a'); a.href = u; a.download = 'apis-' + Date.now() + '.json'; a.click(); URL.revokeObjectURL(u);
-  }
-
-  // ========== Hide Panel ==========
-  function hidePanel() {
-    var app = document.querySelector('.app');
-    app.classList.add('slide-out');
-    setTimeout(function() {
-      chrome.runtime.sendMessage({ type: 'HIDE_SIDE_PANEL' });
-    }, 250);
   }
 
   // ========== 工具 ==========

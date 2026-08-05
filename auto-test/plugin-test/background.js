@@ -627,20 +627,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
   } catch(e) {}
-  try {
-    if (msg.type === 'HIDE_SIDE_PANEL') {
-      if (chrome.sidePanel) {
-        chrome.sidePanel.setOptions({ enabled: false }).then(function() {
-          sendResponse({ ok: true });
-        }).catch(function(e) {
-          sendResponse({ ok: false, error: e.message });
-        });
-      } else {
-        sendResponse({ ok: true });
-      }
-      return true;
-    }
-  } catch(e) {}
   return true;
 });
 

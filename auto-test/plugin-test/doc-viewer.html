@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API 文档预览</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13px; color: #1F2937; background: #F6F8FA; line-height: 1.6; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    .toolbar { position: sticky; top: 0; z-index: 20; background: #FFFFFF; border-bottom: 1px solid #E5E7EB; padding: 14px 22px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .t-left { flex: 1; min-width: 220px; }
+    .title-input { width: 100%; max-width: 420px; font-size: 17px; font-weight: 500; color: #111827; border: 1px solid transparent; border-radius: 6px; padding: 6px 8px; outline: none; font-family: inherit; background: transparent; transition: all .2s; }
+    .title-input:hover { border-color: #E5E7EB; background: #F9FAFB; }
+    .title-input:focus { border-color: #2563EB; background: #FFFFFF; box-shadow: 0 0 0 2px rgba(37,99,235,.12); }
+    .meta { color: #6B7280; font-size: 12px; margin-top: 3px; padding-left: 8px; }
+    .t-right { display: flex; gap: 8px; }
+    .btn { padding: 7px 14px; border-radius: 6px; border: 1px solid #D1D5DB; background: #FFFFFF; color: #374151; font-size: 12px; font-family: inherit; cursor: pointer; transition: all .2s; font-weight: 500; }
+    .btn:hover { border-color: #9CA3AF; background: #F9FAFB; }
+    .btn.primary { background: #2563EB; border-color: #2563EB; color: #FFFFFF; }
+    .btn.primary:hover { background: #1D4ED8; border-color: #1D4ED8; }
+    .doc-body { max-width: 1080px; margin: 20px auto 60px; padding: 0 22px; }
+    .empty { text-align: center; color: #9CA3AF; padding: 80px 0; font-size: 14px; }
+    .card { background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 10px; margin-bottom: 14px; overflow: hidden; }
+    .card-h { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid #F1F5F9; }
+    .m { border-radius: 4px; padding: 2px 8px; font-weight: 500; font-size: 12px; }
+    .m-GET { background: #ECFDF5; color: #047857; }
+    .m-POST { background: #EFF6FF; color: #1D4ED8; }
+    .m-PUT { background: #FFFBEB; color: #B45309; }
+    .m-DELETE { background: #FEF2F2; color: #B91C1C; }
+    .m-PATCH { background: #F5F3FF; color: #6D28D9; }
+    .m-HEAD { background: #F1F5F9; color: #475569; }
+    .m-OPTIONS { background: #F1F5F9; color: #475569; }
+    .name-input { font-weight: 500; font-size: 13px; color: #111827; border: 1px solid transparent; border-radius: 4px; padding: 2px 6px; outline: none; font-family: inherit; background: transparent; max-width: 280px; transition: all .2s; }
+    .name-input:hover { border-color: #E5E7EB; background: #F9FAFB; }
+    .name-input:focus { border-color: #2563EB; background: #FFFFFF; box-shadow: 0 0 0 2px rgba(37,99,235,.12); }
+    .path { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 12px; color: #6B7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .base { font-size: 11px; color: #9CA3AF; margin-left: auto; }
+    .del-card { border: none; background: none; color: #9CA3AF; cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 4px; transition: all .2s; }
+    .del-card:hover { color: #DC2626; background: #FEF2F2; }
+    .card-b { padding: 10px 16px 14px; }
+    .example-h { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6B7280; padding: 6px 8px; margin-bottom: 6px; }
+    .example-h b { color: #374151; font-weight: 500; }
+    .del-ex { border: none; background: none; color: #9CA3AF; cursor: pointer; font-size: 13px; padding: 0 4px; border-radius: 4px; margin-left: auto; }
+    .del-ex:hover { color: #DC2626; background: #FEF2F2; }
+    .sec { border: 1px solid #F1F5F9; border-radius: 8px; margin-bottom: 8px; overflow: hidden; }
+    .sec-h { display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; color: #64748B; user-select: none; transition: background .15s; }
+    .sec-h:hover { background: #F8FAFC; }
+    .sec-h .chev { font-size: 10px; color: #9CA3AF; transition: transform .18s; width: 10px; text-align: center; }
+    .sec-h.open .chev { transform: rotate(90deg); }
+    .sec-h .lbl { font-weight: 500; }
+    .sec-h .cnt { font-size: 12px; color: #9CA3AF; }
+    .sec-h .edit-btn { margin-left: auto; padding: 3px 10px; font-size: 11px; border: 1px solid #D1D5DB; border-radius: 5px; background: #FFFFFF; color: #374151; cursor: pointer; font-family: inherit; transition: all .2s; }
+    .sec-h .edit-btn:hover { border-color: #2563EB; color: #2563EB; }
+    .sec-b { display: none; padding: 4px 12px 12px; }
+    .sec.open .sec-b { display: block; }
+    .code { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 10px 12px; font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 12px; color: #334155; white-space: pre-wrap; word-break: break-all; max-height: 340px; overflow: auto; }
+    .edit-wrap { display: none; }
+    .sec.editing .code { display: none; }
+    .sec.editing .edit-wrap { display: block; }
+    textarea.ta { width: 100%; min-height: 150px; padding: 10px 12px; border: 1px solid #E2E8F0; border-radius: 6px; font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 12px; color: #334155; background: #FFFFFF; resize: vertical; outline: none; }
+    textarea.ta:focus { border-color: #2563EB; box-shadow: 0 0 0 2px rgba(37,99,235,.12); }
+    .edit-ops { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+    .edit-err { color: #DC2626; font-size: 12px; }
+    .save-btn { padding: 5px 14px; border-radius: 6px; border: none; background: #2563EB; color: #FFF; font-size: 12px; cursor: pointer; font-family: inherit; }
+    .save-btn:hover { background: #1D4ED8; }
+    .cancel-btn { padding: 5px 14px; border-radius: 6px; border: 1px solid #D1D5DB; background: #FFF; color: #374151; font-size: 12px; cursor: pointer; font-family: inherit; }
+    .cancel-btn:hover { background: #F9FAFB; }
+    .ok-tip { color: #059669; font-size: 12px; }
+    @media print { .toolbar { display: none; } .doc-body { margin: 0; padding: 0; max-width: none; } body { background: #FFF; } .card { break-inside: avoid; } }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <div class="t-left">
+      <input id="docTitle" class="title-input" value="API 接口文档" spellcheck="false" />
+      <div id="docMeta" class="meta"></div>
+    </div>
+    <div class="t-right">
+      <button id="btnDownloadHtml" class="btn primary">下载 HTML</button>
+      <button id="btnDownloadMd" class="btn">下载 Markdown</button>
+      <button id="btnPrint" class="btn">打印</button>
+    </div>
+  </div>
+  <div id="docBody" class="doc-body"></div>
+  <div id="emptyTip" class="empty" style="display:none">没有接口数据</div>
+  <script src="doc-viewer.js"></script>
+</body>
+</html>
