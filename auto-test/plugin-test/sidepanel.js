@@ -195,10 +195,6 @@
       window.open(url, '_blank');
     });
     el('saveSettingsBtn').addEventListener('click', saveSettings);
-    el('clearAuthTokens').addEventListener('click', function() {
-      chrome.storage.local.set({ authContext: {} });
-      el('authTokenList').innerHTML = '<span style="color:var(--text-muted)">认证信息已清除。</span>';
-    });
     el('pushCancel').addEventListener('click', function() { el('pushDialog').classList.remove('open'); });
     el('pushOk').addEventListener('click', doPush);
     el('pushMode').addEventListener('change', function() { el('pushCodeWrap').style.display = this.value === 'append' ? 'block' : 'none'; });
@@ -361,6 +357,7 @@
         + '<span class="trace-page">' + enc(pageName) + '</span>'
         + '<span class="trace-count">' + g.items.length + ' 个接口</span>'
         + '</div><div class="trace-group-body"></div>';
+      groupDiv.classList.add('collapsed');
       var body = groupDiv.querySelector('.trace-group-body');
       g.items.forEach(function(a) { body.appendChild(createApiItem(a, checkedIdxs)); });
       groupDiv.querySelector('.trace-group-header').addEventListener('click', function() {
@@ -463,7 +460,7 @@
     if (search) query.keyword = search;
     if (method) query.method = method;
 
-    window.PlatformApi.apiFetch('/api/plugin/chain/list', { query: query })
+    window.PlatformApi.apiFetch('/api/chain/list', { query: query })
       .then(function(d) {
         if (d.code === 200) {
           chainList = d.data.list || [];
@@ -526,14 +523,9 @@
   }
 
   function loadChainVersions(chainCode) {
-    window.PlatformApi.apiFetch('/api/chain/versions', { query: { chainCode: chainCode, all: true } })
-      .then(function(d) {
-        if (d.code === 200 && d.data && d.data.list) {
-          renderChainVersions(chainCode, d.data.list);
-        }
-      }).catch(function(e) {
-        console.error('加载版本失败:', e);
-      });
+    // 后端暂无版本接口，跳过
+    var container = el('versions-' + chainCode);
+    if (container) container.innerHTML = '<div style="padding:4px 12px;font-size:11px;color:var(--text-muted)">暂无版本</div>';
   }
 
   function renderChainVersions(chainCode, versions) {
@@ -1045,13 +1037,7 @@
     el('cfgReplayInterval').value = settings.replayInterval || 0;
     el('cfgFailStrategy').value = settings.failStrategy || 'continue';
     el('cfgParallelGroup').value = settings.enableParallelGroup !== false ? 'true' : 'false';
-    // Phase 4: Encryption config
-    el('cfgEncryptEnabled').value = settings.encryptEnabled ? 'true' : 'false';
-    el('cfgDecryptRequest').value = settings.decryptRequestCode || '';
-    el('cfgDecryptResponse').value = settings.decryptResponseCode || '';
-    el('cfgEncryptAlgo').value = settings.encryptAlgo || 'AES';
     updateFilterHelp();
-    loadAuthTokenList();
     openP('settings');
   }
   function saveSettings() {
@@ -1065,33 +1051,11 @@
     settings.replayInterval = parseFloat(el('cfgReplayInterval').value) || 0;
     settings.failStrategy = el('cfgFailStrategy').value;
     settings.enableParallelGroup = el('cfgParallelGroup').value === 'true';
-    // Phase 4: Encryption config
-    settings.encryptEnabled = el('cfgEncryptEnabled').value === 'true';
-    settings.decryptRequestCode = el('cfgDecryptRequest').value;
-    settings.decryptResponseCode = el('cfgDecryptResponse').value;
-    settings.encryptAlgo = el('cfgEncryptAlgo').value;
     settings.cdpCapture = el('cdpCapture').checked;
     chrome.storage.local.set({ settings: settings });
     // 实时同步 CDP 抓包开关到后台（录制中开启会 attach，关闭会 detach）
     chrome.runtime.sendMessage({ type: 'SET_CDP_CAPTURE', enabled: settings.cdpCapture });
     alert('设置已保存'); closeP('settings'); render();
-  }
-  function loadAuthTokenList() {
-    chrome.runtime.sendMessage({ type: 'GET_AUTH_CONTEXT' }, function(resp) {
-      var tokens = (resp && resp.tokens) || {};
-      var html = '';
-      var keys = Object.keys(tokens);
-      if (keys.length === 0) {
-        html = '<span style="color:var(--text-muted)">录制期间自动提取的认证信息将显示在此处。</span>';
-      } else {
-        keys.forEach(function(k) {
-          var v = String(tokens[k]);
-          if (v.length > 60) v = v.substring(0, 30) + '...' + v.substring(v.length - 20);
-          html += '<div style="margin-bottom:4px"><b>' + enc(k) + ':</b> <code style="font-size:10px;word-break:break-all">' + enc(v) + '</code></div>';
-        });
-      }
-      el('authTokenList').innerHTML = html;
-    });
   }
 
   // ========== 平台登录鉴权 ==========
@@ -1193,20 +1157,98 @@
     updateAuthBadge();
   }
 
+  // 验证码倒计时
+  var captchaCountdown = 0;
+  var captchaCountdownTimer = null;
+
+  function startCaptchaCountdown(seconds) {
+    captchaCountdown = seconds;
+    var img = el('authCaptchaImg');
+    if (img) { img.style.pointerEvents = 'none'; img.style.opacity = '0.5'; }
+    updateCaptchaCountdown();
+    captchaCountdownTimer = setInterval(function () {
+      captchaCountdown--;
+      if (captchaCountdown <= 0) {
+        clearInterval(captchaCountdownTimer);
+        captchaCountdownTimer = null;
+        if (img) { img.style.pointerEvents = ''; img.style.opacity = ''; }
+        return;
+      }
+      updateCaptchaCountdown();
+    }, 1000);
+  }
+
+  function updateCaptchaCountdown() {
+    var img = el('authCaptchaImg');
+    if (img && captchaCountdown > 0) {
+      img.title = captchaCountdown + 's 后可刷新';
+    }
+  }
+
+  // 保存/读取已记住的账号列表
+  function getSavedAccounts() {
+    return new Promise(function (resolve) {
+      chrome.storage.local.get(['savedAccounts'], function (r) { resolve(r.savedAccounts || []); });
+    });
+  }
+  function saveAccounts(accounts) {
+    chrome.storage.local.set({ savedAccounts: accounts });
+  }
+  function addSavedAccount(username, password) {
+    getSavedAccounts().then(function (list) {
+      var idx = list.findIndex(function (a) { return a.username === username; });
+      if (idx >= 0) { list[idx].password = password; } else { list.unshift({ username: username, password: password }); }
+      if (list.length > 5) list = list.slice(0, 5);
+      saveAccounts(list);
+    });
+  }
+  function removeSavedAccount(username) {
+    getSavedAccounts().then(function (list) {
+      list = list.filter(function (a) { return a.username !== username; });
+      saveAccounts(list);
+      loadSavedAccounts(); // 刷新下拉
+    });
+  }
+
+  function loadSavedAccounts() {
+    var wrap = el('savedAccountsWrap');
+    if (!wrap) return;
+    getSavedAccounts().then(function (list) {
+      if (!list.length) { wrap.style.display = 'none'; return; }
+      wrap.style.display = '';
+      var sel = el('savedAccountsSelect');
+      if (!sel) return;
+      sel.innerHTML = '<option value="">-- 选择已记住的账号 --</option>';
+      list.forEach(function (a) {
+        var opt = document.createElement('option');
+        opt.value = a.username;
+        opt.textContent = a.username;
+        sel.appendChild(opt);
+      });
+    });
+  }
+
   function openAuthPanel() {
     var body = el('authBody');
     if (!body) return;
     closeAuthMenu();
+    if (captchaCountdownTimer) { clearInterval(captchaCountdownTimer); captchaCountdownTimer = null; }
     body.innerHTML =
       '<div class="auth-form">'
       + '<div class="auth-hint" id="authMsg"></div>'
+      + '<div class="form-g" id="savedAccountsWrap" style="display:none"><label>已记住的账号</label>'
+      + '<div class="saved-accounts-row">'
+      + '<select id="savedAccountsSelect" style="flex:1"><option value="">-- 选择已记住的账号 --</option></select>'
+      + '<button class="btn-icon" id="removeAccountBtn" title="删除选中账号" style="flex:0 0 auto;padding:4px 8px">✕</button>'
+      + '</div></div>'
       + '<div class="form-g"><label>用户名</label><input type="text" id="authUser" placeholder="请输入用户名" autocomplete="username"></div>'
       + '<div class="form-g"><label>密码</label><input type="password" id="authPwd" placeholder="请输入密码" autocomplete="current-password"></div>'
       + '<div class="form-g"><label>验证码</label>'
       + '<div class="captcha-row">'
       + '<input type="text" id="authCaptchaInput" placeholder="请输入右侧验证码" maxlength="6" autocomplete="off">'
-      + '<img id="authCaptchaImg" class="captcha-img" alt="验证码" title="点击刷新">'
+      + '<img id="authCaptchaImg" class="captcha-img" alt="验证码" title="点击刷新验证码">'
       + '</div></div>'
+      + '<label class="remember-pwd-label"><input type="checkbox" id="rememberPwdCheck" checked> 记住账号密码</label>'
       + '<button class="btn-solid btn-primary" id="authLoginBtn" style="width:100%;margin-top:6px">登录</button>'
       + '<button class="btn-solid btn-outline" id="authSyncBtn" style="width:100%;margin-top:8px">同步平台登录态</button>'
       + '<div class="auth-tip">若已在浏览器中登录本平台（同一后端），可一键同步登录态，无需重复输入账号密码。</div>'
@@ -1214,10 +1256,31 @@
 
     el('authOverlay').addEventListener('click', closeAuthPanel);
     el('authClose').addEventListener('click', closeAuthPanel);
-    el('authCaptchaImg').addEventListener('click', loadCaptcha);
+    el('authCaptchaImg').addEventListener('click', function () { loadCaptcha(); });
     el('authLoginBtn').addEventListener('click', submitAuthLogin);
     el('authSyncBtn').addEventListener('click', syncPlatformLogin);
     el('authPwd').addEventListener('keydown', function (e) { if (e.key === 'Enter') submitAuthLogin(); });
+    el('removeAccountBtn').addEventListener('click', function () {
+      var sel = el('savedAccountsSelect');
+      if (sel && sel.value) { removeSavedAccount(sel.value); }
+    });
+    // 选择已记住账号 → 自动填入密码
+    var savedSel = el('savedAccountsSelect');
+    if (savedSel) {
+      savedSel.addEventListener('change', function () {
+        var username = this.value;
+        if (!username) return;
+        getSavedAccounts().then(function (list) {
+          var found = list.find(function (a) { return a.username === username; });
+          if (found) {
+            el('authUser').value = found.username;
+            el('authPwd').value = found.password;
+            el('authCaptchaInput').focus();
+          }
+        });
+      });
+    }
+    loadSavedAccounts();
     loadCaptcha();
     openP('auth');
   }
@@ -1233,12 +1296,15 @@
     var img = el('authCaptchaImg');
     var msg = el('authMsg');
     if (!img) return;
+    // 刷新倒计时：5秒内不允许重复刷新
+    if (captchaCountdown > 0) return;
     try {
       var d = await window.PlatformApi.apiFetch('/api/captcha', { auth: false, silent: true });
       if (d && d.code === 200 && d.data) {
         currentCaptchaToken = d.data.token || '';
         img.src = d.data.image || '';
         if (msg) { msg.textContent = ''; msg.className = 'auth-hint'; }
+        startCaptchaCountdown(5);
       } else if (msg) {
         msg.textContent = '验证码加载失败，请重试'; msg.className = 'auth-hint err';
       }
@@ -1264,6 +1330,10 @@
         var exp = window.PlatformAuth.parseExp(token);
         var boundUrl = currentBaseUrl();
         await window.PlatformAuth.set({ token: token, user: d.data.user || null, exp: exp, boundUrl: boundUrl });
+        // 登录成功 → 保存账号密码
+        if (el('rememberPwdCheck') && el('rememberPwdCheck').checked) {
+          addSavedAccount(user, pwd);
+        }
         if (msg) { msg.textContent = ''; msg.className = 'auth-hint'; }
         if (window.PlatformApi) window.PlatformApi.resolveLogin(true);
         closeAuthPanel();
@@ -1306,9 +1376,12 @@
   }
 
   // ========== 推送 ==========
-  function openPush() {
+  async function openPush() {
     var c = getChecked();
     if (!c.length) { alert('请勾选接口'); return; }
+    // 先检查登录态，未登录则弹出登录面板
+    var loggedIn = await window.PlatformApi.ensureLogin();
+    if (!loggedIn) return;
     el('pushName').value = '录制接口-' + new Date().toLocaleDateString();
     el('pushDialog').classList.add('open');
   }

@@ -4,12 +4,12 @@
 
     <resultMap id="BaseResultMap" type="com.autotest.model.entity.TestGlobalVariable">
         <id column="id" property="id"/>
-        <result column="var_scope" property="varScope"/>
+        <result column="scope" property="varScope"/>
         <result column="chain_code" property="chainCode"/>
-        <result column="var_name" property="varName"/>
+        <result column="var_key" property="varName"/>
         <result column="var_value" property="varValue"/>
         <result column="var_type" property="varType"/>
-        <result column="is_encrypted" property="isEncrypted"/>
+        <result column="is_secret" property="isEncrypted"/>
         <result column="description" property="description"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
@@ -17,7 +17,7 @@
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO test_global_variable
-            (var_scope, chain_code, var_name, var_value, var_type, is_encrypted, description)
+            (scope, chain_code, var_key, var_value, var_type, is_secret, description)
         VALUES
             (#{varScope}, #{chainCode}, #{varName}, #{varValue}, #{varType}, #{isEncrypted}, #{description})
     </insert>
@@ -25,12 +25,12 @@
     <update id="update">
         UPDATE test_global_variable
         <set>
-            <if test="varScope != null">var_scope = #{varScope},</if>
+            <if test="varScope != null">scope = #{varScope},</if>
             <if test="chainCode != null">chain_code = #{chainCode},</if>
-            <if test="varName != null">var_name = #{varName},</if>
+            <if test="varName != null">var_key = #{varName},</if>
             <if test="varValue != null">var_value = #{varValue},</if>
             <if test="varType != null">var_type = #{varType},</if>
-            <if test="isEncrypted != null">is_encrypted = #{isEncrypted},</if>
+            <if test="isEncrypted != null">is_secret = #{isEncrypted},</if>
             <if test="description != null">description = #{description},</if>
         </set>
         WHERE id = #{id}
@@ -48,22 +48,22 @@
         SELECT * FROM test_global_variable
         <where>
             <if test="scope != null and scope != ''">
-                AND var_scope = #{scope}
+                AND scope = #{scope}
             </if>
             <if test="chainCode != null and chainCode != ''">
                 AND chain_code = #{chainCode}
             </if>
         </where>
-        ORDER BY var_scope ASC, chain_code ASC, var_name ASC
+        ORDER BY scope ASC, chain_code ASC, var_key ASC
     </select>
 
     <select id="selectGlobalList" resultMap="BaseResultMap">
-        SELECT * FROM test_global_variable WHERE var_scope = 'GLOBAL' ORDER BY var_name ASC
+        SELECT * FROM test_global_variable WHERE scope = 'GLOBAL' ORDER BY var_key ASC
     </select>
 
     <select id="selectChainList" resultMap="BaseResultMap">
         SELECT * FROM test_global_variable
-        WHERE var_scope = 'CHAIN' AND chain_code = #{chainCode}
-        ORDER BY var_name ASC
+        WHERE scope = 'CHAIN' AND chain_code = #{chainCode}
+        ORDER BY var_key ASC
     </select>
 </mapper>

@@ -13,9 +13,6 @@
         <t-button theme="primary" variant="outline" size="small" @click="addNode">
           <template #icon><AddIcon /></template>新增节点
         </t-button>
-        <t-button theme="primary" variant="outline" size="small" @click="autoLayoutGraph">
-          <template #icon><SwapIcon /></template>自动布局
-        </t-button>
         <t-button theme="primary" variant="outline" size="small" :loading="saving" @click="saveGraphData">
           <template #icon><SaveIcon /></template>保存画布
         </t-button>
@@ -24,9 +21,6 @@
         </t-button>
         <t-button theme="primary" variant="outline" size="small" :loading="aiLoading" @click="generateData">
           <template #icon><LightbulbIcon /></template>AI 生成数据
-        </t-button>
-        <t-button theme="primary" variant="outline" size="small" @click="importVisible = true">
-          <template #icon><DownloadIcon /></template>导入
         </t-button>
         <t-button theme="primary" variant="outline" size="small" @click="varVisible = true">
           <template #icon><RootListIcon /></template>变量
@@ -153,7 +147,7 @@ const varVisible = ref(false)
 const debugVisible = ref(false)
 const layersVisible = ref(false)
 const layers = ref([])
-const listCollapsed = ref(false)
+const listCollapsed = ref(true)
 const nodeSearch = ref('')
 
 // 注：HttpNode 由 @antv/x6-vue-shape 挂在独立 Vue 上下文，收不到本组件的 provide；
