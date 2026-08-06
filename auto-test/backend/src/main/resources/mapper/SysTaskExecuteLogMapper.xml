@@ -11,12 +11,16 @@
         <result column="start_time" property="startTime"/>
         <result column="end_time" property="endTime"/>
         <result column="error_message" property="errorMessage"/>
+        <result column="round_number" property="roundNumber"/>
+        <result column="total_rounds" property="totalRounds"/>
         <result column="create_time" property="createTime"/>
     </resultMap>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO sys_task_execute_log (task_id, execution_ids, status, trigger_type, start_time, end_time, error_message)
-        VALUES (#{taskId}, #{executionIds}, #{status}, #{triggerType}, #{startTime}, #{endTime}, #{errorMessage})
+        INSERT INTO sys_task_execute_log (task_id, execution_ids, status, trigger_type, start_time, end_time,
+            error_message, round_number, total_rounds)
+        VALUES (#{taskId}, #{executionIds}, #{status}, #{triggerType}, #{startTime}, #{endTime},
+            #{errorMessage}, #{roundNumber}, #{totalRounds})
     </insert>
 
     <select id="selectByTaskId" resultMap="BaseResultMap">

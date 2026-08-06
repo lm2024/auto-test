@@ -6,11 +6,16 @@
         <id column="id" property="id"/>
         <result column="account_code" property="accountCode"/>
         <result column="account_name" property="accountName"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="product_code" property="productCode"/>
         <result column="system_name" property="systemName"/>
         <result column="username" property="username"/>
         <result column="password" property="password"/>
         <result column="auth_type" property="authType"/>
         <result column="auth_config" property="authConfig"/>
+        <result column="login_type" property="loginType"/>
+        <result column="login_config" property="loginConfig"/>
+        <result column="login_script" property="loginScript"/>
         <result column="status" property="status"/>
         <result column="last_used_time" property="lastUsedTime"/>
         <result column="lock_until" property="lockUntil"/>
@@ -19,10 +24,10 @@
     </resultMap>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO test_account (account_code, account_name, system_name, username, password,
-            auth_type, auth_config, status)
-        VALUES (#{accountCode}, #{accountName}, #{systemName}, #{username}, #{password},
-            #{authType}, #{authConfig}, #{status})
+        INSERT INTO test_account (account_code, account_name, tenant_id, product_code, system_name, username, password,
+            auth_type, auth_config, login_type, login_config, login_script, status)
+        VALUES (#{accountCode}, #{accountName}, #{tenantId}, #{productCode}, #{systemName}, #{username}, #{password},
+            #{authType}, #{authConfig}, #{loginType}, #{loginConfig}, #{loginScript}, #{status})
     </insert>
 
     <update id="update">
@@ -34,6 +39,11 @@
             <if test="password != null">password = #{password},</if>
             <if test="authType != null">auth_type = #{authType},</if>
             <if test="authConfig != null">auth_config = #{authConfig},</if>
+            <if test="tenantId != null">tenant_id = #{tenantId},</if>
+            <if test="productCode != null">product_code = #{productCode},</if>
+            <if test="loginType != null">login_type = #{loginType},</if>
+            <if test="loginConfig != null">login_config = #{loginConfig},</if>
+            <if test="loginScript != null">login_script = #{loginScript},</if>
             <if test="status != null">status = #{status},</if>
         </set>
         WHERE id = #{id}

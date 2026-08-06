@@ -40,6 +40,11 @@ const routes = [
     component: () => import('../views/AccountList.vue')
   },
   {
+    path: '/account/login-wizard',
+    name: 'LoginWizard',
+    component: () => import('../views/LoginWizard.vue')
+  },
+  {
     path: '/dict/category',
     name: 'DictCategory',
     component: () => import('../views/DictCategory.vue')
@@ -63,6 +68,26 @@ const routes = [
     path: '/system/registry',
     name: 'SystemRegistry',
     component: () => import('../views/SystemRegistry.vue')
+  },
+  {
+    path: '/tenant/list',
+    name: 'TenantManage',
+    component: () => import('../views/TenantManage.vue')
+  },
+  {
+    path: '/product/list',
+    name: 'ProductManage',
+    component: () => import('../views/ProductManage.vue')
+  },
+  {
+    path: '/datapool/list',
+    name: 'DataPoolList',
+    component: () => import('../views/DataPoolList.vue')
+  },
+  {
+    path: '/datapool/edit/:poolCode',
+    name: 'DataPoolEditor',
+    component: () => import('../views/DataPoolEditor.vue')
   },
   {
     path: '/call-graph',

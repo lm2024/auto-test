@@ -51,7 +51,7 @@
       </div>
     </t-card>
 
-    <t-dialog v-model:visible="dialogVisible" :header="dialogTitle" width="500px">
+    <t-dialog v-model:visible="dialogVisible" :header="dialogTitle" width="550px">
       <t-form :data="form" label-width="100px">
         <t-form-item label="账号编码" name="accountCode">
           <t-input v-model="form.accountCode" :disabled="isEdit" />
@@ -68,16 +68,24 @@
         <t-form-item label="密码" name="password">
           <t-input v-model="form.password" type="password" :placeholder="isEdit ? '留空不修改' : ''" />
         </t-form-item>
-        <t-form-item label="认证类型" name="authType">
-          <t-select v-model="form.authType">
-            <t-option label="PASSWORD" value="PASSWORD" />
-            <t-option label="SSO" value="SSO" />
-            <t-option label="TOKEN" value="TOKEN" />
+        <t-form-item label="登录方式" name="loginType">
+          <t-select v-model="form.loginType">
+            <t-option label="HTTP 密码登录" value="HTTP" />
+            <t-option label="Cookie 会话" value="COOKIE" />
+            <t-option label="OAuth2" value="OAUTH2_CODE" />
+            <t-option label="CAS 统一认证" value="CAS" />
+            <t-option label="浏览器自动登录" value="PLAYWRIGHT" />
+            <t-option label="静态 Token" value="TOKEN" />
           </t-select>
         </t-form-item>
-        <t-form-item label="认证配置" name="authConfig">
-          <t-textarea v-model="form.authConfig" :autosize="{ minRows: 3, maxRows: 3 }" placeholder="JSON格式，如SSO登录地址" />
+        <t-form-item label="登录配置" name="loginConfig">
+          <t-textarea v-model="form.loginConfig" :autosize="{ minRows: 3, maxRows: 3 }" placeholder="JSON格式登录配置" />
         </t-form-item>
+        <div style="margin: -8px 0 16px 100px">
+          <router-link to="/account/login-wizard" style="color: var(--primary); font-size: 13px">
+            💡 不知道怎么配置？使用登录配置向导 →
+          </router-link>
+        </div>
       </t-form>
       <template #footer>
         <t-button @click="dialogVisible = false">取消</t-button>
@@ -103,7 +111,9 @@ const dialogVisible = ref(false)
 const dialogTitle = ref('新增账号')
 const isEdit = ref(false)
 const form = ref({
-  accountCode: '', accountName: '', systemName: '', username: '', password: '', authType: 'PASSWORD', authConfig: ''
+  accountCode: '', accountName: '', systemName: '', username: '', password: '',
+  authType: 'PASSWORD', authConfig: '', loginType: 'HTTP', loginConfig: '',
+  tenantId: null, productCode: ''
 })
 
 const accountColumns = [
@@ -139,7 +149,8 @@ const resetFilter = () => {
 const showCreateDialog = () => {
   dialogTitle.value = '新增账号'
   isEdit.value = false
-  form.value = { accountCode: '', accountName: '', systemName: '', username: '', password: '', authType: 'PASSWORD', authConfig: '' }
+  form.value = { accountCode: '', accountName: '', systemName: '', username: '', password: '',
+    authType: 'PASSWORD', authConfig: '', loginType: 'HTTP', loginConfig: '', tenantId: null, productCode: '' }
   dialogVisible.value = true
 }
 

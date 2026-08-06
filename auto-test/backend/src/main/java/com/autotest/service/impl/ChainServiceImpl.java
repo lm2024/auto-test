@@ -72,6 +72,10 @@ public class ChainServiceImpl implements ChainService {
         chain.setExecuteMode(dto.getExecuteMode() != null ? dto.getExecuteMode() : 1);
         chain.setDescription(dto.getDescription());
         chain.setStatus(1);
+        // 自动设置 tenantId
+        if (chain.getTenantId() == null) {
+            chain.setTenantId(com.autotest.context.TenantContext.getTenantId());
+        }
         if (dto.getCategoryId() != null) chain.setCategoryId(dto.getCategoryId());
         chainMapper.insert(chain);
 
@@ -263,6 +267,10 @@ public class ChainServiceImpl implements ChainService {
         chain.setChainName(dto.getChainName());
         chain.setExecuteMode(1); // Default serial
         chain.setStatus(1);
+        // 设置租户、产品、分类
+        chain.setTenantId(dto.getTenantId());
+        chain.setProductCode(dto.getProductCode());
+        chain.setCategoryId(dto.getCategoryId());
         chainMapper.insert(chain);
 
         // Create nodes and identify dependencies

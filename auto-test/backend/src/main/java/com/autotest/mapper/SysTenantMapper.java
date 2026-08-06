@@ -13,6 +13,10 @@ public interface SysTenantMapper {
     int deleteById(@Param("id") Long id);
     SysTenant selectById(@Param("id") Long id);
     SysTenant selectByCode(@Param("tenantCode") String tenantCode);
-    List<SysTenant> selectAll(@Param("offset") int offset, @Param("pageSize") int pageSize);
-    int countAll();
+    List<SysTenant> selectAll(@Param("keyword") String keyword,
+                              @Param("status") Integer status,
+                              @Param("offset") int offset,
+                              @Param("pageSize") int pageSize);
+    int countAll(@Param("keyword") String keyword,
+                 @Param("status") Integer status);
 }

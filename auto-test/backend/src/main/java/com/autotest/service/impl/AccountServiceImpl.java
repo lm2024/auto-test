@@ -1,5 +1,6 @@
 package com.autotest.service.impl;
 
+import com.autotest.context.TenantContext;
 import com.autotest.exception.BusinessException;
 import com.autotest.mapper.TestAccountMapper;
 import com.autotest.model.dto.AccountCreateDTO;
@@ -45,7 +46,21 @@ public class AccountServiceImpl implements AccountService {
         // 密码加密存储
         account.setPassword(AESUtil.encrypt(dto.getPassword(), aesKey));
         account.setAuthType(dto.getAuthType() != null ? dto.getAuthType() : "PASSWORD");
-        account.setAuthConfig(dto.getAuthConfig());
+        // authConfig 和 loginConfig 兼容处理：如果只传了 loginConfig，自动同步到 authConfig
+        String authConfig = dto.getAuthConfig();
+        String loginConfig = dto.getLoginConfig();
+        if (authConfig == null || authConfig.isEmpty()) {
+            authConfig = loginConfig;
+        }
+        account.setAuthConfig(authConfig);
+        account.setLoginType(dto.getLoginType() != null ? dto.getLoginType() : "HTTP");
+        account.setLoginConfig(loginConfig);
+        account.setTenantId(dto.getTenantId());
+        account.setProductCode(dto.getProductCode());
+        // 自动设置 tenantId
+        if (account.getTenantId() == null) {
+            account.setTenantId(TenantContext.getTenantId());
+        }
         account.setStatus(1); // 默认可用
 
         accountMapper.insert(account);
@@ -69,7 +84,15 @@ public class AccountServiceImpl implements AccountService {
             account.setPassword(AESUtil.encrypt(dto.getPassword(), aesKey));
         }
         if (dto.getAuthType() != null) account.setAuthType(dto.getAuthType());
-        if (dto.getAuthConfig() != null) account.setAuthConfig(dto.getAuthConfig());
+        if (dto.getAuthConfig() != null) {
+            account.setAuthConfig(dto.getAuthConfig());
+        } else if (dto.getLoginConfig() != null) {
+            account.setAuthConfig(dto.getLoginConfig());
+        }
+        if (dto.getLoginType() != null) account.setLoginType(dto.getLoginType());
+        if (dto.getLoginConfig() != null) account.setLoginConfig(dto.getLoginConfig());
+        if (dto.getTenantId() != null) account.setTenantId(dto.getTenantId());
+        if (dto.getProductCode() != null) account.setProductCode(dto.getProductCode());
 
         accountMapper.update(account);
         return decryptPassword(accountMapper.selectById(id));

@@ -297,6 +297,10 @@
     .dialog-box input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(37,99,235,0.12); }
     .dialog-btns { display: flex; gap: 8px; margin-top: 14px; }
     .dialog-btns button { flex: 1; padding: 8px; border-radius: var(--radius-sm); cursor: pointer; font-size: 12px; font-family: inherit; font-weight: 500; transition: all var(--transition); }
+    .push-section { margin-bottom: 12px; padding: 10px; background: var(--surface-hover, #f8f9fa); border-radius: var(--radius-sm); }
+    .section-title { font-size: 11px; font-weight: 600; color: var(--text-secondary, #666); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .dialog-box select { width: 100%; padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 12px; font-family: inherit; outline: none; background: var(--surface); color: var(--text); transition: all var(--transition); }
+    .dialog-box select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(37,99,235,0.12); }
 
     /* ===== Debugger ===== */
     .dbg-section { margin-bottom: 12px; }
@@ -727,14 +731,29 @@
 
   <!-- Push Dialog -->
   <div class="dialog" id="pushDialog">
-    <div class="dialog-box">
+    <div class="dialog-box" style="max-height:80vh;overflow-y:auto">
       <h4>
         <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         推送至测试平台
       </h4>
-      <div class="form-g"><label>链路名称</label><input type="text" id="pushName"></div>
-      <div class="form-g"><label>推送方式</label><select id="pushMode"><option value="create">新建链路</option><option value="append">追加到现有</option></select></div>
-      <div class="form-g" id="pushCodeWrap" style="display:none"><label>链路编码</label><input type="text" id="pushCode"></div>
+      <div class="push-section">
+        <div class="section-title">📍 归属信息</div>
+        <div class="form-g"><label>租户 <span style="color:var(--accent)">*</span></label>
+          <select id="pushTenant"><option value="">加载中...</option></select>
+        </div>
+        <div class="form-g"><label>产品</label>
+          <select id="pushProduct"><option value="">请先选择租户</option></select>
+        </div>
+        <div class="form-g"><label>分类</label>
+          <select id="pushCategory"><option value="">请先选择租户</option></select>
+        </div>
+      </div>
+      <div class="push-section">
+        <div class="section-title">🔗 链路信息</div>
+        <div class="form-g"><label>链路名称</label><input type="text" id="pushName"></div>
+        <div class="form-g"><label>推送方式</label><select id="pushMode"><option value="create">新建链路</option><option value="append">追加到现有</option></select></div>
+        <div class="form-g" id="pushCodeWrap" style="display:none"><label>链路编码</label><input type="text" id="pushCode"></div>
+      </div>
       <div class="dialog-btns">
         <button class="btn-solid btn-outline" id="pushCancel">取消</button>
         <button class="btn-solid btn-primary" id="pushOk">确认推送</button>

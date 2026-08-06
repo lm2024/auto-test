@@ -26,6 +26,13 @@ public class TestChain {
     // 阶段三新增字段
     private Long categoryId;
     private Long tenantId;
+    private String productCode;
+
+    // 登录链路 + 参数化字段
+    private String loginChainCode;
+    private Integer loginTimeout;
+    private String dataPoolCode;
+    private String paramMode;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -64,4 +71,14 @@ public class TestChain {
     public void setCategoryId(Long categoryId) { this.categoryId = categoryId; }
     public Long getTenantId() { return tenantId; }
     public void setTenantId(Long tenantId) { this.tenantId = tenantId; }
+    public String getProductCode() { return productCode; }
+    public void setProductCode(String productCode) { this.productCode = productCode; }
+    public String getLoginChainCode() { return loginChainCode; }
+    public void setLoginChainCode(String loginChainCode) { this.loginChainCode = loginChainCode; }
+    public Integer getLoginTimeout() { return loginTimeout; }
+    public void setLoginTimeout(Integer loginTimeout) { this.loginTimeout = loginTimeout; }
+    public String getDataPoolCode() { return dataPoolCode; }
+    public void setDataPoolCode(String dataPoolCode) { this.dataPoolCode = dataPoolCode; }
+    public String getParamMode() { return paramMode; }
+    public void setParamMode(String paramMode) { this.paramMode = paramMode; }
 }

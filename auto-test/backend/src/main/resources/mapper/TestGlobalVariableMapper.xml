@@ -11,15 +11,16 @@
         <result column="var_type" property="varType"/>
         <result column="is_secret" property="isEncrypted"/>
         <result column="description" property="description"/>
+        <result column="tenant_id" property="tenantId"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
     </resultMap>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO test_global_variable
-            (scope, chain_code, var_key, var_value, var_type, is_secret, description)
+            (scope, chain_code, var_key, var_value, var_type, is_secret, description, tenant_id)
         VALUES
-            (#{varScope}, #{chainCode}, #{varName}, #{varValue}, #{varType}, #{isEncrypted}, #{description})
+            (#{varScope}, #{chainCode}, #{varName}, #{varValue}, #{varType}, #{isEncrypted}, #{description}, #{tenantId})
     </insert>
 
     <update id="update">
@@ -32,6 +33,7 @@
             <if test="varType != null">var_type = #{varType},</if>
             <if test="isEncrypted != null">is_secret = #{isEncrypted},</if>
             <if test="description != null">description = #{description},</if>
+            <if test="tenantId != null">tenant_id = #{tenantId},</if>
         </set>
         WHERE id = #{id}
     </update>

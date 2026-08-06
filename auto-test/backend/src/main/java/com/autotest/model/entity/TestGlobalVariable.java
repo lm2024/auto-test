@@ -15,6 +15,7 @@ public class TestGlobalVariable {
     private String varType;
     private Integer isEncrypted;
     private String description;
+    private Long tenantId;
     private Date createTime;
     private Date updateTime;
 
@@ -34,6 +35,8 @@ public class TestGlobalVariable {
     public void setIsEncrypted(Integer isEncrypted) { this.isEncrypted = isEncrypted; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+    public Long getTenantId() { return tenantId; }
+    public void setTenantId(Long tenantId) { this.tenantId = tenantId; }
     public Date getCreateTime() { return createTime; }
     public void setCreateTime(Date createTime) { this.createTime = createTime; }
     public Date getUpdateTime() { return updateTime; }

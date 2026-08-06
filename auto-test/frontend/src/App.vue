@@ -29,6 +29,14 @@
           <template #icon><UserIcon /></template>
           测试账号管理
         </t-menu-item>
+        <t-menu-item value="/account/login-wizard">
+          <template #icon><LightbulbIcon /></template>
+          登录配置向导
+        </t-menu-item>
+        <t-menu-item value="/datapool/list">
+          <template #icon><ViewListIcon /></template>
+          数据池管理
+        </t-menu-item>
         <t-menu-item value="/dict/category">
           <template #icon><BookmarkIcon /></template>
           分类字典管理
@@ -36,6 +44,14 @@
         <t-menu-item value="/user/list" v-if="user && user.role === 'ADMIN'">
           <template #icon><UserIcon /></template>
           用户管理
+        </t-menu-item>
+        <t-menu-item value="/tenant/list" v-if="user && user.role === 'ADMIN'">
+          <template #icon><ServerIcon /></template>
+          租户管理
+        </t-menu-item>
+        <t-menu-item value="/product/list" v-if="user && user.role === 'ADMIN'">
+          <template #icon><ShareIcon /></template>
+          产品管理
         </t-menu-item>
         <t-menu-item value="/scheduled-task" v-if="user && user.role === 'ADMIN'">
           <template #icon><TimeIcon /></template>
@@ -103,7 +119,8 @@ import {
   SunnyIcon,
   MoonIcon,
   ServerIcon,
-  ShareIcon
+  ShareIcon,
+  LightbulbIcon
 } from 'tdesign-icons-vue-next'
 import { getUser, logout } from './utils/auth'
 

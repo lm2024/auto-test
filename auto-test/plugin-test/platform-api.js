@@ -13,7 +13,13 @@
   function resolveLogin(ok) { if (loginResolver) { loginResolver(!!ok); loginResolver = null; } }
 
   // 等待一次登录；并发 401 复用同一 Promise，保证只弹一次登录框
-  function waitForLogin() {
+  async function waitForLogin() {
+    // 如果已有有效 token，直接放行，不弹登录框
+    var auth = await window.PlatformAuth.get();
+    if (auth && auth.token && isValidObj(auth)) {
+      return true;
+    }
+    // 没有有效 token，才弹登录框
     if (loginPending && loginPromise) return loginPromise;
     loginPending = true;
     loginPromise = new Promise(function (resolve) {

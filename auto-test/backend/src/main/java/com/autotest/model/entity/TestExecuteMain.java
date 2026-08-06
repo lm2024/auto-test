@@ -16,6 +16,8 @@ public class TestExecuteMain {
     private Integer failCount;
     private Integer skipCount;
     private Long tenantId;
+    private Integer roundNumber;
+    private Long taskId;
     private Date createTime;
     private Date updateTime;
 
@@ -45,6 +47,10 @@ public class TestExecuteMain {
     public void setSkipCount(Integer skipCount) { this.skipCount = skipCount; }
     public Long getTenantId() { return tenantId; }
     public void setTenantId(Long tenantId) { this.tenantId = tenantId; }
+    public Integer getRoundNumber() { return roundNumber; }
+    public void setRoundNumber(Integer roundNumber) { this.roundNumber = roundNumber; }
+    public Long getTaskId() { return taskId; }
+    public void setTaskId(Long taskId) { this.taskId = taskId; }
     public Date getCreateTime() { return createTime; }
     public void setCreateTime(Date createTime) { this.createTime = createTime; }
     public Date getUpdateTime() { return updateTime; }

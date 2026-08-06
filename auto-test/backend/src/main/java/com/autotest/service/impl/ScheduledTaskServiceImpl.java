@@ -11,6 +11,7 @@ import com.autotest.model.entity.TestChain;
 import com.autotest.mapper.TestChainMapper;
 import com.autotest.service.ExecuteService;
 import com.autotest.service.ScheduledTaskService;
+import org.springframework.context.ApplicationContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +43,9 @@ public class ScheduledTaskServiceImpl implements ScheduledTaskService {
 
     @Autowired
     private ExecuteService executeService;
+
+    @Autowired
+    private ApplicationContext applicationContext;
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
     private final Map<Long, java.util.concurrent.ScheduledFuture<?>> runningTasks = new HashMap<>();
@@ -150,34 +154,66 @@ public class ScheduledTaskServiceImpl implements ScheduledTaskService {
         SysScheduledTask task = taskMapper.selectById(taskId);
         if (task == null || task.getEnabled() != 1) return;
 
+        // 获取带参数化能力的执行服务
+        ExecuteServiceImpl executeServiceExt = applicationContext.getBean(ExecuteServiceImpl.class);
+
         SysTaskExecuteLog executeLog = new SysTaskExecuteLog();
         executeLog.setTaskId(taskId);
         executeLog.setTriggerType(triggerType);
         executeLog.setStartTime(new Date());
         executeLog.setStatus("RUNNING");
 
-        try {
-            List<String> executionIds = new ArrayList<>();
+        int roundCount = task.getRoundCount() != null && task.getRoundCount() > 0 ? task.getRoundCount() : 1;
+        boolean useDataPool = task.getUseDataPool() != null && task.getUseDataPool() == 1;
 
-            if ("SINGLE".equals(task.getTaskType()) && task.getChainCode() != null) {
-                String executionId = executeService.runChain(task.getChainCode());
-                executionIds.add(executionId);
-            } else if ("CATEGORY".equals(task.getTaskType()) && task.getCategoryId() != null) {
-                List<TestChain> chains = chainMapper.selectListByCategory(
-                        null, null, null, null, null,
-                        task.getCategoryId() != null ? Collections.singletonList(task.getCategoryId()) : null,
-                        0, 1000);
-                for (TestChain chain : chains) {
-                    try {
-                        String executionId = executeService.runChain(chain.getChainCode());
-                        executionIds.add(executionId);
-                    } catch (Exception e) {
-                        log.error("Failed to execute chain {}: {}", chain.getChainCode(), e.getMessage());
+        try {
+            List<String> allExecutionIds = new ArrayList<>();
+
+            for (int round = 0; round < roundCount; round++) {
+                List<String> roundExecutionIds = new ArrayList<>();
+
+                if ("SINGLE".equals(task.getTaskType()) && task.getChainCode() != null) {
+                    String executionId;
+                    if (useDataPool && task.getDataPoolCode() != null && !task.getDataPoolCode().isEmpty()) {
+                        executionId = executeServiceExt.runChainWithParams(task.getChainCode(), round, null);
+                    } else {
+                        executionId = executeService.runChain(task.getChainCode());
+                    }
+                    roundExecutionIds.add(executionId);
+                } else if ("CATEGORY".equals(task.getTaskType()) && task.getCategoryId() != null) {
+                    List<TestChain> chains = chainMapper.selectListByCategory(
+                            null, null, null, null, null,
+                            task.getCategoryId() != null ? Collections.singletonList(task.getCategoryId()) : null,
+                            0, 1000);
+                    for (TestChain chain : chains) {
+                        try {
+                            String executionId;
+                            if (useDataPool && task.getDataPoolCode() != null && !task.getDataPoolCode().isEmpty()) {
+                                executionId = executeServiceExt.runChainWithParams(chain.getChainCode(), round, null);
+                            } else {
+                                executionId = executeService.runChain(chain.getChainCode());
+                            }
+                            roundExecutionIds.add(executionId);
+                        } catch (Exception e) {
+                            log.error("Failed to execute chain {}: {}", chain.getChainCode(), e.getMessage());
+                        }
                     }
                 }
+
+                allExecutionIds.addAll(roundExecutionIds);
+
+                // 轮次间隔
+                if (round < roundCount - 1 && task.getRoundIntervalMs() != null && task.getRoundIntervalMs() > 0) {
+                    try {
+                        Thread.sleep(task.getRoundIntervalMs());
+                    } catch (InterruptedException ignored) {}
+                }
+
+                log.info("[ScheduledTask] 任务 {} 第 {}/{} 轮执行完成", task.getTaskName(), round + 1, roundCount);
             }
 
-            executeLog.setExecutionIds(String.join(",", executionIds));
+            executeLog.setExecutionIds(String.join(",", allExecutionIds));
+            executeLog.setTotalRounds(roundCount);
             executeLog.setStatus("SUCCESS");
             executeLog.setEndTime(new Date());
             taskMapper.updateLastRunTime(taskId);

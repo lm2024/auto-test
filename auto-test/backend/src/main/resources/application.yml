@@ -9,6 +9,10 @@ server:
     force-request: true
     force-response: true
 
+# 开发环境验证码绕过（仅用于接口测试）
+captcha:
+  bypass: true
+
 spring:
   servlet:
     multipart:

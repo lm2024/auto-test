@@ -20,13 +20,20 @@
         <result column="priority" property="priority"/>
         <result column="category_id" property="categoryId"/>
         <result column="tenant_id" property="tenantId"/>
+        <result column="product_code" property="productCode"/>
+        <result column="login_chain_code" property="loginChainCode"/>
+        <result column="login_timeout" property="loginTimeout"/>
+        <result column="data_pool_code" property="dataPoolCode"/>
+        <result column="param_mode" property="paramMode"/>
     </resultMap>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO test_chain (chain_code, chain_name, execute_mode, description, create_by, status, graph_data,
-            biz_oper_trace_id, account_code, system_category, func_category, priority, category_id, tenant_id)
+            biz_oper_trace_id, account_code, system_category, func_category, priority, category_id, tenant_id,
+            product_code, login_chain_code, login_timeout, data_pool_code, param_mode)
         VALUES (#{chainCode}, #{chainName}, #{executeMode}, #{description}, #{createBy}, #{status}, #{graphData},
-            #{bizOperTraceId}, #{accountCode}, #{systemCategory}, #{funcCategory}, #{priority}, #{categoryId}, #{tenantId})
+            #{bizOperTraceId}, #{accountCode}, #{systemCategory}, #{funcCategory}, #{priority}, #{categoryId}, #{tenantId},
+            #{productCode}, #{loginChainCode}, #{loginTimeout}, #{dataPoolCode}, #{paramMode})
     </insert>
 
     <update id="update">
@@ -44,6 +51,11 @@
             <if test="priority != null">priority = #{priority},</if>
             <if test="categoryId != null">category_id = #{categoryId},</if>
             <if test="tenantId != null">tenant_id = #{tenantId},</if>
+            <if test="productCode != null">product_code = #{productCode},</if>
+            <if test="loginChainCode != null">login_chain_code = #{loginChainCode},</if>
+            <if test="loginTimeout != null">login_timeout = #{loginTimeout},</if>
+            <if test="dataPoolCode != null">data_pool_code = #{dataPoolCode},</if>
+            <if test="paramMode != null">param_mode = #{paramMode},</if>
         </set>
         WHERE chain_code = #{chainCode}
     </update>

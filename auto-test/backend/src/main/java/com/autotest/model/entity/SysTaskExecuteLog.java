@@ -11,6 +11,8 @@ public class SysTaskExecuteLog {
     private Date startTime;
     private Date endTime;
     private String errorMessage;
+    private Integer roundNumber;
+    private Integer totalRounds;
     private Date createTime;
 
     public Long getId() { return id; }
@@ -29,6 +31,10 @@ public class SysTaskExecuteLog {
     public void setEndTime(Date endTime) { this.endTime = endTime; }
     public String getErrorMessage() { return errorMessage; }
     public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
+    public Integer getRoundNumber() { return roundNumber; }
+    public void setRoundNumber(Integer roundNumber) { this.roundNumber = roundNumber; }
+    public Integer getTotalRounds() { return totalRounds; }
+    public void setTotalRounds(Integer totalRounds) { this.totalRounds = totalRounds; }
     public Date getCreateTime() { return createTime; }
     public void setCreateTime(Date createTime) { this.createTime = createTime; }
 }

@@ -11,6 +11,10 @@ public class AccountCreateDTO {
     private String password;
     private String authType;
     private String authConfig;
+    private String loginType;
+    private String loginConfig;
+    private Long tenantId;
+    private String productCode;
 
     public String getAccountCode() { return accountCode; }
     public void setAccountCode(String accountCode) { this.accountCode = accountCode; }
@@ -26,4 +30,12 @@ public class AccountCreateDTO {
     public void setAuthType(String authType) { this.authType = authType; }
     public String getAuthConfig() { return authConfig; }
     public void setAuthConfig(String authConfig) { this.authConfig = authConfig; }
+    public String getLoginType() { return loginType; }
+    public void setLoginType(String loginType) { this.loginType = loginType; }
+    public String getLoginConfig() { return loginConfig; }
+    public void setLoginConfig(String loginConfig) { this.loginConfig = loginConfig; }
+    public Long getTenantId() { return tenantId; }
+    public void setTenantId(Long tenantId) { this.tenantId = tenantId; }
+    public String getProductCode() { return productCode; }
+    public void setProductCode(String productCode) { this.productCode = productCode; }
 }

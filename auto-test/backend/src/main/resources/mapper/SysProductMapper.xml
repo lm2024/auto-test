@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.autotest.mapper.SysProductMapper">
+
+    <resultMap id="BaseResultMap" type="com.autotest.model.entity.SysProduct">
+        <id column="id" property="id"/>
+        <result column="product_code" property="productCode"/>
+        <result column="product_name" property="productName"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="description" property="description"/>
+        <result column="status" property="status"/>
+        <result column="create_by" property="createBy"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_product (product_code, product_name, tenant_id, description, status, create_by)
+        VALUES (#{productCode}, #{productName}, #{tenantId}, #{description}, #{status}, #{createBy})
+    </insert>
+
+    <update id="update">
+        UPDATE sys_product
+        <set>
+            <if test="productName != null">product_name = #{productName},</if>
+            <if test="tenantId != null">tenant_id = #{tenantId},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="status != null">status = #{status},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM sys_product WHERE id = #{id}
+    </delete>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT * FROM sys_product WHERE id = #{id}
+    </select>
+
+    <select id="selectByProductCode" resultMap="BaseResultMap">
+        SELECT * FROM sys_product WHERE product_code = #{productCode}
+    </select>
+
+    <select id="selectList" resultMap="BaseResultMap">
+        SELECT * FROM sys_product
+        <where>
+            <if test="tenantId != null">
+                AND tenant_id = #{tenantId}
+            </if>
+            <if test="productName != null and productName != ''">
+                AND product_name LIKE CONCAT('%', #{productName}, '%')
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="countList" resultType="int">
+        SELECT COUNT(*) FROM sys_product
+        <where>
+            <if test="tenantId != null">
+                AND tenant_id = #{tenantId}
+            </if>
+            <if test="productName != null and productName != ''">
+                AND product_name LIKE CONCAT('%', #{productName}, '%')
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+    </select>
+</mapper>

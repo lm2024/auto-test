@@ -38,11 +38,30 @@
     </select>
 
     <select id="selectAll" resultMap="BaseResultMap">
-        SELECT * FROM sys_tenant ORDER BY create_time DESC
+        SELECT * FROM sys_tenant
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (tenant_code LIKE CONCAT('%', #{keyword}, '%')
+                    OR tenant_name LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+        ORDER BY create_time DESC
         LIMIT #{offset}, #{pageSize}
     </select>
 
     <select id="countAll" resultType="int">
         SELECT COUNT(*) FROM sys_tenant
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (tenant_code LIKE CONCAT('%', #{keyword}, '%')
+                    OR tenant_name LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
     </select>
 </mapper>

@@ -198,6 +198,11 @@
     el('pushCancel').addEventListener('click', function() { el('pushDialog').classList.remove('open'); });
     el('pushOk').addEventListener('click', doPush);
     el('pushMode').addEventListener('change', function() { el('pushCodeWrap').style.display = this.value === 'append' ? 'block' : 'none'; });
+    el('pushTenant').addEventListener('change', function() {
+      var tenantId = this.value;
+      loadPushProducts(tenantId);
+      loadPushCategories(tenantId);
+    });
     el('editCancel').addEventListener('click', function() { el('editDialog').classList.remove('open'); editingIdx = -1; });
     el('editOk').addEventListener('click', function() {
       if (editingIdx < 0) return;
@@ -1384,10 +1389,85 @@
     if (!loggedIn) return;
     el('pushName').value = '录制接口-' + new Date().toLocaleDateString();
     el('pushDialog').classList.add('open');
+    // 加载租户列表
+    loadPushTenants();
+  }
+
+  function loadPushTenants() {
+    var sel = el('pushTenant');
+    sel.innerHTML = '<option value="">加载中...</option>';
+    window.PlatformApi.apiFetch('/api/plugin/tenants').then(function(res) {
+      if (res.code === 200 && res.data) {
+        var html = '<option value="">请选择租户</option>';
+        res.data.forEach(function(t) {
+          html += '<option value="' + t.id + '">' + enc(t.tenantName) + ' (' + enc(t.tenantCode) + ')</option>';
+        });
+        sel.innerHTML = html;
+      } else {
+        sel.innerHTML = '<option value="">加载失败</option>';
+      }
+    }).catch(function() { sel.innerHTML = '<option value="">加载失败</option>'; });
+  }
+
+  function loadPushProducts(tenantId) {
+    var sel = el('pushProduct');
+    if (!tenantId) { sel.innerHTML = '<option value="">请先选择租户</option>'; return; }
+    sel.innerHTML = '<option value="">加载中...</option>';
+    window.PlatformApi.apiFetch('/api/plugin/products?tenantId=' + tenantId).then(function(res) {
+      if (res.code === 200 && res.data) {
+        var html = '<option value="">— 不选择 —</option>';
+        res.data.forEach(function(p) {
+          html += '<option value="' + enc(p.productCode) + '">' + enc(p.productName) + '</option>';
+        });
+        sel.innerHTML = html;
+      } else {
+        sel.innerHTML = '<option value="">加载失败</option>';
+      }
+    }).catch(function() { sel.innerHTML = '<option value="">加载失败</option>'; });
+  }
+
+  function loadPushCategories(tenantId) {
+    var sel = el('pushCategory');
+    if (!tenantId) { sel.innerHTML = '<option value="">请先选择租户</option>'; return; }
+    sel.innerHTML = '<option value="">加载中...</option>';
+    window.PlatformApi.apiFetch('/api/plugin/categories?tenantId=' + tenantId).then(function(res) {
+      if (res.code === 200 && res.data) {
+        var html = '<option value="">— 不选择 —</option>';
+        // 构建树形结构
+        var items = res.data;
+        var map = {}, roots = [];
+        items.forEach(function(c) { map[c.id] = c; c.children = []; });
+        items.forEach(function(c) {
+          if (c.parentId && c.parentId !== 0 && map[c.parentId]) {
+            map[c.parentId].children.push(c);
+          } else {
+            roots.push(c);
+          }
+        });
+        function buildOptions(list, depth, isLast) {
+          list.forEach(function(c, idx) {
+            var prefix = '';
+            for (var i = 0; i < depth - 1; i++) prefix += '│  ';
+            if (depth > 0) prefix += (idx === list.length - 1) ? '└─ ' : '├─ ';
+            var label = depth === 0 ? '📁 ' + enc(c.categoryName) : prefix + enc(c.categoryName);
+            html += '<option value="' + c.id + '">' + label + '</option>';
+            if (c.children && c.children.length > 0) buildOptions(c.children, depth + 1, idx === list.length - 1);
+          });
+        }
+        buildOptions(roots, 0);
+        sel.innerHTML = html;
+      } else {
+        sel.innerHTML = '<option value="">加载失败</option>';
+      }
+    }).catch(function() { sel.innerHTML = '<option value="">加载失败</option>'; });
   }
   function doPush() {
     var name = el('pushName').value.trim();
     if (!name) { alert('请输入链路名称'); return; }
+    var tenantId = el('pushTenant').value;
+    if (!tenantId) { alert('请选择租户'); return; }
+    var productCode = el('pushProduct').value || '';
+    var categoryId = el('pushCategory').value || '';
     var mode = el('pushMode').value, code = el('pushCode').value.trim(), list = getChecked();
     if (mode === 'append' && !code) { alert('请输入链路编码'); return; }
 
@@ -1435,7 +1515,7 @@
       function pushGroup(ifList, chainName) {
         var path = '/api/plugin/chain/' + (mode === 'create' ? 'create' : 'append');
         var body = mode === 'create'
-          ? { chainName: chainName, interfaceList: ifList }
+          ? { chainName: chainName, interfaceList: ifList, tenantId: parseInt(tenantId), productCode: productCode || undefined, categoryId: categoryId ? parseInt(categoryId) : undefined }
           : { chainCode: code, interfaceList: ifList };
         return window.PlatformApi.apiFetch(path, { method: 'POST', body: body });
       }

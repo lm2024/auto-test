@@ -1,5 +1,6 @@
 package com.autotest.filter;
 
+import com.autotest.context.TenantContext;
 import com.autotest.util.JwtUtil;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -25,7 +26,10 @@ public class JwtAuthFilter implements HandlerInterceptor {
                 request.setAttribute("userId", JwtUtil.getUserId(token));
                 request.setAttribute("username", JwtUtil.getUsername(token));
                 request.setAttribute("role", JwtUtil.getRole(token));
-                request.setAttribute("tenantId", JwtUtil.getTenantId(token));
+                Long tenantId = JwtUtil.getTenantId(token);
+                request.setAttribute("tenantId", tenantId);
+                // 设置租户上下文，供 MyBatis 拦截器使用
+                TenantContext.setTenantId(tenantId);
                 return true;
             }
             writeUnauthorized(response, "TOKEN_EXPIRED", "登录已过期，请重新登录");
@@ -33,6 +37,13 @@ public class JwtAuthFilter implements HandlerInterceptor {
         }
         writeUnauthorized(response, "NO_TOKEN", "未登录，请先登录平台");
         return false;
+    }
+
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response,
+                                Object handler, Exception ex) {
+        // 请求结束后清理租户上下文，防止 ThreadLocal 内存泄漏
+        TenantContext.clear();
     }
 
     private void writeUnauthorized(HttpServletResponse response, String reason, String message) throws IOException {

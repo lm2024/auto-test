@@ -75,6 +75,13 @@
             <version>${jayway.version}</version>
         </dependency>
 
+        <!-- Selenium WebDriver: 浏览器自动化登录（Playwright 的 Java 8 兼容替代） -->
+        <dependency>
+            <groupId>org.seleniumhq.selenium</groupId>
+            <artifactId>selenium-java</artifactId>
+            <version>4.18.1</version>
+        </dependency>
+
         <dependency>
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j</artifactId>

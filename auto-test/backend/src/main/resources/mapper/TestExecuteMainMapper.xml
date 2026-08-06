@@ -15,15 +15,20 @@
         <result column="success_count" property="successCount"/>
         <result column="fail_count" property="failCount"/>
         <result column="skip_count" property="skipCount"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="round_number" property="roundNumber"/>
+        <result column="task_id" property="taskId"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
     </resultMap>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO test_execute_main (execution_id, chain_code, status, start_time, end_time,
-            total_cost_ms, error_message, node_count, success_count, fail_count, skip_count)
+            total_cost_ms, error_message, node_count, success_count, fail_count, skip_count,
+            tenant_id, round_number, task_id)
         VALUES (#{executionId}, #{chainCode}, #{status}, #{startTime}, #{endTime},
-            #{totalCostMs}, #{errorMessage}, #{nodeCount}, #{successCount}, #{failCount}, #{skipCount})
+            #{totalCostMs}, #{errorMessage}, #{nodeCount}, #{successCount}, #{failCount}, #{skipCount},
+            #{tenantId}, #{roundNumber}, #{taskId})
     </insert>
 
     <update id="update">
@@ -36,6 +41,8 @@
             <if test="successCount != null">success_count = #{successCount},</if>
             <if test="failCount != null">fail_count = #{failCount},</if>
             <if test="skipCount != null">skip_count = #{skipCount},</if>
+            <if test="roundNumber != null">round_number = #{roundNumber},</if>
+            <if test="taskId != null">task_id = #{taskId},</if>
         </set>
         WHERE execution_id = #{executionId}
     </update>

@@ -1,8 +1,14 @@
 package com.autotest.controller;
 
+import com.autotest.mapper.SysCategoryMapper;
+import com.autotest.mapper.SysProductMapper;
+import com.autotest.mapper.SysTenantMapper;
 import com.autotest.mapper.TestNodeConfigMapper;
 import com.autotest.model.dto.PluginChainAppendDTO;
 import com.autotest.model.dto.PluginChainCreateDTO;
+import com.autotest.model.entity.SysCategory;
+import com.autotest.model.entity.SysProduct;
+import com.autotest.model.entity.SysTenant;
 import com.autotest.model.entity.TestNodeConfig;
 import com.autotest.model.vo.ChainVO;
 import com.autotest.model.vo.NodeVO;
@@ -28,6 +34,15 @@ public class PluginController {
 
     @Autowired
     private TestNodeConfigMapper nodeConfigMapper;
+
+    @Autowired
+    private SysTenantMapper tenantMapper;
+
+    @Autowired
+    private SysProductMapper productMapper;
+
+    @Autowired
+    private SysCategoryMapper categoryMapper;
 
     @PostMapping("/chain/create")
     public Result<?> createChainByPlugin(@Valid @RequestBody PluginChainCreateDTO dto) {
@@ -150,6 +165,33 @@ public class PluginController {
         config.put("maxInterfacesPerPush", 200);
         config.put("traceEnabled", true);
         return Result.success(config);
+    }
+
+    /**
+     * 插件端获取租户列表
+     */
+    @GetMapping("/tenants")
+    public Result<?> getTenants() {
+        List<SysTenant> tenants = tenantMapper.selectAll(null, null, 0, 1000);
+        return Result.success(tenants);
+    }
+
+    /**
+     * 插件端获取产品列表（按租户过滤）
+     */
+    @GetMapping("/products")
+    public Result<?> getProducts(@RequestParam(required = false) Long tenantId) {
+        List<SysProduct> products = productMapper.selectList(tenantId, null, null, 0, 1000);
+        return Result.success(products);
+    }
+
+    /**
+     * 插件端获取分类树（按租户过滤）
+     */
+    @GetMapping("/categories")
+    public Result<?> getCategories(@RequestParam(required = false) Long tenantId) {
+        List<SysCategory> categories = categoryMapper.selectAll(tenantId);
+        return Result.success(categories);
     }
 
     private NodeVO toNodeVO(TestNodeConfig node) {

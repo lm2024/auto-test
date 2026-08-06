@@ -10,6 +10,10 @@ public class SysScheduledTask {
     private Long categoryId;
     private String cronExpression;
     private Integer intervalMinutes;
+    private Integer roundCount;
+    private Integer roundIntervalMs;
+    private Integer useDataPool;
+    private String dataPoolCode;
     private Integer enabled;
     private Date lastRunTime;
     private Date nextRunTime;
@@ -31,6 +35,14 @@ public class SysScheduledTask {
     public void setCronExpression(String cronExpression) { this.cronExpression = cronExpression; }
     public Integer getIntervalMinutes() { return intervalMinutes; }
     public void setIntervalMinutes(Integer intervalMinutes) { this.intervalMinutes = intervalMinutes; }
+    public Integer getRoundCount() { return roundCount; }
+    public void setRoundCount(Integer roundCount) { this.roundCount = roundCount; }
+    public Integer getRoundIntervalMs() { return roundIntervalMs; }
+    public void setRoundIntervalMs(Integer roundIntervalMs) { this.roundIntervalMs = roundIntervalMs; }
+    public Integer getUseDataPool() { return useDataPool; }
+    public void setUseDataPool(Integer useDataPool) { this.useDataPool = useDataPool; }
+    public String getDataPoolCode() { return dataPoolCode; }
+    public void setDataPoolCode(String dataPoolCode) { this.dataPoolCode = dataPoolCode; }
     public Integer getEnabled() { return enabled; }
     public void setEnabled(Integer enabled) { this.enabled = enabled; }
     public Date getLastRunTime() { return lastRunTime; }

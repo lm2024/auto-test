@@ -17,7 +17,9 @@ import com.autotest.model.entity.TestNodeExecuteLog;
 import com.autotest.model.vo.ExecuteMainVO;
 import com.autotest.model.vo.NodeExecuteLogVO;
 import com.autotest.service.AccountService;
+import com.autotest.service.DataPoolService;
 import com.autotest.service.ExecuteService;
+import com.autotest.service.GlobalVariableService;
 import com.autotest.util.CodeGenerator;
 import com.autotest.util.DagPlanner;
 import com.autotest.util.FileUploadUtil;
@@ -68,13 +70,89 @@ public class ExecuteServiceImpl implements ExecuteService {
     private AccountService accountService;
 
     @Autowired
+    private GlobalVariableService globalVariableService;
+
+    @Autowired
+    private DataPoolService dataPoolService;
+
+    @Autowired
     private javax.sql.DataSource dataSource;
 
     private final ConcurrentHashMap<String, ExecutionContext> contextMap = new ConcurrentHashMap<>();
 
+    /** 临时存储数据池参数（key: executionId, value: 参数 Map） */
+    private final ConcurrentHashMap<String, Map<String, Object>> poolVarsMap = new ConcurrentHashMap<>();
+
     @Override
     public String runChain(String chainCode) {
         return runChain(chainCode, null, false);
+    }
+
+    /**
+     * 参数化执行入口。
+     * 从数据池取参数注入到执行上下文，支持多轮不同参数。
+     *
+     * @param chainCode 链路编码
+     * @param roundIndex 轮次索引（从 0 开始），-1 表示不使用数据池
+     * @param taskExecutionId 关联的定时任务执行 ID（可选）
+     */
+    public String runChainWithParams(String chainCode, int roundIndex, String taskExecutionId) {
+        TestChain chain = chainMapper.selectByChainCode(chainCode);
+        if (chain == null) {
+            throw new BusinessException(404, "链路不存在");
+        }
+
+        List<TestNodeConfig> nodes = nodeConfigMapper.selectByChainCode(chainCode);
+        if (nodes == null || nodes.isEmpty()) {
+            throw new BusinessException(400, "链路无节点配置，无法执行");
+        }
+
+        String executionId = CodeGenerator.generateExecutionId();
+
+        // 创建执行记录
+        TestExecuteMain mainLog = new TestExecuteMain();
+        mainLog.setExecutionId(executionId);
+        mainLog.setChainCode(chainCode);
+        mainLog.setStatus("RUNNING");
+        mainLog.setStartTime(new Date());
+        mainLog.setNodeCount(nodes.size());
+        mainLog.setSuccessCount(0);
+        mainLog.setFailCount(0);
+        mainLog.setSkipCount(0);
+        mainLog.setTenantId(chain.getTenantId());
+        if (roundIndex >= 0) {
+            mainLog.setRoundNumber(roundIndex + 1);
+        }
+        executeMainMapper.insert(mainLog);
+
+        // 异步执行
+        executeChainByTraceIdAsync(executionId, chainCode, chain.getExecuteMode(), null, false, roundIndex);
+
+        return executionId;
+    }
+
+    /**
+     * 带轮次索引的异步执行（内部方法）
+     */
+    @Async("executeThreadPool")
+    public void executeChainByTraceIdAsync(String executionId, String chainCode, int executeMode,
+                                           String traceId, boolean parallel, int roundIndex) {
+        // 如果需要参数化，预加载数据池参数
+        if (roundIndex >= 0) {
+            try {
+                TestChain chain = chainMapper.selectByChainCode(chainCode);
+                if (chain != null && chain.getDataPoolCode() != null && !chain.getDataPoolCode().isEmpty()) {
+                    Map<String, Object> poolVars = dataPoolService.getRowVars(chain.getDataPoolCode(), roundIndex);
+                    if (poolVars != null && !poolVars.isEmpty()) {
+                        poolVarsMap.put(executionId, poolVars);
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[Execute] 加载数据池参数失败: chainCode={}, roundIndex={}", chainCode, roundIndex, e);
+            }
+        }
+
+        executeChainByTraceIdAsync(executionId, chainCode, executeMode, traceId, parallel);
     }
 
     /**
@@ -106,6 +184,7 @@ public class ExecuteServiceImpl implements ExecuteService {
         mainLog.setSuccessCount(0);
         mainLog.setFailCount(0);
         mainLog.setSkipCount(0);
+        mainLog.setTenantId(chain.getTenantId());
         executeMainMapper.insert(mainLog);
 
         // Execute asynchronously with TraceId grouping
@@ -131,7 +210,32 @@ public class ExecuteServiceImpl implements ExecuteService {
         context.setStartTime(new Date());
         contextMap.put(executionId, context);
 
+        // 加载全局变量和链路级变量到执行上下文
+        try {
+            Map<String, String> globalVars = globalVariableService.loadVariableMap(chainCode);
+            if (globalVars != null) {
+                globalVars.forEach(context::setVariable);
+            }
+        } catch (Exception e) {
+            log.warn("[Execute] 加载全局变量失败: chainCode={}, {}", chainCode, e.getMessage());
+        }
+
+        // 注入数据池参数（优先级高于全局变量）
+        try {
+            Map<String, Object> poolVars = poolVarsMap.remove(executionId);
+            if (poolVars != null) {
+                poolVars.forEach(context::setVariable);
+                log.info("[Execute] 注入数据池参数: executionId={}, count={}", executionId, poolVars.size());
+            }
+        } catch (Exception e) {
+            log.warn("[Execute] 注入数据池参数失败: executionId={}", executionId, e);
+        }
+
         TestChain chain = chainMapper.selectByChainCode(chainCode);
+
+        // 执行前置登录链路（如果有）
+        executeLoginChain(chain, context);
+
         List<TestNodeConfig> allNodes = nodeConfigMapper.selectByChainCode(chainCode);
 
         // 执行顺序由 X6 画布拓扑决定，不再依赖 sort_no / parallel_group
@@ -920,6 +1024,128 @@ public class ExecuteServiceImpl implements ExecuteService {
             log.warn("[Execute] 获取账号token失败: accountCode={}", account.getAccountCode(), e);
         }
         return null;
+    }
+
+    /**
+     * 执行前置登录链路。
+     * 如果链路配置了 login_chain_code，则先同步执行登录链路，
+     * 将登录链路提取的变量（token、cookie 等）注入到当前执行上下文。
+     */
+    private void executeLoginChain(TestChain chain, ExecutionContext context) {
+        if (chain == null) {
+            return;
+        }
+        String loginChainCode = chain.getLoginChainCode();
+        if (loginChainCode == null || loginChainCode.trim().isEmpty()) {
+            return;
+        }
+
+        log.info("[Execute] 执行前置登录链路: loginChainCode={}", loginChainCode);
+        try {
+            // 同步执行登录链路
+            ExecutionContext loginContext = executeChainSync(loginChainCode);
+
+            // 将登录链路的变量合并到当前上下文
+            if (loginContext != null && loginContext.getVariables() != null) {
+                Map<String, Object> loginVars = loginContext.getVariables();
+                for (Map.Entry<String, Object> entry : loginVars.entrySet()) {
+                    // 不覆盖已有的 __ACCOUNT_TOKEN__
+                    if ("__ACCOUNT_TOKEN__".equals(entry.getKey())
+                            && context.getVariable("__ACCOUNT_TOKEN__") != null) {
+                        continue;
+                    }
+                    context.setVariable(entry.getKey(), entry.getValue());
+                }
+                log.info("[Execute] 登录链路变量注入成功: count={}", loginVars.size());
+            }
+        } catch (Exception e) {
+            log.error("[Execute] 前置登录链路执行失败: loginChainCode={}", loginChainCode, e);
+            // 登录失败不中断业务链路执行，只记录警告
+            log.warn("[Execute] 登录链路执行失败，继续执行业务链路（可能因缺少认证而失败）");
+        }
+    }
+
+    /**
+     * 同步执行一条链路并返回执行上下文。
+     * 用于登录链路的前置执行。
+     */
+    private ExecutionContext executeChainSync(String chainCode) {
+        TestChain loginChain = chainMapper.selectByChainCode(chainCode);
+        if (loginChain == null) {
+            throw new BusinessException(404, "登录链路不存在: " + chainCode);
+        }
+
+        List<TestNodeConfig> allNodes = nodeConfigMapper.selectByChainCode(chainCode);
+        if (allNodes == null || allNodes.isEmpty()) {
+            throw new BusinessException(400, "登录链路无节点: " + chainCode);
+        }
+
+        ExecutionContext loginContext = new ExecutionContext();
+        loginContext.setExecutionId("LOGIN_" + CodeGenerator.generateExecutionId());
+        loginContext.setChainCode(chainCode);
+        loginContext.setStartTime(new Date());
+
+        // 加载全局变量
+        try {
+            Map<String, String> globalVars = globalVariableService.loadVariableMap(chainCode);
+            if (globalVars != null) {
+                globalVars.forEach(loginContext::setVariable);
+            }
+        } catch (Exception e) {
+            log.warn("[Execute] 登录链路加载全局变量失败: {}", e.getMessage());
+        }
+
+        // DAG 规划
+        List<List<TestNodeConfig>> dagLayers = new ArrayList<>();
+        try {
+            dagLayers = DagPlanner.planLayers(loginChain.getGraphData(), allNodes);
+        } catch (Exception e) {
+            log.error("[Execute] 登录链路拓扑解析失败: chainCode={}", chainCode, e);
+        }
+        List<TestNodeConfig> nodes = new ArrayList<>();
+        for (List<TestNodeConfig> layer : dagLayers) {
+            nodes.addAll(layer);
+        }
+        if (nodes.isEmpty()) {
+            nodes = allNodes;
+        }
+
+        // 获取账号 token
+        if (loginChain.getAccountCode() != null && !loginChain.getAccountCode().isEmpty()) {
+            try {
+                TestAccount account = accountService.acquireAccount(loginChain.getAccountCode());
+                String token = obtainTokenForAccount(account);
+                if (token != null) {
+                    loginContext.setVariable("__ACCOUNT_TOKEN__", token);
+                }
+            } catch (Exception e) {
+                log.warn("[Execute] 登录链路获取账号失败: {}", e.getMessage());
+            }
+        }
+
+        // 串行执行所有节点
+        for (TestNodeConfig node : nodes) {
+            if (loginContext.isStopped()) {
+                break;
+            }
+            NodeResult result = executeNode(loginContext, node);
+            if (!result.success) {
+                log.error("[Execute] 登录链路节点执行失败: nodeCode={}, error={}",
+                        node.getNodeCode(), result.errorMessage);
+                break;
+            }
+        }
+
+        // 释放账号
+        if (loginChain.getAccountCode() != null && !loginChain.getAccountCode().isEmpty()) {
+            try {
+                accountService.releaseAccount(loginChain.getAccountCode());
+            } catch (Exception e) {
+                log.warn("[Execute] 登录链路释放账号失败: {}", e.getMessage());
+            }
+        }
+
+        return loginContext;
     }
 
     private static class NodeResult {

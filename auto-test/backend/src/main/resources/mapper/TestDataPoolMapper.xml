@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.autotest.mapper.TestDataPoolMapper">
+
+    <resultMap id="BaseResultMap" type="com.autotest.model.entity.TestDataPool">
+        <id column="id" property="id"/>
+        <result column="pool_code" property="poolCode"/>
+        <result column="pool_name" property="poolName"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="product_code" property="productCode"/>
+        <result column="description" property="description"/>
+        <result column="column_defs" property="columnDefs"/>
+        <result column="status" property="status"/>
+        <result column="create_by" property="createBy"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO test_data_pool (pool_code, pool_name, tenant_id, product_code, description,
+            column_defs, status, create_by)
+        VALUES (#{poolCode}, #{poolName}, #{tenantId}, #{productCode}, #{description},
+            #{columnDefs}, #{status}, #{createBy})
+    </insert>
+
+    <update id="update">
+        UPDATE test_data_pool
+        <set>
+            <if test="poolName != null">pool_name = #{poolName},</if>
+            <if test="tenantId != null">tenant_id = #{tenantId},</if>
+            <if test="productCode != null">product_code = #{productCode},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="columnDefs != null">column_defs = #{columnDefs},</if>
+            <if test="status != null">status = #{status},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM test_data_pool WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteRowsByPoolId">
+        DELETE FROM test_data_pool_row WHERE pool_id = #{poolId}
+    </delete>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT * FROM test_data_pool WHERE id = #{id}
+    </select>
+
+    <select id="selectByPoolCode" resultMap="BaseResultMap">
+        SELECT * FROM test_data_pool WHERE pool_code = #{poolCode}
+    </select>
+
+    <select id="selectList" resultMap="BaseResultMap">
+        SELECT * FROM test_data_pool
+        <where>
+            <if test="tenantId != null">
+                AND tenant_id = #{tenantId}
+            </if>
+            <if test="productCode != null and productCode != ''">
+                AND product_code = #{productCode}
+            </if>
+            <if test="poolName != null and poolName != ''">
+                AND pool_name LIKE CONCAT('%', #{poolName}, '%')
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="countList" resultType="int">
+        SELECT COUNT(*) FROM test_data_pool
+        <where>
+            <if test="tenantId != null">
+                AND tenant_id = #{tenantId}
+            </if>
+            <if test="productCode != null and productCode != ''">
+                AND product_code = #{productCode}
+            </if>
+            <if test="poolName != null and poolName != ''">
+                AND pool_name LIKE CONCAT('%', #{poolName}, '%')
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+    </select>
+
+    <select id="countRows" resultType="int">
+        SELECT COUNT(*) FROM test_data_pool_row WHERE pool_id = #{poolId}
+    </select>
+</mapper>
