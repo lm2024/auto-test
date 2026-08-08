@@ -181,8 +181,10 @@ public final class GraphDataBuilder {
     private static JSONObject buildEdgeCell(String sourceId, String targetId) {
         JSONObject source = new JSONObject();
         source.put("cell", sourceId);
+        source.put("port", "out");
         JSONObject target = new JSONObject();
         target.put("cell", targetId);
+        target.put("port", "in");
 
         JSONObject cell = new JSONObject();
         cell.put("id", "edge-" + sourceId + "-" + targetId);

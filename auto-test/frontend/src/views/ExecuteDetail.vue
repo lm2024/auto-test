@@ -22,6 +22,7 @@
         <div class="log-header">
           <span class="log-name">{{ log.nodeName || log.nodeCode }}</span>
           <t-tag size="small" :theme="statusType(log.status)">{{ statusText(log.status) }}</t-tag>
+          <t-tag v-if="log.status === 'FAILED'" size="small" theme="warning" variant="light">{{ failureType(log) }}</t-tag>
           <span class="log-cost">{{ log.costMs }}ms</span>
         </div>
         <div class="log-info">
@@ -71,6 +72,7 @@
         <t-descriptions :column="2" bordered size="small">
           <t-descriptions-item label="节点编码">{{ currentLog.nodeCode }}</t-descriptions-item>
           <t-descriptions-item label="状态">{{ statusText(currentLog.status) }}</t-descriptions-item>
+          <t-descriptions-item label="失败分类" v-if="currentLog.status === 'FAILED'">{{ failureType(currentLog) }}</t-descriptions-item>
           <t-descriptions-item label="请求方法">{{ currentLog.requestMethod }}</t-descriptions-item>
           <t-descriptions-item label="响应码">{{ currentLog.responseCode }}</t-descriptions-item>
           <t-descriptions-item label="耗时">{{ currentLog.costMs }}ms</t-descriptions-item>
@@ -213,7 +215,8 @@ const loadData = async () => {
 }
 
 const connectWs = () => {
-  const wsUrl = `ws://${location.host}/ws/execute/${executionId}`
+  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const wsUrl = `${protocol}//${location.host}/ws/execute/${executionId}`
   ws = new WebSocket(wsUrl)
   ws.onmessage = (event) => {
     const msg = JSON.parse(event.data)
@@ -256,6 +259,18 @@ const formatJson = (str) => {
 }
 
 const copyText = (text) => { navigator.clipboard.writeText(text); MessagePlugin.success('已复制') }
+const failureType = (log) => {
+  const message = String(log?.errorMessage || '').toLowerCase()
+  const code = Number(log?.responseCode || 0)
+  if (!log || log.status !== 'FAILED') return ''
+  if (code === 401 || code === 403 || /token|登录|认证|unauthori|forbidden/.test(message)) return '认证失败'
+  if (code === 404 || /环境|地址|not found|连接|network|host/.test(message)) return '环境/请求失败'
+  if (/断言|assert/.test(message)) return '断言失败'
+  if (/timeout|超时/.test(message)) return '超时'
+  if (/变量|placeholder|jsonpath/.test(message)) return '变量配置失败'
+  if (code >= 500) return '服务端错误'
+  return '请求失败'
+}
 // 返回 TDesign t-tag 的 theme 取值（Element 的 info 对应 TDesign 的 default）
 const statusType = (s) => ({ RUNNING: 'warning', SUCCESS: 'success', FAILED: 'danger', SKIPPED: 'default' }[s] || 'default')
 const statusText = (s) => ({ RUNNING: '运行中', SUCCESS: '成功', FAILED: '失败', SKIPPED: '跳过', PENDING: '待执行' }[s] || s)

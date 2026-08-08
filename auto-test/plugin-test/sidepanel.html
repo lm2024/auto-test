@@ -450,7 +450,9 @@
     .auth-menu-item svg { width: 15px; height: 15px; }
 
     /* ===== Reduced Motion ===== */
-    .form-hint { font-size: 11px; color: #9ca3af; margin-left: 8px; }
+    .form-hint { display: block; min-height: 16px; font-size: 11px; color: #9ca3af; margin: 4px 0 0; line-height: 16px; }
+    .form-hint-error { color: #f87171; }
+    .form-hint-ok { color: #4ade80; }
 
     /* ===== Auth Panel (登录平台) ===== */
     .auth-form { font-size: 13px; }
@@ -525,6 +527,8 @@
     <div class="tab-content active" id="tab-record">
       <div class="toolbar">
         <label class="select-all"><input type="checkbox" id="selectAll"><span>全选</span></label>
+        <button class="btn-solid btn-outline" id="selectBusinessBtn" style="padding:5px 8px;font-size:11px">选中业务接口</button>
+        <button class="btn-solid btn-outline" id="hideIgnoredBtn" style="padding:5px 8px;font-size:11px">取消噪声</button>
         <input type="text" class="search-input" id="searchInput" placeholder="搜索…">
         <select class="filter-select" id="resourceTypeFilter"><option value="fetch_xhr" selected>Fetch/XHR</option><option value="">全部</option><option value="script">JS</option><option value="stylesheet">CSS</option><option value="image">Img</option><option value="document">Doc</option><option value="media">Media</option><option value="font">Font</option><option value="websocket">WS</option><option value="other">Other</option></select>
         <select class="filter-select" id="methodFilter"><option value="">方法</option><option value="GET">GET</option><option value="POST">POST</option><option value="PUT">PUT</option><option value="DELETE">DELETE</option></select>
@@ -743,9 +747,11 @@
         </div>
         <div class="form-g"><label>产品</label>
           <select id="pushProduct"><option value="">请先选择租户</option></select>
+          <div class="form-hint" id="pushProductHint" role="status"></div>
         </div>
         <div class="form-g"><label>分类</label>
           <select id="pushCategory"><option value="">请先选择租户</option></select>
+          <div class="form-hint" id="pushCategoryHint" role="status"></div>
         </div>
       </div>
       <div class="push-section">
@@ -754,6 +760,7 @@
         <div class="form-g"><label>推送方式</label><select id="pushMode"><option value="create">新建链路</option><option value="append">追加到现有</option></select></div>
         <div class="form-g" id="pushCodeWrap" style="display:none"><label>链路编码</label><input type="text" id="pushCode"></div>
       </div>
+      <div class="form-hint form-hint-error" id="pushHint" role="alert"></div>
       <div class="dialog-btns">
         <button class="btn-solid btn-outline" id="pushCancel">取消</button>
         <button class="btn-solid btn-primary" id="pushOk">确认推送</button>

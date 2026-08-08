@@ -16,6 +16,15 @@
         <t-button theme="primary" variant="outline" size="small" :loading="saving" @click="saveGraphData">
           <template #icon><SaveIcon /></template>保存画布
         </t-button>
+        <t-button theme="primary" variant="outline" size="small" @click="layoutGraph('snake')">
+          <template #icon><SwapIcon /></template>蛇形布局
+        </t-button>
+        <t-button theme="primary" variant="outline" size="small" @click="layoutGraph('dag')">
+          <template #icon><LayersIcon /></template>DAG布局
+        </t-button>
+        <t-button theme="primary" variant="outline" size="small" @click="fitGraph">
+          <template #icon><SearchIcon /></template>适应屏幕
+        </t-button>
         <t-button theme="primary" variant="outline" size="small" @click="previewLayers">
           <template #icon><LayersIcon /></template>预览执行顺序
         </t-button>
@@ -121,7 +130,7 @@ import {
 } from 'tdesign-icons-vue-next'
 import chainApi from '../api/chain'
 import nodeApi from '../api/node'
-import { createGraph, addHttpNode, autoLayout, NODE_SHAPE } from '../graph/graph'
+import { createGraph, addHttpNode, snakeLayout, dagWrapLayout, NODE_SHAPE } from '../graph/graph'
 import NodeConfigPanel from '../components/chain/NodeConfigPanel.vue'
 import ImportDialog from '../components/chain/ImportDialog.vue'
 import GlobalVarPanel from '../components/chain/GlobalVarPanel.vue'
@@ -247,6 +256,11 @@ function renderCanvas(graphData) {
     // 画布 JSON(graph_data) 可能缺 requestUrl/pageUrl，用节点配置表补全后再渲染，
     // 避免画布节点显示“未配置 URL”（vue-shape 组件挂载后不会因 setData 自动刷新）
     parsed.cells.forEach((cell) => {
+      if (cell && cell.shape === 'dag-edge' && cell.source && cell.target) {
+        if (cell.source.cell) cell.source.port = 'out'
+        if (cell.target.cell) cell.target.port = 'in'
+        cell.vertices = []
+      }
       if (cell && cell.shape === NODE_SHAPE && cell.data && nodeDataMap[cell.id]) {
         const d = nodeDataMap[cell.id]
         cell.data = {
@@ -262,6 +276,15 @@ function renderCanvas(graphData) {
       }
     })
     graph.fromJSON(parsed)
+    graph.getEdges().forEach((edge) => {
+      const sourceCell = edge.getSourceCellId()
+      const targetCell = edge.getTargetCellId()
+      if (sourceCell && targetCell) {
+        edge.setSource({ cell: sourceCell, port: 'out' })
+        edge.setTarget({ cell: targetCell, port: 'in' })
+        edge.setVertices([])
+      }
+    })
   } else {
     // 无画布数据：按节点表平铺为无连线节点
     Object.values(nodeDataMap).forEach((n, i) => {
@@ -342,9 +365,22 @@ async function onNodeDeleted(id) {
   }
 }
 
-function autoLayoutGraph() {
-  autoLayout(graph)
-  MessagePlugin.success('已自动布局')
+function layoutGraph(mode) {
+  if (!graph) return
+  const availableWidth = canvasRef.value?.clientWidth || 1280
+  const availableHeight = canvasRef.value?.clientHeight || 720
+  const result = mode === 'dag'
+    ? dagWrapLayout(graph, { availableWidth, availableHeight })
+    : snakeLayout(graph, { availableWidth })
+  MessagePlugin.success(mode === 'dag'
+    ? `已完成 DAG 布局（${result.layers} 层）`
+    : `已完成蛇形布局（${result.columns} 列）`)
+}
+
+function fitGraph() {
+  if (!graph) return
+  graph.zoomToFit({ padding: 40, maxScale: 1 })
+  MessagePlugin.success('已适应屏幕')
 }
 
 async function saveGraphData() {
@@ -451,6 +487,7 @@ onMounted(async () => {
   graph.on('node:click', ({ node }) => selectNode(node.id))
   graph.on('blank:click', () => deselect())
   await load()
+  if (graph.getNodes().length > 30) layoutGraph('snake')
 })
 
 onBeforeUnmount(() => {

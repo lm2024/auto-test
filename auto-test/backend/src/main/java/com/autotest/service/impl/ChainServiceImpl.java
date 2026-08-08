@@ -3,7 +3,9 @@ package com.autotest.service.impl;
 import com.autotest.exception.BusinessException;
 import com.autotest.mapper.TestChainMapper;
 import com.autotest.mapper.TestNodeConfigMapper;
+import com.autotest.mapper.SysProductMapper;
 import com.autotest.model.dto.*;
+import com.autotest.model.entity.SysProduct;
 import com.autotest.model.entity.TestChain;
 import com.autotest.model.entity.TestNodeConfig;
 import com.autotest.model.vo.ChainVO;
@@ -35,6 +37,9 @@ public class ChainServiceImpl implements ChainService {
 
     @Autowired
     private TestNodeConfigMapper nodeConfigMapper;
+
+    @Autowired
+    private SysProductMapper productMapper;
 
     @Autowired
     private InterfaceClassifier interfaceClassifier;
@@ -260,6 +265,18 @@ public class ChainServiceImpl implements ChainService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ChainVO pluginCreateChain(PluginChainCreateDTO dto) {
+        if (dto.getTenantId() == null) {
+            throw new BusinessException(400, "请选择租户后再推送");
+        }
+        if (dto.getInterfaceList() == null || dto.getInterfaceList().isEmpty()) {
+            throw new BusinessException(400, "至少选择一个接口后再推送");
+        }
+        if (dto.getProductCode() != null && !dto.getProductCode().trim().isEmpty()) {
+            SysProduct product = productMapper.selectByProductCode(dto.getProductCode().trim());
+            if (product == null || !dto.getTenantId().equals(product.getTenantId()) || product.getStatus() == null || product.getStatus() != 1) {
+                throw new BusinessException(400, "所选产品不存在或已停用，请重新选择产品");
+            }
+        }
         // Create chain
         String chainCode = generateUniqueChainCode();
         TestChain chain = new TestChain();

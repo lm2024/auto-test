@@ -17,62 +17,30 @@
         class="app-menu"
         @change="onMenuChange"
       >
-        <t-menu-item value="/chain/list">
-          <template #icon><ViewListIcon /></template>
-          测试链路管理
-        </t-menu-item>
-        <t-menu-item value="/execute/list">
-          <template #icon><BrowseIcon /></template>
-          执行记录查询
-        </t-menu-item>
-        <t-menu-item value="/account/list">
-          <template #icon><UserIcon /></template>
-          测试账号管理
-        </t-menu-item>
-        <t-menu-item value="/account/login-wizard">
-          <template #icon><LightbulbIcon /></template>
-          登录配置向导
-        </t-menu-item>
-        <t-menu-item value="/datapool/list">
-          <template #icon><ViewListIcon /></template>
-          数据池管理
-        </t-menu-item>
-        <t-menu-item value="/dict/category">
-          <template #icon><BookmarkIcon /></template>
-          分类字典管理
-        </t-menu-item>
-        <t-menu-item value="/user/list" v-if="user && user.role === 'ADMIN'">
-          <template #icon><UserIcon /></template>
-          用户管理
-        </t-menu-item>
-        <t-menu-item value="/tenant/list" v-if="user && user.role === 'ADMIN'">
-          <template #icon><ServerIcon /></template>
-          租户管理
-        </t-menu-item>
-        <t-menu-item value="/product/list" v-if="user && user.role === 'ADMIN'">
-          <template #icon><ShareIcon /></template>
-          产品管理
-        </t-menu-item>
-        <t-menu-item value="/scheduled-task" v-if="user && user.role === 'ADMIN'">
-          <template #icon><TimeIcon /></template>
-          定时任务
-        </t-menu-item>
-        <t-menu-item value="/plugin/download">
-          <template #icon><DesktopIcon /></template>
-          插件下载
-        </t-menu-item>
-        <t-menu-item value="/system/registry">
-          <template #icon><ServerIcon /></template>
-          系统注册表
-        </t-menu-item>
-        <t-menu-item value="/call-graph">
-          <template #icon><ShareIcon /></template>
-          调用关系图
-        </t-menu-item>
-        <t-menu-item value="/system/config">
-          <template #icon><SettingIcon /></template>
-          系统设置
-        </t-menu-item>
+        <t-menu-item value="/workbench"><template #icon><LightbulbIcon /></template>工作台</t-menu-item>
+        <t-submenu value="assets">
+          <template #icon><ViewListIcon /></template><template #title>测试资产</template>
+          <t-menu-item value="/chain/list">测试链路</t-menu-item>
+          <t-menu-item value="/account/list">测试账号</t-menu-item>
+          <t-menu-item value="/account/login-wizard">登录配置向导</t-menu-item>
+          <t-menu-item value="/datapool/list">数据池</t-menu-item>
+          <t-menu-item value="/plugin/download">插件下载</t-menu-item>
+        </t-submenu>
+        <t-submenu value="execution">
+          <template #icon><BrowseIcon /></template><template #title>执行结果</template>
+          <t-menu-item value="/execute/list">执行记录</t-menu-item>
+          <t-menu-item value="/scheduled-task" v-if="user && user.role === 'ADMIN'">定时任务</t-menu-item>
+        </t-submenu>
+        <t-submenu value="system">
+          <template #icon><SettingIcon /></template><template #title>系统管理</template>
+          <t-menu-item value="/dict/category">分类字典</t-menu-item>
+          <t-menu-item value="/system/registry">系统注册表</t-menu-item>
+          <t-menu-item value="/call-graph">调用关系图</t-menu-item>
+          <t-menu-item value="/system/config">系统设置</t-menu-item>
+          <t-menu-item value="/user/list" v-if="user && user.role === 'ADMIN'">用户管理</t-menu-item>
+          <t-menu-item value="/tenant/list" v-if="user && user.role === 'ADMIN'">租户管理</t-menu-item>
+          <t-menu-item value="/product/list" v-if="user && user.role === 'ADMIN'">产品管理</t-menu-item>
+        </t-submenu>
       </t-menu>
 
       <div class="user-info" v-if="user">

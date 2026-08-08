@@ -450,8 +450,20 @@ function saveApi(data) {
   if (data.resourceType !== 'fetch_xhr' && data.apiType !== 'api') return;
   chrome.storage.local.get(['recordedApis'], (r) => {
     const apis = r.recordedApis || [];
-    const dup = apis.some(a => a.url === data.url && a.method === data.method && Math.abs(a.timestamp - data.timestamp) < 2000);
-    if (!dup) {
+    const duplicateKey = `${data.method || 'GET'} ${data.url || ''} ${data.body || ''}`;
+    const recentSame = apis.find(a => {
+      const existingKey = a.duplicateKey || `${a.method || 'GET'} ${a.url || ''} ${a.body || ''}`;
+      return existingKey === duplicateKey && Math.abs((a.timestamp || 0) - (data.timestamp || 0)) < 2000;
+    });
+    const urlText = String(data.url || '').toLowerCase();
+    const isNoise = data.method === 'OPTIONS' || /\b(log|track|report|analytics|beacon|collect|stat|monitor)\b/i.test(urlText);
+    const isPolling = apis.some(a => a.url === data.url && a.method === data.method && Math.abs((a.timestamp || 0) - (data.timestamp || 0)) < 8000);
+    data.duplicateKey = duplicateKey;
+    data.captureCategory = isNoise ? 'NOISE' : (recentSame ? 'DUPLICATE' : (isPolling ? 'POLLING' : 'BUSINESS'));
+    data.captureReason = isNoise ? '埋点、预检或系统噪声' : (recentSame ? '短时间内重复请求' : (isPolling ? '相同接口短时间重复出现' : '用户操作窗口内的业务请求'));
+    data.selected = data.captureCategory === 'BUSINESS';
+    data.ignore = !data.selected;
+    if (!recentSame) {
       apis.push(data);
       chrome.storage.local.set({ recordedApis: apis });
     }

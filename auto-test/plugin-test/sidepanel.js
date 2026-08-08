@@ -44,6 +44,30 @@
   function el(id) { return document.getElementById(id); }
   function narrow() { return window.innerWidth <= 360; }
 
+  function setPushHint(message, type) {
+    var hint = el('pushHint');
+    if (!hint) return;
+    hint.textContent = message || '';
+    hint.className = 'form-hint ' + (type === 'error' ? 'form-hint-error' : 'form-hint-ok');
+  }
+
+  function setFieldHint(id, message, type) {
+    var hint = el(id);
+    if (!hint) return;
+    hint.textContent = message || '';
+    hint.className = 'form-hint ' + (type === 'error' ? 'form-hint-error' : 'form-hint-ok');
+  }
+
+  function friendlyPushError(error) {
+    var message = error && error.message ? error.message : '';
+    if (error && error.type === 'NETWORK') return '平台暂时无法连接，请确认平台服务已启动后重试。';
+    if (error && error.type === 'UNAUTHORIZED') return '登录状态已失效，请重新登录后再推送。';
+    if (/Unknown column|SQLSyntaxErrorException|Error updating database|MyBatis|服务器内部错误/i.test(message)) {
+      return '平台数据结构未完成升级，请重启平台服务后重试；如果仍失败，请联系管理员。';
+    }
+    return message && message.length < 120 ? message : '推送失败，请检查填写内容后重试。';
+  }
+
   function init() {
     document.querySelector('.app').classList.add('slide-in');
     bindAll();
@@ -217,9 +241,26 @@
     if (dbgCloseBtn) dbgCloseBtn.addEventListener('click', function() { el('dbgDialog').classList.remove('open'); });
     el('selectAll').addEventListener('change', function() {
       var checked = this.checked;
-      el('apiList').querySelectorAll('.api-check').forEach(function(c) { c.checked = checked; });
+      el('apiList').querySelectorAll('.api-check').forEach(function(c) {
+        c.checked = checked;
+        var i = parseInt(c.getAttribute('data-i'));
+        if (apis[i]) { apis[i].selected = checked; apis[i].ignore = !checked; }
+      });
+      chrome.storage.local.set({ recordedApis: apis });
       var cnt = checked ? el('apiList').querySelectorAll('.api-check').length : 0;
       el('selText').textContent = '已选 ' + cnt + ' 条';
+    });
+    var selectBusinessBtn = el('selectBusinessBtn');
+    if (selectBusinessBtn) selectBusinessBtn.addEventListener('click', function() {
+      apis.forEach(function(a) { a.selected = a.captureCategory === 'BUSINESS'; a.ignore = !a.selected; });
+      chrome.storage.local.set({ recordedApis: apis });
+      render();
+    });
+    var hideIgnoredBtn = el('hideIgnoredBtn');
+    if (hideIgnoredBtn) hideIgnoredBtn.addEventListener('click', function() {
+      apis.forEach(function(a) { if (a.captureCategory !== 'BUSINESS') { a.selected = false; a.ignore = true; } });
+      chrome.storage.local.set({ recordedApis: apis });
+      render();
     });
 
     // Tab switching
@@ -382,14 +423,14 @@
     var ok = a.status >= 200 && a.status < 300;
     var nm = a.nodeName || getName(a.url);
     var m = (a.method || 'GET').toUpperCase();
-    var chk = checkedIdxs[idx] ? ' checked' : '';
+    var chk = (Object.prototype.hasOwnProperty.call(checkedIdxs, idx) ? checkedIdxs[idx] : a.selected !== false) ? ' checked' : '';
     var ignoreClass = a.ignore ? ' api-item-ignored' : '';
     var div = document.createElement('div');
     div.className = 'api-item' + ignoreClass; div.setAttribute('data-i', idx); div.setAttribute('draggable', 'true');
     div.innerHTML = '<input type="checkbox" class="api-check" data-i="' + idx + '"' + chk + '>'
       + '<span class="method-badge m-' + m + '">' + m + '</span>'
       + '<div class="api-info" data-i="' + idx + '"><div class="api-name" title="' + enc(a.url) + '">' + enc(nm) + '</div>'
-      + '<div class="api-meta"><span>' + enc(shortUrl(a.url)) + '</span><span>' + (a.duration || 0) + 'ms</span></div></div>'
+      + '<div class="api-meta"><span>' + enc(shortUrl(a.url)) + '</span><span>' + (a.duration || 0) + 'ms</span><span>' + enc(a.captureCategory || '未分类') + '</span></div></div>'
       + '<span class="status-badge ' + (ok ? 'st-ok' : 'st-err') + '">' + (a.status || 'ERR') + '</span>'
       + '<div class="api-acts">'
       + '<button class="act-btn" data-a="debug" data-i="' + idx + '" title="调试"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></button>'
@@ -401,7 +442,11 @@
 
   function bindListEvents(list) {
     list.querySelectorAll('.api-check').forEach(function(c) {
-      c.addEventListener('change', function() { el('selText').textContent = '已选 ' + list.querySelectorAll('.api-check:checked').length + ' 条'; });
+      c.addEventListener('change', function() {
+        var i = parseInt(this.getAttribute('data-i'));
+        if (apis[i]) { apis[i].selected = this.checked; apis[i].ignore = !this.checked; chrome.storage.local.set({ recordedApis: apis }); }
+        el('selText').textContent = '已选 ' + list.querySelectorAll('.api-check:checked').length + ' 条';
+      });
     });
     list.querySelectorAll('.api-info').forEach(function(info) {
       info.addEventListener('click', function() { showDetail(parseInt(this.getAttribute('data-i'))); });
@@ -1388,6 +1433,9 @@
     var loggedIn = await window.PlatformApi.ensureLogin();
     if (!loggedIn) return;
     el('pushName').value = '录制接口-' + new Date().toLocaleDateString();
+    setPushHint('');
+    setFieldHint('pushProductHint', '');
+    setFieldHint('pushCategoryHint', '');
     el('pushDialog').classList.add('open');
     // 加载租户列表
     loadPushTenants();
@@ -1411,27 +1459,31 @@
 
   function loadPushProducts(tenantId) {
     var sel = el('pushProduct');
-    if (!tenantId) { sel.innerHTML = '<option value="">请先选择租户</option>'; return; }
+    if (!tenantId) { sel.innerHTML = '<option value="">请先选择租户</option>'; setFieldHint('pushProductHint', '选择租户后加载产品'); return; }
     sel.innerHTML = '<option value="">加载中...</option>';
+    setFieldHint('pushProductHint', '正在加载产品...');
     window.PlatformApi.apiFetch('/api/plugin/products?tenantId=' + tenantId).then(function(res) {
-      if (res.code === 200 && res.data) {
+      if (res.code === 200 && Array.isArray(res.data)) {
         var html = '<option value="">— 不选择 —</option>';
         res.data.forEach(function(p) {
           html += '<option value="' + enc(p.productCode) + '">' + enc(p.productName) + '</option>';
         });
         sel.innerHTML = html;
+        setFieldHint('pushProductHint', res.data.length ? '可选产品已加载' : '当前租户暂无启用产品，可先不选择产品。', res.data.length ? 'ok' : 'error');
       } else {
-        sel.innerHTML = '<option value="">加载失败</option>';
+        sel.innerHTML = '<option value="">暂时无法加载</option>';
+        setFieldHint('pushProductHint', '产品加载失败，请稍后重试。', 'error');
       }
-    }).catch(function() { sel.innerHTML = '<option value="">加载失败</option>'; });
+    }).catch(function() { sel.innerHTML = '<option value="">暂时无法加载</option>'; setFieldHint('pushProductHint', '产品加载失败，请检查平台连接。', 'error'); });
   }
 
   function loadPushCategories(tenantId) {
     var sel = el('pushCategory');
-    if (!tenantId) { sel.innerHTML = '<option value="">请先选择租户</option>'; return; }
+    if (!tenantId) { sel.innerHTML = '<option value="">请先选择租户</option>'; setFieldHint('pushCategoryHint', '选择租户后加载分类'); return; }
     sel.innerHTML = '<option value="">加载中...</option>';
+    setFieldHint('pushCategoryHint', '正在加载分类...');
     window.PlatformApi.apiFetch('/api/plugin/categories?tenantId=' + tenantId).then(function(res) {
-      if (res.code === 200 && res.data) {
+      if (res.code === 200 && Array.isArray(res.data)) {
         var html = '<option value="">— 不选择 —</option>';
         // 构建树形结构
         var items = res.data;
@@ -1456,20 +1508,24 @@
         }
         buildOptions(roots, 0);
         sel.innerHTML = html;
+        setFieldHint('pushCategoryHint', res.data.length ? '可选分类已加载' : '当前租户暂无分类，可先不选择分类。', res.data.length ? 'ok' : 'error');
       } else {
-        sel.innerHTML = '<option value="">加载失败</option>';
+        sel.innerHTML = '<option value="">暂时无法加载</option>';
+        setFieldHint('pushCategoryHint', '分类加载失败，请稍后重试。', 'error');
       }
-    }).catch(function() { sel.innerHTML = '<option value="">加载失败</option>'; });
+    }).catch(function() { sel.innerHTML = '<option value="">暂时无法加载</option>'; setFieldHint('pushCategoryHint', '分类加载失败，请检查平台连接。', 'error'); });
   }
   function doPush() {
+    setPushHint('');
     var name = el('pushName').value.trim();
-    if (!name) { alert('请输入链路名称'); return; }
+    if (!name) { setPushHint('请填写链路名称。', 'error'); el('pushName').focus(); return; }
     var tenantId = el('pushTenant').value;
-    if (!tenantId) { alert('请选择租户'); return; }
+    if (!tenantId) { setPushHint('请选择租户。', 'error'); el('pushTenant').focus(); return; }
     var productCode = el('pushProduct').value || '';
     var categoryId = el('pushCategory').value || '';
     var mode = el('pushMode').value, code = el('pushCode').value.trim(), list = getChecked();
-    if (mode === 'append' && !code) { alert('请输入链路编码'); return; }
+    if (mode === 'append' && !code) { setPushHint('追加推送时，请填写链路编码。', 'error'); el('pushCode').focus(); return; }
+    if (!list.length) { setPushHint('至少选择一个接口后才能推送。', 'error'); return; }
 
     chrome.storage.local.get(['macroActions'], function(macroR) {
       var macroActions = macroR.macroActions || [];
@@ -1544,9 +1600,9 @@
               window.open(platformUrl, '_blank');
             }
           } else {
-            alert('失败: ' + (d.message || ''));
+            setPushHint(friendlyPushError({ message: d.message }), 'error');
           }
-        }).catch(function(e) { alert('失败: ' + e.message); });
+        }).catch(function(e) { setPushHint(friendlyPushError(e), 'error'); });
       } else {
         // Multiple trace groups - push each as separate chain
         var pushed = 0, failed = 0;
@@ -1596,7 +1652,7 @@
                 window.open((getConfig().FRONTEND_URL || 'http://localhost:9094') + '/chain/list', '_blank');
               }
             } else {
-              alert('全部推送失败');
+              setPushHint('本次没有推送成功，请检查链路编码、接口选择和平台状态后重试。', 'error');
             }
           }
         }

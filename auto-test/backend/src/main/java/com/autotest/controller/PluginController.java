@@ -181,7 +181,7 @@ public class PluginController {
      */
     @GetMapping("/products")
     public Result<?> getProducts(@RequestParam(required = false) Long tenantId) {
-        List<SysProduct> products = productMapper.selectList(tenantId, null, null, 0, 1000);
+        List<SysProduct> products = productMapper.selectList(tenantId, null, 1, 0, 1000);
         return Result.success(products);
     }
 

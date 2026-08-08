@@ -8,7 +8,12 @@ const routes = [
     component: () => import('../views/Login.vue'),
     meta: { public: true }
   },
-  { path: '/', redirect: '/chain/list' },
+  { path: '/', redirect: '/workbench' },
+  {
+    path: '/workbench',
+    name: 'WorkBench',
+    component: () => import('../views/WorkBench.vue')
+  },
   {
     path: '/chain/list',
     name: 'ChainList',
