@@ -8,6 +8,7 @@ import com.autotest.service.AccountService;
 import com.autotest.service.AuthService;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -23,6 +24,7 @@ import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.cookie.BasicClientCookie;
 
 import java.util.*;
+import java.net.URLEncoder;
 
 /**
  * 认证服务实现 - Phase 4: SSO认证与Token管理
@@ -75,15 +77,26 @@ public class AuthServiceImpl implements AuthService {
                         .setConnectTimeout(10000).setSocketTimeout(30000).build();
                 try (CloseableHttpClient client = HttpClients.custom()
                         .setDefaultRequestConfig(requestConfig).build()) {
-                    HttpPost post = new HttpPost(loginUrl);
-                    post.setHeader("Content-Type", "application/json");
-                    post.setEntity(new StringEntity(loginBody.toJSONString(), "UTF-8"));
-                    try (CloseableHttpResponse response = client.execute(post)) {
+                    String method = config.getString("method");
+                    org.apache.http.client.methods.HttpUriRequest request;
+                    if ("GET".equalsIgnoreCase(method)) {
+                        request = new HttpGet(loginUrl + (loginUrl.contains("?") ? "&" : "?") +
+                                formEncode(loginBody));
+                    } else {
+                        HttpPost post = new HttpPost(loginUrl);
+                        post.setHeader("Content-Type", "application/json");
+                        post.setEntity(new StringEntity(loginBody.toJSONString(), "UTF-8"));
+                        request = post;
+                    }
+                    try (CloseableHttpResponse response = client.execute(request)) {
                         String respBody = EntityUtils.toString(response.getEntity(), "UTF-8");
-                        JSONObject respJson = JSON.parseObject(respBody);
                         String tokenField = config.getString("tokenField");
                         if (tokenField == null) tokenField = "token";
-                        result.put("accessToken", respJson.getString(tokenField));
+                        requireHttpSuccess(response.getStatusLine().getStatusCode(), respBody, "密码登录");
+                        JSONObject respJson = JSON.parseObject(respBody);
+                        String accessToken = respJson.getString(tokenField);
+                        requireValue(accessToken, "密码登录响应中未找到 Token 字段: " + tokenField);
+                        result.put("accessToken", accessToken);
                         result.put("tokenType", "Bearer");
                         if (respJson.containsKey("expiresIn")) {
                             result.put("expiresIn", respJson.get("expiresIn"));
@@ -113,13 +126,17 @@ public class AuthServiceImpl implements AuthService {
                         .setDefaultRequestConfig(requestConfig).build()) {
                     HttpPost post = new HttpPost(tokenUrl);
                     post.setHeader("Content-Type", "application/x-www-form-urlencoded");
-                    String formBody = "grant_type=" + grantType
-                            + "&client_id=" + clientId
-                            + "&client_secret=" + clientSecret;
+                    Map<String, String> form = new LinkedHashMap<>();
+                    form.put("grant_type", grantType);
+                    form.put("client_id", clientId);
+                    form.put("client_secret", clientSecret);
+                    String formBody = formEncode(form);
                     post.setEntity(new StringEntity(formBody, "UTF-8"));
                     try (CloseableHttpResponse response = client.execute(post)) {
                         String respBody = EntityUtils.toString(response.getEntity(), "UTF-8");
+                        requireHttpSuccess(response.getStatusLine().getStatusCode(), respBody, "OAuth2");
                         JSONObject respJson = JSON.parseObject(respBody);
+                        requireValue(respJson.getString("access_token"), "OAuth2 响应中未返回 access_token");
                         result.put("accessToken", respJson.getString("access_token"));
                         result.put("tokenType", respJson.getString("token_type"));
                         if (respJson.containsKey("expires_in")) {
@@ -206,6 +223,10 @@ public class AuthServiceImpl implements AuthService {
                                 // 响应体不是 JSON，忽略
                             }
                         }
+                        requireHttpSuccess(response.getStatusLine().getStatusCode(), respBody, "Cookie 登录");
+                        if (cookies.isEmpty() && !result.containsKey("accessToken")) {
+                            throw new BusinessException(401, "Cookie 登录未返回 Cookie 或 Token");
+                        }
                         return result;
                     }
                 }
@@ -233,31 +254,27 @@ public class AuthServiceImpl implements AuthService {
                     HttpPost post = new HttpPost(tokenUrl);
                     post.setHeader("Content-Type", "application/x-www-form-urlencoded");
 
-                    StringBuilder formBody = new StringBuilder();
-                    formBody.append("grant_type=").append(grantType);
-                    formBody.append("&client_id=").append(clientId);
-                    if (clientSecret != null) {
-                        formBody.append("&client_secret=").append(clientSecret);
-                    }
+                    Map<String, String> form = new LinkedHashMap<>();
+                    form.put("grant_type", grantType);
+                    form.put("client_id", clientId);
+                    if (clientSecret != null) form.put("client_secret", clientSecret);
                     if ("authorization_code".equals(grantType)) {
                         // 授权码模式需要 code 参数
                         String code = config.getString("code");
                         if (code == null || code.isEmpty()) {
                             throw new BusinessException(400, "授权码模式需要提供 code 参数");
                         }
-                        formBody.append("&code=").append(code);
-                        if (redirectUri != null) {
-                            formBody.append("&redirect_uri=").append(redirectUri);
-                        }
+                        form.put("code", code);
+                        if (redirectUri != null) form.put("redirect_uri", redirectUri);
                     }
-                    if (scope != null) {
-                        formBody.append("&scope=").append(scope);
-                    }
+                    if (scope != null) form.put("scope", scope);
 
-                    post.setEntity(new StringEntity(formBody.toString(), "UTF-8"));
+                    post.setEntity(new StringEntity(formEncode(form), "UTF-8"));
                     try (CloseableHttpResponse response = client.execute(post)) {
                         String respBody = EntityUtils.toString(response.getEntity(), "UTF-8");
+                        requireHttpSuccess(response.getStatusLine().getStatusCode(), respBody, "OAuth2");
                         JSONObject respJson = JSON.parseObject(respBody);
+                        requireValue(respJson.getString("access_token"), "OAuth2 响应中未返回 access_token");
                         result.put("accessToken", respJson.getString("access_token"));
                         result.put("tokenType", respJson.getString("token_type") != null ? respJson.getString("token_type") : "Bearer");
                         if (respJson.containsKey("expires_in")) {
@@ -292,8 +309,10 @@ public class AuthServiceImpl implements AuthService {
                     // 1. 获取 TGT (Ticket Granting Ticket)
                     HttpPost post = new HttpPost(ticketUrl);
                     post.setHeader("Content-Type", "application/x-www-form-urlencoded");
-                    String formBody = "username=" + account.getUsername()
-                            + "&password=" + account.getPassword();
+                    Map<String, String> form = new LinkedHashMap<>();
+                    form.put("username", account.getUsername());
+                    form.put("password", account.getPassword());
+                    String formBody = formEncode(form);
                     post.setEntity(new StringEntity(formBody, "UTF-8"));
                     try (CloseableHttpResponse response = client.execute(post)) {
                         int statusCode = response.getStatusLine().getStatusCode();
@@ -311,9 +330,11 @@ public class AuthServiceImpl implements AuthService {
                         // 2. 用 TGT 获取 ST (Service Ticket)
                         HttpPost stPost = new HttpPost(tgtUrl);
                         stPost.setHeader("Content-Type", "application/x-www-form-urlencoded");
-                        stPost.setEntity(new StringEntity("service=" + serviceUrl, "UTF-8"));
+                        stPost.setEntity(new StringEntity(formEncode(Collections.singletonMap("service", serviceUrl)), "UTF-8"));
                         try (CloseableHttpResponse stResponse = client.execute(stPost)) {
                             String st = EntityUtils.toString(stResponse.getEntity(), "UTF-8").trim();
+                            requireHttpSuccess(stResponse.getStatusLine().getStatusCode(), st, "CAS 服务票据");
+                            requireValue(st, "CAS 未返回 Service Ticket");
                             result.put("accessToken", st);
                             result.put("tokenType", "CAS");
                             result.put("casTicket", st);
@@ -431,5 +452,28 @@ public class AuthServiceImpl implements AuthService {
             sb.append(entry.getKey()).append("=").append(entry.getValue());
         }
         return sb.toString();
+    }
+
+    private void requireHttpSuccess(int statusCode, String responseBody, String authName) {
+        if (statusCode < 200 || statusCode >= 300) {
+            String detail = responseBody == null ? "" : responseBody.substring(0, Math.min(responseBody.length(), 200));
+            throw new BusinessException(401, authName + "失败，HTTP " + statusCode + ": " + detail);
+        }
+    }
+
+    private void requireValue(String value, String message) {
+        if (value == null || value.trim().isEmpty()) {
+            throw new BusinessException(401, message);
+        }
+    }
+
+    private String formEncode(Map<String, ?> values) throws java.io.UnsupportedEncodingException {
+        StringBuilder body = new StringBuilder();
+        for (Map.Entry<String, ?> entry : values.entrySet()) {
+            if (body.length() > 0) body.append('&');
+            body.append(URLEncoder.encode(entry.getKey(), "UTF-8"));
+            body.append('=').append(URLEncoder.encode(String.valueOf(entry.getValue() == null ? "" : entry.getValue()), "UTF-8"));
+        }
+        return body.toString();
     }
 }

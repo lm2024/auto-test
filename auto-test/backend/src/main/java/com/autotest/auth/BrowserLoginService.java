@@ -7,15 +7,18 @@ import com.autotest.exception.BusinessException;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.remote.RemoteWebDriver;
 import org.openqa.selenium.support.ui.ExpectedCondition;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -61,6 +64,10 @@ public class BrowserLoginService {
     @Autowired
     private CookieSessionManager cookieSessionManager;
 
+    /** 可选远程 Selenium 地址，适合后端运行环境没有 Chrome/ChromeDriver 的部署。 */
+    @Value("${browser-login.remote-url:}")
+    private String remoteWebDriverUrl;
+
     /**
      * 通过浏览器执行登录
      *
@@ -87,9 +94,15 @@ public class BrowserLoginService {
         options.addArguments("--disable-gpu");
         options.addArguments("--window-size=1920,1080");
 
-        ChromeDriver driver = null;
+        WebDriver driver = null;
         try {
-            driver = new ChromeDriver(options);
+            if (remoteWebDriverUrl != null && !remoteWebDriverUrl.trim().isEmpty()) {
+                log.info("[BrowserLogin] 使用远程 WebDriver: {}", remoteWebDriverUrl);
+                driver = new RemoteWebDriver(new URL(remoteWebDriverUrl), options);
+            } else {
+                log.info("[BrowserLogin] 使用本地 ChromeDriver");
+                driver = new ChromeDriver(options);
+            }
             driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
 
             Map<String, Object> result = new LinkedHashMap<>();
@@ -157,7 +170,8 @@ public class BrowserLoginService {
                     String type = extractor.getString("type");
                     if ("localStorage".equals(type)) {
                         String key = extractor.getString("key");
-                        String value = (String) driver.executeScript("return localStorage.getItem('" + key + "');");
+                        String value = (String) ((JavascriptExecutor) driver)
+                                .executeScript("return localStorage.getItem(arguments[0]);", key);
                         if (value != null) {
                             result.put("accessToken", value);
                             result.put("tokenType", "Bearer");
@@ -165,7 +179,8 @@ public class BrowserLoginService {
                         }
                     } else if ("sessionStorage".equals(type)) {
                         String key = extractor.getString("key");
-                        String value = (String) driver.executeScript("return sessionStorage.getItem('" + key + "');");
+                        String value = (String) ((JavascriptExecutor) driver)
+                                .executeScript("return sessionStorage.getItem(arguments[0]);", key);
                         if (value != null) {
                             result.put("accessToken", value);
                             result.put("tokenType", "Bearer");
@@ -233,7 +248,7 @@ public class BrowserLoginService {
     /**
      * 执行预定义的操作序列
      */
-    private void executeActions(ChromeDriver driver, JSONArray actions) {
+    private void executeActions(WebDriver driver, JSONArray actions) {
         if (actions == null) return;
         for (int i = 0; i < actions.size(); i++) {
             JSONObject action = actions.getJSONObject(i);
@@ -255,11 +270,11 @@ public class BrowserLoginService {
                     WebElement elem = driver.findElement(By.cssSelector(selector));
                     elem.clear();
                     elem.sendKeys(value != null ? value : "");
-                    log.debug("[BrowserLogin] 输入: {} = {}", selector, value);
+                    log.debug("[BrowserLogin] 输入字段: {}", selector);
                 } else if ("js".equals(type)) {
                     String script = action.getString("script");
                     if (script != null) {
-                        driver.executeScript(script);
+                        ((JavascriptExecutor) driver).executeScript(script);
                         log.debug("[BrowserLogin] 执行 JS");
                     }
                 }

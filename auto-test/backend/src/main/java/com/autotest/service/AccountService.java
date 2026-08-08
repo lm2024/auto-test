@@ -25,6 +25,9 @@ public interface AccountService {
      */
     void deleteAccount(Long id);
 
+    /** 按账号编码删除临时测试账号。 */
+    void deleteAccountByCode(String accountCode);
+
     /**
      * 获取账号详情（密码自动解密）
      */

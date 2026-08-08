@@ -49,6 +49,10 @@ logging:
   level:
     com.autotest: debug
 
+# 浏览器登录测试。为空时使用本机 ChromeDriver；配置后使用远程 Selenium。
+browser-login:
+  remote-url: ${BROWSER_LOGIN_REMOTE_URL:}
+
 ai:
   base-url: http://localhost:11434/v1
   api-key: sk-placeholder

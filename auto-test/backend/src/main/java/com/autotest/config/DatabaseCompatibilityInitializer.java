@@ -21,6 +21,16 @@ public class DatabaseCompatibilityInitializer {
 
     @PostConstruct
     public void repairPluginSchema() {
+        addColumnIfMissing("test_account", "tenant_id",
+                "ALTER TABLE test_account ADD COLUMN tenant_id bigint DEFAULT NULL COMMENT '租户ID' AFTER account_code");
+        addColumnIfMissing("test_account", "product_code",
+                "ALTER TABLE test_account ADD COLUMN product_code varchar(64) DEFAULT NULL COMMENT '所属产品编码' AFTER tenant_id");
+        addColumnIfMissing("test_account", "login_type",
+                "ALTER TABLE test_account ADD COLUMN login_type varchar(32) DEFAULT 'HTTP' COMMENT '登录类型' AFTER auth_type");
+        addColumnIfMissing("test_account", "login_config",
+                "ALTER TABLE test_account ADD COLUMN login_config json COMMENT '登录详细配置' AFTER auth_config");
+        addColumnIfMissing("test_account", "login_script",
+                "ALTER TABLE test_account ADD COLUMN login_script text COMMENT '自定义登录脚本' AFTER login_config");
         addColumnIfMissing("test_chain", "product_code",
                 "ALTER TABLE test_chain ADD COLUMN product_code varchar(64) DEFAULT NULL COMMENT '所属产品编码' AFTER tenant_id");
         addColumnIfMissing("test_chain", "login_chain_code",

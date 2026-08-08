@@ -98,6 +98,7 @@ public class AccountController {
         }
 
         Map<String, Object> result = new HashMap<>();
+        String tempAccountCode = "LOGIN_TEST_" + System.currentTimeMillis();
         try {
             if ("PLAYWRIGHT".equals(loginType)) {
                 // 浏览器自动化登录
@@ -105,23 +106,34 @@ public class AccountController {
                 result.putAll(loginResult);
                 result.put("success", true);
             } else {
-                // HTTP 方式登录（PASSWORD/COOKIE/OAUTH2_CODE/CAS）
-                // 创建临时账号进行测试
-                com.autotest.model.entity.TestAccount tempAccount = new com.autotest.model.entity.TestAccount();
-                tempAccount.setUsername(username);
-                tempAccount.setPassword(password);
-                tempAccount.setAuthType(loginType);
-                tempAccount.setAuthConfig(loginConfig);
-
-                // 使用 AuthService 获取 token
-                // 由于 AuthService 需要 accountCode，这里用临时逻辑
-                com.alibaba.fastjson.JSONObject config = com.alibaba.fastjson.JSON.parseObject(loginConfig);
+                // 通过临时账号复用正式认证链路，确保向导测试和真实执行行为一致。
+                AccountCreateDTO dto = new AccountCreateDTO();
+                dto.setAccountCode(tempAccountCode);
+                dto.setAccountName("登录向导临时测试账号");
+                dto.setUsername(username);
+                dto.setPassword(password);
+                dto.setAuthType(loginType);
+                dto.setLoginType(loginType);
+                dto.setAuthConfig(loginConfig);
+                dto.setLoginConfig(loginConfig);
+                accountService.createAccount(dto);
+                Map<String, Object> loginResult = authService.getToken(tempAccountCode);
+                result.putAll(loginResult);
                 result.put("success", true);
-                result.put("message", "配置格式验证通过，请保存后在链路中测试");
             }
         } catch (Exception e) {
             result.put("success", false);
             result.put("message", e.getMessage());
+        } finally {
+            if (!"PLAYWRIGHT".equals(loginType)) {
+                try {
+                    accountService.deleteAccountByCode(tempAccountCode);
+                } catch (Exception cleanupException) {
+                    // 测试账号清理失败不能覆盖原始登录结果，但必须留痕排查。
+                    org.slf4j.LoggerFactory.getLogger(AccountController.class)
+                            .warn("[LoginWizard] 清理临时测试账号失败: accountCode={}", tempAccountCode, cleanupException);
+                }
+            }
         }
         return Result.success(result);
     }

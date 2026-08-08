@@ -109,6 +109,15 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteAccountByCode(String accountCode) {
+        TestAccount existing = accountMapper.selectByAccountCode(accountCode);
+        if (existing != null) {
+            accountMapper.deleteById(existing.getId());
+        }
+    }
+
+    @Override
     public TestAccount getAccount(Long id) {
         TestAccount account = accountMapper.selectById(id);
         if (account == null) {

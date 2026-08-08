@@ -43,11 +43,16 @@ CREATE TABLE `test_account` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '自增主键',
   `account_code` varchar(64) NOT NULL COMMENT '账号编码',
   `account_name` varchar(128) NOT NULL COMMENT '显示名称',
+  `tenant_id` bigint DEFAULT NULL COMMENT '租户ID',
+  `product_code` varchar(64) DEFAULT NULL COMMENT '所属产品编码',
   `system_name` varchar(128) DEFAULT NULL COMMENT '所属系统',
   `username` varchar(128) NOT NULL COMMENT '登录用户名',
   `password` varchar(256) NOT NULL COMMENT '登录密码（AES加密存储）',
   `auth_type` varchar(32) NOT NULL COMMENT '认证类型：SSO/PASSWORD/TOKEN/CERTIFICATE',
   `auth_config` text COMMENT '认证配置JSON',
+  `login_type` varchar(32) DEFAULT 'HTTP' COMMENT '登录类型',
+  `login_config` json COMMENT '登录详细配置',
+  `login_script` text COMMENT '自定义登录脚本',
   `status` int DEFAULT '1' COMMENT '状态：0=禁用，1=可用，2=锁定',
   `last_used_time` datetime DEFAULT NULL COMMENT '最后使用时间',
   `lock_until` datetime DEFAULT NULL COMMENT '锁定截止时间',
@@ -55,7 +60,9 @@ CREATE TABLE `test_account` (
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_account_code` (`account_code`),
-  KEY `idx_status` (`status`)
+  KEY `idx_status` (`status`),
+  KEY `idx_account_tenant` (`tenant_id`),
+  KEY `idx_account_product` (`product_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='测试账号管理表';
 
 -- =============================================

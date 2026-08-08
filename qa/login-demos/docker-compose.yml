@@ -1,0 +1,20 @@
+services:
+  password-demo:
+    build: ./password
+    ports: ["18101:8080"]
+  cookie-demo:
+    build: ./cookie
+    ports: ["18102:8080"]
+  oauth2-demo:
+    build: ./oauth2
+    ports: ["18103:8080"]
+  cas-demo:
+    build: ./cas
+    ports: ["18104:8080"]
+  browser-demo:
+    build: ./browser
+    ports: ["18105:8080"]
+  selenium-chrome:
+    image: selenium/standalone-chromium:4.21.0
+    shm_size: 2gb
+    ports: ["4444:4444"]

@@ -176,13 +176,13 @@
           <t-form-item label="用户名 *" name="username">
             <t-input v-model="verifyForm.username" />
           </t-form-item>
-          <t-form-item label="密码 *" name="password">
+          <t-form-item :label="requiresPassword ? '密码 *' : '密码（可选）'" name="password">
             <t-input v-model="verifyForm.password" type="password" />
           </t-form-item>
         </t-form>
 
         <div class="test-section">
-          <t-button theme="primary" @click="runTest" :loading="testing" :disabled="!verifyForm.username || !verifyForm.password">
+          <t-button theme="primary" @click="runTest" :loading="testing" :disabled="!canRunTest">
             {{ testing ? '测试中...' : '▶ 执行登录测试' }}
           </t-button>
 
@@ -192,9 +192,7 @@
               <span v-else>❌ 登录测试失败</span>
             </div>
             <div v-if="testResult.message" class="result-message">{{ testResult.message }}</div>
-            <div v-if="testResult.token" class="result-token">
-              提取到的 Token: {{ testResult.token.substring(0, 50) }}...
-            </div>
+            <div v-if="testResult.accessToken" class="result-token">已提取访问令牌</div>
             <div v-if="testResult.cookies" class="result-cookies">
               提取到 {{ Object.keys(testResult.cookies).length }} 个 Cookie
             </div>
@@ -213,7 +211,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { MessagePlugin } from 'tdesign-vue-next'
 import api from '../api'
@@ -259,6 +257,15 @@ const browserConfig = reactive({
 
 const verifyForm = reactive({ accountName: '', username: '', password: '' })
 
+const requiresPassword = computed(() => {
+  if (form.loginType === 'OAUTH2_CODE') return oauthConfig.grantType !== 'client_credentials'
+  return true
+})
+
+const canRunTest = computed(() => Boolean(
+  verifyForm.username.trim() && (!requiresPassword.value || verifyForm.password)
+))
+
 const buildLoginConfig = () => {
   switch (form.loginType) {
     case 'PASSWORD':
@@ -285,7 +292,27 @@ const buildLoginConfig = () => {
   }
 }
 
+const validateConfig = () => {
+  const required = {
+    PASSWORD: [httpConfig.loginUrl],
+    COOKIE: [cookieConfig.loginUrl],
+    OAUTH2_CODE: [oauthConfig.tokenUrl, oauthConfig.clientId],
+    CAS: [casConfig.casServerUrl, casConfig.serviceUrl],
+    PLAYWRIGHT: [browserConfig.loginUrl, browserConfig.usernameSelector, browserConfig.passwordSelector, browserConfig.submitSelector]
+  }[form.loginType] || []
+  if (required.some(value => !String(value || '').trim())) {
+    MessagePlugin.warning('请先填写完整的登录配置')
+    return false
+  }
+  if (form.loginType === 'PLAYWRIGHT' && !browserConfig.successSelector && !browserConfig.tokenKey) {
+    MessagePlugin.warning('浏览器登录至少需要成功标志或 Token 提取配置')
+    return false
+  }
+  return true
+}
+
 const nextStep = () => {
+  if (currentStep.value === 2 && !validateConfig()) return
   if (currentStep.value < 3) currentStep.value++
 }
 
@@ -294,6 +321,10 @@ const prevStep = () => {
 }
 
 const runTest = async () => {
+  if (!canRunTest.value) {
+    MessagePlugin.warning(requiresPassword.value ? '请输入用户名和密码' : '请输入用户名')
+    return
+  }
   testing.value = true
   testResult.value = null
   try {
