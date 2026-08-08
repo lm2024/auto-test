@@ -6,6 +6,8 @@ import java.util.List;
 
 public interface CategoryService {
     List<SysCategory> getTree(Long tenantId);
+    List<SysCategory> getChildren(Long parentId, Long tenantId);
+    List<SysCategory> search(String keyword, Long tenantId, int limit);
     SysCategory getById(Long id);
     SysCategory create(SysCategory category);
     SysCategory update(SysCategory category);

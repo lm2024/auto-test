@@ -12,6 +12,7 @@
         <result column="status" property="status"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
+        <result column="has_children" property="hasChildren"/>
     </resultMap>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
@@ -35,6 +36,25 @@
         DELETE FROM sys_category WHERE id = #{id}
     </delete>
 
+    <select id="selectDescendantIds" resultType="long">
+        WITH RECURSIVE category_descendants AS (
+            SELECT id FROM sys_category WHERE id = #{id}
+            UNION ALL
+            SELECT c.id
+            FROM sys_category c
+            INNER JOIN category_descendants d ON c.parent_id = d.id
+        )
+        SELECT id FROM category_descendants WHERE id &lt;&gt; #{id}
+    </select>
+
+    <delete id="deleteByIds">
+        DELETE FROM sys_category
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
     <delete id="deleteByParentId">
         DELETE FROM sys_category WHERE parent_id = #{parentId}
     </delete>
@@ -54,25 +74,37 @@
     </select>
 
     <select id="selectByParentId" resultMap="BaseResultMap">
-        SELECT * FROM sys_category
+        SELECT c.*,
+               EXISTS (
+                   SELECT 1 FROM sys_category child
+                   WHERE child.parent_id = c.id
+                     AND child.status = 1
+                     <if test="tenantId != null">
+                         AND (child.tenant_id = #{tenantId} OR child.tenant_id IS NULL)
+                     </if>
+               ) AS has_children
+        FROM sys_category c
         <where>
-            parent_id = #{parentId}
+            c.parent_id = #{parentId}
+            AND c.status = 1
             <if test="tenantId != null">
                 AND (tenant_id = #{tenantId} OR tenant_id IS NULL)
             </if>
         </where>
-        ORDER BY sort_order ASC, id ASC
+        ORDER BY c.sort_order ASC, c.id ASC
     </select>
 
     <select id="selectByKeyword" resultMap="BaseResultMap">
-        SELECT * FROM sys_category
+        SELECT c.*, 0 AS has_children FROM sys_category c
         <where>
-            category_name LIKE CONCAT('%', #{keyword}, '%')
+            c.category_name LIKE CONCAT(#{keyword}, '%')
+            AND c.status = 1
             <if test="tenantId != null">
                 AND (tenant_id = #{tenantId} OR tenant_id IS NULL)
             </if>
         </where>
-        ORDER BY sort_order ASC, id ASC
+        ORDER BY c.category_name ASC, c.id ASC
+        LIMIT #{limit}
     </select>
 
     <select id="countByParentId" resultType="int">

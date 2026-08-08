@@ -5,24 +5,41 @@ import com.autotest.mapper.SysCategoryMapper;
 import com.autotest.model.entity.SysCategory;
 import com.autotest.service.CategoryService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 public class CategoryServiceImpl implements CategoryService {
+
+    private static final Logger log = LoggerFactory.getLogger(CategoryServiceImpl.class);
 
     @Autowired
     private SysCategoryMapper categoryMapper;
 
     @Override
     public List<SysCategory> getTree(Long tenantId) {
-        List<SysCategory> all = categoryMapper.selectAll(tenantId);
-        return buildTree(all, 0L);
+        return getChildren(0L, tenantId);
+    }
+
+    @Override
+    public List<SysCategory> getChildren(Long parentId, Long tenantId) {
+        Long actualParentId = parentId == null ? 0L : parentId;
+        List<SysCategory> result = categoryMapper.selectByParentId(actualParentId, tenantId);
+        log.info("[CATEGORY_DIAG] mapper children result: parentId={}, tenantId={}, size={}, nodes={}",
+                actualParentId, tenantId, result.size(), summarize(result));
+        return result;
+    }
+
+    @Override
+    public List<SysCategory> search(String keyword, Long tenantId, int limit) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return getTree(tenantId);
+        }
+        return categoryMapper.selectByKeyword(keyword.trim(), tenantId, Math.min(Math.max(limit, 1), 200));
     }
 
     @Override
@@ -39,8 +56,13 @@ public class CategoryServiceImpl implements CategoryService {
     public SysCategory create(SysCategory category) {
         if (category.getParentId() == null) category.setParentId(0L);
         if (category.getStatus() == null) category.setStatus(1);
+        log.info("[CATEGORY_DIAG] service insert: parentId={}, name={}, sortOrder={}, status={}",
+                category.getParentId(), category.getCategoryName(), category.getSortOrder(), category.getStatus());
         categoryMapper.insert(category);
-        return categoryMapper.selectById(category.getId());
+        SysCategory created = categoryMapper.selectById(category.getId());
+        log.info("[CATEGORY_DIAG] service inserted: generatedId={}, persisted={}",
+                category.getId(), created == null ? null : created.getCategoryName());
+        return created;
     }
 
     @Override
@@ -61,8 +83,10 @@ public class CategoryServiceImpl implements CategoryService {
         if (existing == null) {
             throw new BusinessException(404, "分类不存在");
         }
-        // Recursively delete children
-        deleteChildren(id);
+        List<Long> descendantIds = categoryMapper.selectDescendantIds(id);
+        for (int from = 0; from < descendantIds.size(); from += 500) {
+            categoryMapper.deleteByIds(descendantIds.subList(from, Math.min(from + 500, descendantIds.size())));
+        }
         categoryMapper.deleteById(id);
     }
 
@@ -72,18 +96,17 @@ public class CategoryServiceImpl implements CategoryService {
         categoryMapper.updateSort(id, sortOrder);
     }
 
-    private void deleteChildren(Long parentId) {
-        List<SysCategory> children = categoryMapper.selectByParentId(parentId, null);
-        for (SysCategory child : children) {
-            deleteChildren(child.getId());
-            categoryMapper.deleteById(child.getId());
+    private String summarize(List<SysCategory> categories) {
+        StringBuilder builder = new StringBuilder("[");
+        for (int i = 0; i < categories.size() && i < 20; i++) {
+            if (i > 0) builder.append(", ");
+            SysCategory item = categories.get(i);
+            builder.append("{id=").append(item.getId())
+                    .append(",name=").append(item.getCategoryName())
+                    .append(",hasChildren=").append(item.isHasChildren()).append('}');
         }
+        if (categories.size() > 20) builder.append(", ...");
+        return builder.append(']').toString();
     }
 
-    private List<SysCategory> buildTree(List<SysCategory> all, Long parentId) {
-        return all.stream()
-                .filter(c -> parentId.equals(c.getParentId()))
-                .peek(c -> c.setChildren(buildTree(all, c.getId())))
-                .collect(Collectors.toList());
-    }
 }

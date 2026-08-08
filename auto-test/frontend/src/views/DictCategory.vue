@@ -159,14 +159,21 @@ const submitForm = async () => {
     MessagePlugin.warning('请输入分类名称')
     return
   }
+  console.info('[CATEGORY_DIAG] create/update submit', {
+    isEdit: isEdit.value,
+    editId: editId.value,
+    form: { ...form.value }
+  })
   if (isEdit.value) {
     await api.put('/category/update?id=' + editId.value, form.value)
     MessagePlugin.success('编辑成功')
   } else {
-    await api.post('/category/create', form.value)
+    const res = await api.post('/category/create', form.value)
+    console.info('[CATEGORY_DIAG] create frontend response', res)
     MessagePlugin.success('创建成功')
   }
   dialogVisible.value = false
+  console.info('[CATEGORY_DIAG] refresh tree after submit')
   loadTree()
 }
 

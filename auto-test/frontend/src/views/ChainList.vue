@@ -180,20 +180,16 @@ const chainColumns = [
 const categoryTreeMap = ref({})      // id -> name
 const categoryPathMap = ref({})      // id -> "父 / 子"
 const loadCategoryTreeMap = async () => {
+  // Keep only the small root set for lightweight labels; never materialize the full graph.
   try {
-    const res = await api.get('/category/tree')
-    const flat = {}
-    const pathMap = {}
-    const walk = (nodes, parentPath) => (nodes || []).forEach(n => {
-      flat[n.id] = n.categoryName
-      const full = parentPath ? parentPath + ' / ' + n.categoryName : n.categoryName
-      pathMap[n.id] = full
-      if (n.children) walk(n.children, full)
-    })
-    walk(res.data || [], '')
-    categoryTreeMap.value = flat
-    categoryPathMap.value = pathMap
-  } catch (e) { /* ignore */ }
+    const res = await api.get('/category/tree', { params: { parentId: 0 } })
+    const roots = res.data || []
+    categoryTreeMap.value = Object.fromEntries(roots.map(n => [n.id, n.categoryName]))
+    categoryPathMap.value = { ...categoryTreeMap.value }
+  } catch (e) {
+    categoryTreeMap.value = {}
+    categoryPathMap.value = {}
+  }
 }
 const getCategoryPath = (id) => {
   if (id == null) return '-'

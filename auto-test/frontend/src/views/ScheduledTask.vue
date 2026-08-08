@@ -63,14 +63,7 @@
           <t-input v-model="form.chainCode" placeholder="如 CHAIN_694346B3B0" />
         </t-form-item>
         <t-form-item label="选择分类" name="categoryId" v-if="form.taskType === 'CATEGORY'">
-          <t-cascader
-            v-model="form.categoryId"
-            :options="categoryTree"
-            :keys="{ value: 'id', label: 'categoryName', children: 'children' }"
-            placeholder="选择要执行的分类"
-            style="width:100%"
-            clearable
-          />
+          <CategoryTree mode="select" v-model="form.categoryId" />
           <div class="form-hint">选择分类后，该分类下的所有链路将被执行</div>
         </t-form-item>
         <t-form-item label="Cron表达式" name="cronExpression">
@@ -95,9 +88,9 @@ import { MessagePlugin, DialogPlugin } from 'tdesign-vue-next'
 import { EditIcon, DeleteIcon, PlayCircleIcon } from 'tdesign-icons-vue-next'
 import api from '../api'
 import ActionMenu from '../components/ActionMenu.vue'
+import CategoryTree from '../components/CategoryTree.vue'
 
 const tasks = ref([])
-const categoryTree = ref([])
 const pageNo = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
@@ -200,12 +193,6 @@ const onTaskCommand = (cmd, row) => {
 
 onMounted(async () => {
   loadTasks()
-  try {
-    const res = await api.get('/category/tree')
-    categoryTree.value = res.data || []
-  } catch (e) {
-    console.error('Failed to load category tree', e)
-  }
 })
 </script>
 

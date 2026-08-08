@@ -1,16 +1,15 @@
 <template>
   <div class="category-tree-wrapper">
-    <div class="tree-toolbar" v-if="mode === 'manage'">
+    <div class="tree-toolbar">
       <t-input
         v-model="searchKeyword"
-        placeholder="搜索分类..."
+        placeholder="搜索分类（按名称前缀）..."
         clearable
         size="small"
-        @change="filterTree"
       >
         <template #prefix-icon><SearchIcon /></template>
       </t-input>
-      <t-button size="small" theme="primary" @click="$emit('addRoot')" style="margin-top:8px">
+      <t-button v-if="mode === 'manage'" size="small" theme="primary" @click="$emit('addRoot')" style="margin-top:8px">
         新增根分类
       </t-button>
     </div>
@@ -18,7 +17,10 @@
       ref="treeRef"
       :data="filteredTree"
       :keys="treeKeys"
-      :expand-all="true"
+      :lazy="!isSearching"
+      :load="loadChildren"
+      height="460"
+      :scroll="{ type: 'virtual', rowHeight: 36, threshold: 100 }"
       :expand-on-click-node="false"
       :draggable="mode === 'manage'"
       :allow-drop="allowDrop"
@@ -47,7 +49,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { SearchIcon } from 'tdesign-icons-vue-next'
 import api from '../api'
 
@@ -62,6 +64,8 @@ const emit = defineEmits(['update:modelValue', 'addRoot', 'addChild', 'edit', 'd
 const treeRef = ref(null)
 const treeData = ref([])
 const searchKeyword = ref('')
+const isSearching = ref(false)
+let searchTimer = null
 
 // t-tree 通过 keys 映射字段名（等价于 el-tree 的 node-key + props）
 const treeKeys = { value: 'id', label: 'categoryName', children: 'children' }
@@ -70,26 +74,54 @@ const treeKeys = { value: 'id', label: 'categoryName', children: 'children' }
 const activedKeys = ref([])
 const checkedKeys = ref([])
 
-const filteredTree = computed(() => {
-  if (!searchKeyword.value) return treeData.value
-  return filterTreeNodes(treeData.value, searchKeyword.value.toLowerCase())
-})
-
-function filterTreeNodes(nodes, keyword) {
-  return nodes.reduce((acc, node) => {
-    const children = node.children ? filterTreeNodes(node.children, keyword) : []
-    if (node.categoryName.toLowerCase().includes(keyword) || children.length > 0) {
-      acc.push({ ...node, children })
-    }
-    return acc
-  }, [])
-}
+const filteredTree = computed(() => treeData.value)
 
 const loadTree = async () => {
+  console.info('[CATEGORY_DIAG] loadTree request', { parentId: 0, isSearching: isSearching.value })
   try {
-    const res = await api.get('/category/tree')
-    treeData.value = res.data || []
+    const res = await api.get('/category/tree', { params: { parentId: 0 } })
+    treeData.value = (res.data || []).map(normalizeNode)
+    isSearching.value = false
+    console.info('[CATEGORY_DIAG] loadTree response', {
+      size: treeData.value.length,
+      nodes: treeData.value.map(n => ({ id: n.id, parentId: n.parentId, name: n.categoryName, hasChildren: n.hasChildren, children: n.children }))
+    })
   } catch (e) {
+    console.error('[CATEGORY_DIAG] loadTree failed', e)
+    treeData.value = []
+  }
+}
+
+const normalizeNode = (node) => ({
+  ...node,
+  // TDesign uses `children: true` as the lazy-load marker.
+  children: node.hasChildren ? true : []
+})
+
+const loadChildren = async (node) => {
+  console.info('[CATEGORY_DIAG] loadChildren request', { parentId: node.data.id, parentName: node.data.categoryName })
+  const res = await api.get('/category/tree', { params: { parentId: node.data.id } })
+  const children = (res.data || []).map(normalizeNode)
+  console.info('[CATEGORY_DIAG] loadChildren response', {
+    parentId: node.data.id,
+    size: children.length,
+    nodes: children.map(n => ({ id: n.id, parentId: n.parentId, name: n.categoryName, hasChildren: n.hasChildren, children: n.children }))
+  })
+  return children
+}
+
+const searchTree = async () => {
+  const keyword = searchKeyword.value.trim()
+  if (!keyword) {
+    await loadTree()
+    return
+  }
+  try {
+    const res = await api.get('/category/tree', { params: { keyword, limit: 100 } })
+    treeData.value = (res.data || []).map(node => ({ ...node, children: [] }))
+    isSearching.value = true
+  } catch (e) {
+    console.error('[CATEGORY_DIAG] search failed', e)
     treeData.value = []
   }
 }
@@ -130,8 +162,6 @@ const handleDrop = async ({ dragNode }) => {
   }
 }
 
-const filterTree = () => {}
-
 const applyModelValue = () => {
   const val = props.modelValue
   if (props.multiple) {
@@ -142,11 +172,17 @@ const applyModelValue = () => {
 }
 
 watch(() => props.modelValue, applyModelValue)
+watch(searchKeyword, () => {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(searchTree, 250)
+})
 
 onMounted(async () => {
   await loadTree()
   applyModelValue()
 })
+
+onBeforeUnmount(() => clearTimeout(searchTimer))
 
 defineExpose({ loadTree })
 </script>

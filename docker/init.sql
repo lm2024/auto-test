@@ -80,13 +80,19 @@ CREATE TABLE `test_chain` (
   `priority` int DEFAULT '2' COMMENT '优先级：0=P0核心回归，1=P1常规回归，2=P2低频验证',
   `category_id` bigint DEFAULT NULL COMMENT '树形分类ID',
   `tenant_id` bigint DEFAULT NULL COMMENT '租户ID',
+  `product_code` varchar(64) DEFAULT NULL COMMENT '所属产品编码',
+  `login_chain_code` varchar(64) DEFAULT NULL COMMENT '前置登录链路编码',
+  `login_timeout` int DEFAULT '30000' COMMENT '登录超时(ms)',
+  `data_pool_code` varchar(64) DEFAULT NULL COMMENT '绑定的数据池编码',
+  `param_mode` varchar(16) DEFAULT 'NONE' COMMENT '参数模式',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_chain_code` (`chain_code`),
   KEY `idx_chain_name` (`chain_name`),
   KEY `idx_execute_mode` (`execute_mode`),
   KEY `idx_create_time` (`create_time`),
   KEY `idx_category_id` (`category_id`),
-  KEY `idx_tenant_id` (`tenant_id`)
+  KEY `idx_tenant_id` (`tenant_id`),
+  KEY `idx_product_code` (`product_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='测试链路表';
 
 -- =============================================
@@ -300,6 +306,8 @@ CREATE TABLE `sys_category` (
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
   KEY `idx_parent_id` (`parent_id`),
+  KEY `idx_category_tree` (`tenant_id`, `parent_id`, `status`, `sort_order`, `id`),
+  KEY `idx_category_name_prefix` (`category_name`),
   KEY `idx_tenant_id` (`tenant_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='树形分类表';
 

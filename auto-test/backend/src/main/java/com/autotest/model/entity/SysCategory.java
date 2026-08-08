@@ -15,6 +15,8 @@ public class SysCategory {
     private Date updateTime;
 
     private List<SysCategory> children;
+    /** 是否存在可展示的子节点，供前端懒加载使用。 */
+    private boolean hasChildren;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -36,4 +38,6 @@ public class SysCategory {
     public void setUpdateTime(Date updateTime) { this.updateTime = updateTime; }
     public List<SysCategory> getChildren() { return children; }
     public void setChildren(List<SysCategory> children) { this.children = children; }
+    public boolean isHasChildren() { return hasChildren; }
+    public void setHasChildren(boolean hasChildren) { this.hasChildren = hasChildren; }
 }

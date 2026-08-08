@@ -106,10 +106,22 @@
                 AND priority = #{priority}
             </if>
             <if test="categoryIds != null and categoryIds.size() > 0">
-                AND category_id IN
-                <foreach collection="categoryIds" item="item" open="(" close=")" separator=",">
-                    #{item}
-                </foreach>
+                AND category_id IN (
+                    WITH RECURSIVE category_scope AS (
+                        SELECT id FROM sys_category
+                        WHERE id IN
+                        <foreach collection="categoryIds" item="item" open="(" close=")" separator=",">
+                            #{item}
+                        </foreach>
+                        AND status = 1
+                        UNION ALL
+                        SELECT child.id
+                        FROM sys_category child
+                        INNER JOIN category_scope parent ON child.parent_id = parent.id
+                        WHERE child.status = 1
+                    )
+                    SELECT id FROM category_scope
+                )
             </if>
         </where>
         ORDER BY create_time DESC
@@ -141,10 +153,22 @@
                 AND priority = #{priority}
             </if>
             <if test="categoryIds != null and categoryIds.size() > 0">
-                AND category_id IN
-                <foreach collection="categoryIds" item="item" open="(" close=")" separator=",">
-                    #{item}
-                </foreach>
+                AND category_id IN (
+                    WITH RECURSIVE category_scope AS (
+                        SELECT id FROM sys_category
+                        WHERE id IN
+                        <foreach collection="categoryIds" item="item" open="(" close=")" separator=",">
+                            #{item}
+                        </foreach>
+                        AND status = 1
+                        UNION ALL
+                        SELECT child.id
+                        FROM sys_category child
+                        INNER JOIN category_scope parent ON child.parent_id = parent.id
+                        WHERE child.status = 1
+                    )
+                    SELECT id FROM category_scope
+                )
             </if>
         </where>
     </select>

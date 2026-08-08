@@ -4,6 +4,8 @@ import com.autotest.model.entity.SysCategory;
 import com.autotest.model.vo.Result;
 import com.autotest.service.CategoryService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,13 +15,24 @@ import java.util.Map;
 @RequestMapping("/api/category")
 public class CategoryController {
 
+    private static final Logger log = LoggerFactory.getLogger(CategoryController.class);
+
     @Autowired
     private CategoryService categoryService;
 
     @GetMapping("/tree")
-    public Result<?> getTree() {
-        List<SysCategory> tree = categoryService.getTree(null);
-        return Result.success(tree);
+    public Result<?> getTree(@RequestParam(required = false) Long parentId,
+                             @RequestParam(required = false) String keyword,
+                             @RequestParam(defaultValue = "100") Integer limit) {
+        log.info("[CATEGORY_DIAG] tree request: parentId={}, keyword={}, limit={}", parentId, keyword, limit);
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            List<SysCategory> result = categoryService.search(keyword, null, limit);
+            log.info("[CATEGORY_DIAG] tree search response: size={}, nodes={}", result.size(), summarize(result));
+            return Result.success(result);
+        }
+        List<SysCategory> result = categoryService.getChildren(parentId == null ? 0L : parentId, null);
+        log.info("[CATEGORY_DIAG] tree children response: size={}, nodes={}", result.size(), summarize(result));
+        return Result.success(result);
     }
 
     @GetMapping("/detail")
@@ -30,6 +43,7 @@ public class CategoryController {
 
     @PostMapping("/create")
     public Result<?> createCategory(@RequestBody Map<String, Object> params) {
+        log.info("[CATEGORY_DIAG] create request: params={}", params);
         SysCategory category = new SysCategory();
         category.setParentId(params.get("parentId") != null ? Long.valueOf(params.get("parentId").toString()) : 0L);
         category.setCategoryName((String) params.get("categoryName"));
@@ -37,7 +51,26 @@ public class CategoryController {
         category.setIcon((String) params.get("icon"));
         category.setStatus(params.get("status") != null ? Integer.valueOf(params.get("status").toString()) : 1);
         SysCategory created = categoryService.create(category);
+        log.info("[CATEGORY_DIAG] create response: id={}, parentId={}, name={}, status={}",
+                created.getId(), created.getParentId(), created.getCategoryName(), created.getStatus());
         return Result.success(created);
+    }
+
+    private String summarize(List<SysCategory> categories) {
+        StringBuilder builder = new StringBuilder("[");
+        for (int i = 0; i < categories.size(); i++) {
+            if (i > 0) builder.append(", ");
+            SysCategory item = categories.get(i);
+            builder.append("{id=").append(item.getId())
+                    .append(",parentId=").append(item.getParentId())
+                    .append(",name=").append(item.getCategoryName())
+                    .append(",hasChildren=").append(item.isHasChildren()).append('}');
+            if (i >= 19 && categories.size() > 20) {
+                builder.append(", ...");
+                break;
+            }
+        }
+        return builder.append(']').toString();
     }
 
     @PutMapping("/update")

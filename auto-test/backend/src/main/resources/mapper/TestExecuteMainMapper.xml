@@ -106,7 +106,17 @@
                 AND e.start_time &lt;= #{endTime}
             </if>
             <if test="categoryId != null">
-                AND c.category_id = #{categoryId}
+                AND c.category_id IN (
+                    WITH RECURSIVE category_scope AS (
+                        SELECT id FROM sys_category WHERE id = #{categoryId} AND status = 1
+                        UNION ALL
+                        SELECT child.id
+                        FROM sys_category child
+                        INNER JOIN category_scope parent ON child.parent_id = parent.id
+                        WHERE child.status = 1
+                    )
+                    SELECT id FROM category_scope
+                )
             </if>
         </where>
         ORDER BY e.start_time DESC
@@ -130,7 +140,17 @@
                 AND e.start_time &lt;= #{endTime}
             </if>
             <if test="categoryId != null">
-                AND c.category_id = #{categoryId}
+                AND c.category_id IN (
+                    WITH RECURSIVE category_scope AS (
+                        SELECT id FROM sys_category WHERE id = #{categoryId} AND status = 1
+                        UNION ALL
+                        SELECT child.id
+                        FROM sys_category child
+                        INNER JOIN category_scope parent ON child.parent_id = parent.id
+                        WHERE child.status = 1
+                    )
+                    SELECT id FROM category_scope
+                )
             </if>
         </where>
     </select>
