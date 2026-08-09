@@ -21,6 +21,8 @@ public class CallGraphVO {
     private Boolean graphTruncated = Boolean.FALSE;
     private List<DimensionStat> statsByMethod = new ArrayList<DimensionStat>();
     private List<DimensionStat> statsByChain = new ArrayList<DimensionStat>();
+    private String viewMode;
+    private String relationNotice;
 
     public List<NodeItem> getNodes() { return nodes; }
     public void setNodes(List<NodeItem> nodes) { this.nodes = nodes; }
@@ -48,6 +50,10 @@ public class CallGraphVO {
     public void setStatsByMethod(List<DimensionStat> statsByMethod) { this.statsByMethod = statsByMethod; }
     public List<DimensionStat> getStatsByChain() { return statsByChain; }
     public void setStatsByChain(List<DimensionStat> statsByChain) { this.statsByChain = statsByChain; }
+    public String getViewMode() { return viewMode; }
+    public void setViewMode(String viewMode) { this.viewMode = viewMode; }
+    public String getRelationNotice() { return relationNotice; }
+    public void setRelationNotice(String relationNotice) { this.relationNotice = relationNotice; }
 
     /**
      * 图节点：中心节点 SUT 或某个目标系统
@@ -57,6 +63,9 @@ public class CallGraphVO {
         private String name;
         private String scope;
         private String category;
+        private String nodeType;
+        private String relationSource;
+        private Integer count;
 
         public NodeItem() {
         }
@@ -76,6 +85,12 @@ public class CallGraphVO {
         public void setScope(String scope) { this.scope = scope; }
         public String getCategory() { return category; }
         public void setCategory(String category) { this.category = category; }
+        public String getNodeType() { return nodeType; }
+        public void setNodeType(String nodeType) { this.nodeType = nodeType; }
+        public String getRelationSource() { return relationSource; }
+        public void setRelationSource(String relationSource) { this.relationSource = relationSource; }
+        public Integer getCount() { return count; }
+        public void setCount(Integer count) { this.count = count; }
     }
 
     /**
@@ -85,6 +100,10 @@ public class CallGraphVO {
         private String source;
         private String target;
         private Integer count;
+        private String relationType;
+        private String relationSource;
+        private String chainCode;
+        private String method;
 
         public EdgeItem() {
         }
@@ -101,6 +120,14 @@ public class CallGraphVO {
         public void setTarget(String target) { this.target = target; }
         public Integer getCount() { return count; }
         public void setCount(Integer count) { this.count = count; }
+        public String getRelationType() { return relationType; }
+        public void setRelationType(String relationType) { this.relationType = relationType; }
+        public String getRelationSource() { return relationSource; }
+        public void setRelationSource(String relationSource) { this.relationSource = relationSource; }
+        public String getChainCode() { return chainCode; }
+        public void setChainCode(String chainCode) { this.chainCode = chainCode; }
+        public String getMethod() { return method; }
+        public void setMethod(String method) { this.method = method; }
     }
 
     /**

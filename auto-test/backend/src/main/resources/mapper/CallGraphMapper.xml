@@ -11,6 +11,9 @@
         <result column="target_system" property="targetSystem"/>
         <result column="category" property="category"/>
         <result column="node_type" property="nodeType"/>
+        <result column="node_id" property="nodeId"/>
+        <result column="node_code" property="nodeCode"/>
+        <result column="graph_data" property="graphData"/>
     </resultMap>
 
     <select id="selectCallRows" resultMap="CallGraphRowMap">
@@ -22,7 +25,10 @@
             n.interface_scope AS interface_scope,
             n.target_system AS target_system,
             r.category AS category,
-            n.node_type AS node_type
+            n.node_type AS node_type,
+            n.node_id AS node_id,
+            n.node_code AS node_code,
+            c.graph_data AS graph_data
         FROM test_node_config n
         LEFT JOIN test_chain c ON c.chain_code = n.chain_code
         LEFT JOIN sys_system_registry r ON r.system_code = n.target_system
@@ -33,7 +39,8 @@
 
     <select id="selectGraphRows" resultMap="CallGraphRowMap">
         SELECT n.chain_code, c.chain_name, n.request_url, n.request_method,
-               n.interface_scope, n.target_system, r.category, n.node_type
+               n.interface_scope, n.target_system, r.category, n.node_type,
+               n.node_id, n.node_code, c.graph_data
         FROM test_node_config n
         LEFT JOIN test_chain c ON c.chain_code = n.chain_code
         LEFT JOIN sys_system_registry r ON r.system_code = n.target_system

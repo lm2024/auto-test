@@ -13,5 +13,6 @@ public interface CallGraphService {
     CallGraphVO buildCallGraph(String chainCode);
 
     CallGraphVO buildCallGraph(String chainCode, String keyword, String scope, String method,
-                               String category, Integer pageNo, Integer pageSize, Integer maxNodes);
+                               String category, Integer pageNo, Integer pageSize, Integer maxNodes,
+                               String viewMode);
 }

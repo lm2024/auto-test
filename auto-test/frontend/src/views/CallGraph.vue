@@ -53,7 +53,8 @@
 
     <section v-if="activeView === 'network'" class="network-layout">
       <div class="panel graph-panel">
-        <div class="panel-head"><div><h2>调用网络</h2><p>点击节点或连线查看详情，拖拽、缩放和切换布局均不会重新查询数据</p></div><div class="graph-actions"><t-select v-model="layoutMode" size="small" style="width:120px"><t-option v-for="item in layoutOptions" :key="item.value" :label="item.label" :value="item.value" /></t-select><span v-if="graphData.graphTruncated" class="warning-text">Top {{ maxNodes }}</span></div></div>
+        <div class="panel-head"><div><h2>{{ graphModeLabel }}</h2><p>有向边表示链路顺序；点击节点或连线查看明细。图形只渲染受控样本，明细继续分页。</p></div><div class="graph-actions"><t-select v-model="viewMode" size="small" style="width:150px"><t-option v-for="item in graphModes" :key="item.value" :label="item.label" :value="item.value" /></t-select><t-select v-model="layoutMode" size="small" style="width:120px"><t-option v-for="item in layoutOptions" :key="item.value" :label="item.label" :value="item.value" /></t-select><span v-if="graphData.graphTruncated" class="warning-text">Top {{ maxNodes }}</span></div></div>
+        <div v-if="graphData.relationNotice" class="relation-notice">{{ graphData.relationNotice }}</div>
         <div class="graph-wrap"><div ref="graphRef" class="graph-canvas"></div><t-empty v-if="!graphData.nodes.length" description="当前条件暂无调用关系" class="graph-empty" /></div>
       </div>
       <div class="side-stack">
@@ -80,6 +81,8 @@
         <div class="graph-detail-title"><span class="detail-dot" :style="{ background: scopeColor(selectedGraphItem.data.scope) }"></span><strong>{{ selectedGraphItem.data.name }}</strong></div>
         <t-descriptions :column="1" bordered size="small">
           <t-descriptions-item label="系统编码">{{ selectedGraphItem.data.id }}</t-descriptions-item>
+          <t-descriptions-item label="节点类型">{{ selectedGraphItem.data.nodeType || 'SYSTEM' }}</t-descriptions-item>
+          <t-descriptions-item label="关系来源">{{ selectedGraphItem.data.relationSource || 'OVERVIEW' }}</t-descriptions-item>
           <t-descriptions-item label="网络范围">{{ scopeLabel(selectedGraphItem.data.scope) }}</t-descriptions-item>
           <t-descriptions-item label="系统分类">{{ selectedGraphItem.data.category || '未分类' }}</t-descriptions-item>
           <t-descriptions-item label="调用次数">{{ selectedGraphItem.data.count || nodeCallCount(selectedGraphItem.data.id) }}</t-descriptions-item>
@@ -90,6 +93,8 @@
         <t-descriptions :column="1" bordered size="small">
           <t-descriptions-item label="来源">{{ selectedGraphItem.data.source }}</t-descriptions-item>
           <t-descriptions-item label="目标">{{ selectedGraphItem.data.target }}</t-descriptions-item>
+          <t-descriptions-item label="关系类型">{{ selectedGraphItem.data.relationType || 'OVERVIEW' }}</t-descriptions-item>
+          <t-descriptions-item label="所属链路">{{ selectedGraphItem.data.chainCode || '全部链路' }}</t-descriptions-item>
           <t-descriptions-item label="调用次数">{{ selectedGraphItem.data.count || 0 }}</t-descriptions-item>
         </t-descriptions>
         <div class="drawer-actions"><t-button theme="primary" @click="inspectEdge">查看调用明细</t-button></div>
@@ -99,7 +104,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { RefreshIcon } from 'tdesign-icons-vue-next'
 import * as echarts from 'echarts'
@@ -109,9 +114,11 @@ import callgraphApi from '../api/callgraph'
 import chainApi from '../api/chain'
 import registryApi from '../api/registry'
 
-const views = [{ value: 'network', label: '调用网络' }, { value: 'system', label: '系统排行' }, { value: 'chain', label: '链路排行' }, { value: 'method', label: '方法分布' }]
+const views = [{ value: 'network', label: '链路分析' }, { value: 'system', label: '系统排行' }, { value: 'chain', label: '链路排行' }, { value: 'method', label: '方法分布' }]
+const graphModes = [{ value: 'CHAIN_FLOW', label: '链路流转（推荐）' }, { value: 'SYSTEM_FLOW', label: '系统流转' }, { value: 'TARGET_OVERVIEW', label: '目标系统概览' }]
 const methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
 const activeView = ref('network')
+const viewMode = ref('CHAIN_FLOW')
 const maxNodes = ref(200)
 const filters = reactive({ keyword: '', chainCode: '', scope: '', method: '', category: '' })
 const chains = ref([])
@@ -122,9 +129,10 @@ const scopeRef = ref(null)
 const methodRef = ref(null)
 const scopeAltRef = ref(null)
 const primaryRef = ref(null)
-const graphData = reactive({ nodes: [], edges: [], statsByModule: [], statsByScope: [], statsByMethod: [], statsByChain: [], byDomain: [], detail: [], totalRows: 0, totalSystems: 0, pageNo: 1, pageSize: 20, graphTruncated: false })
-const layoutMode = ref('force')
-const layoutOptions = [{ value: 'force', label: '力导向' }, { value: 'circular', label: '环形布局' }, { value: 'radial', label: '径向布局' }]
+const graphData = reactive({ nodes: [], edges: [], statsByModule: [], statsByScope: [], statsByMethod: [], statsByChain: [], byDomain: [], detail: [], totalRows: 0, totalSystems: 0, pageNo: 1, pageSize: 20, graphTruncated: false, relationNotice: '' })
+const layoutMode = ref('dagre')
+const layoutOptions = [{ value: 'dagre', label: '分层流程' }, { value: 'force', label: '力导向' }, { value: 'circular', label: '环形布局' }, { value: 'radial', label: '径向布局' }]
+const graphModeLabel = computed(() => graphModes.find(item => item.value === viewMode.value)?.label || '调用链路')
 const graphDrawerVisible = ref(false)
 const selectedGraphItem = ref(null)
 let g6 = null
@@ -195,7 +203,7 @@ async function loadOptions() {
 async function load() {
   loading.value = true
   try {
-    const res = await callgraphApi.getData({ ...filters, pageNo: graphData.pageNo, pageSize: graphData.pageSize, maxNodes: maxNodes.value })
+    const res = await callgraphApi.getData({ ...filters, pageNo: graphData.pageNo, pageSize: graphData.pageSize, maxNodes: maxNodes.value, viewMode: viewMode.value })
     if (res.code !== 200) throw new Error(res.message || '加载失败')
     Object.assign(graphData, res.data || {})
     await nextTick()
@@ -211,12 +219,13 @@ function renderGraph() {
   if (!graphRef.value) return
   if (g6) g6.destroy()
   const colors = themeColors()
-  const nodes = graphData.nodes.map(node => ({ id: node.id, data: node, style: { labelText: node.name, labelFill: colors.text, labelFontSize: 12, fill: node.scope === 'SUT' ? colors.primary : colors.surface, stroke: node.scope === 'SUT' ? colors.primary : scopeColor(node.scope), lineWidth: 2, size: node.scope === 'SUT' ? 56 : 42 } }))
-  const edges = graphData.edges.map(edge => ({ source: edge.source, target: edge.target, data: edge, style: { endArrow: true, stroke: colors.borderStrong, lineWidth: Math.max(1, Math.min(5, (edge.count || 1) / 5)) } }))
+  const nodes = graphData.nodes.map(node => ({ id: node.id, data: node, style: { labelText: node.name, labelFill: colors.text, labelFontSize: node.nodeType === 'INTERFACE' ? 11 : 12, fill: node.nodeType === 'CHAIN' ? colors.primary : colors.surface, stroke: node.nodeType === 'CHAIN' ? colors.primary : scopeColor(node.scope), lineWidth: 2, size: node.nodeType === 'CHAIN' ? 52 : node.nodeType === 'INTERFACE' ? 44 : 42 } }))
+  const edges = graphData.edges.map(edge => ({ id: `edge-${edge.source}-${edge.target}`, source: edge.source, target: edge.target, data: edge, style: { endArrow: true, stroke: edge.relationType === 'INFERRED' ? colors.external : colors.borderStrong, lineDash: edge.relationType === 'INFERRED' ? [6, 4] : undefined, lineWidth: Math.max(1, Math.min(5, (edge.count || 1) / 5)) } }))
   const layouts = {
     force: { type: 'force', linkDistance: 130, preventOverlap: true, nodeSize: 44 },
     circular: { type: 'circular', radius: 190 },
-    radial: { type: 'radial', unitRadius: 120, preventOverlap: true }
+    radial: { type: 'radial', unitRadius: 120, preventOverlap: true },
+    dagre: { type: 'dagre', rankdir: 'LR', nodesep: 32, ranksep: 90 }
   }
   g6 = new Graph({ container: graphRef.value, autoResize: true, data: { nodes, edges }, layout: layouts[layoutMode.value], node: { type: 'circle' }, edge: { type: 'line' }, behaviors: ['drag-canvas', 'zoom-canvas', 'drag-element'] })
   g6.on('node:click', event => {
@@ -282,6 +291,7 @@ function resize() { charts.forEach(chart => chart.resize()) }
 function refreshTheme() { nextTick(() => { renderGraph(); renderCharts() }) }
 let themeObserver = null
 watch(activeView, () => nextTick(() => { if (activeView.value === 'network') renderGraph(); renderCharts() }))
+watch(viewMode, () => { if (activeView.value === 'network') { graphData.pageNo = 1; load() } })
 watch(layoutMode, () => nextTick(renderGraph))
 watch(maxNodes, load)
 onMounted(async () => { await loadOptions(); await load(); window.addEventListener('resize', resize); themeObserver = new MutationObserver(refreshTheme); themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] }) })
@@ -315,6 +325,7 @@ onBeforeUnmount(() => { window.removeEventListener('resize', resize); themeObser
 .panel-head p, .panel-head span { margin: 4px 0 0; color: var(--text-mute); font-size: 12px; }
 .warning-text { color: var(--danger) !important; white-space: nowrap; }
 .graph-wrap { position: relative; height: 520px; border-radius: 6px; background: var(--surface-2); }
+.relation-notice { margin: -2px 0 10px; padding: 8px 10px; border-left: 3px solid var(--primary); background: var(--surface-2); color: var(--text-secondary); font-size: 12px; line-height: 18px; }
 .graph-actions { display:flex; align-items:center; gap:10px; }
 .graph-canvas { width: 100%; height: 100%; }
 .graph-empty { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; }

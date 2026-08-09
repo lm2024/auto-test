@@ -27,9 +27,10 @@ public class CallGraphController {
                                     @RequestParam(required = false) String category,
                                     @RequestParam(required = false, defaultValue = "1") Integer pageNo,
                                     @RequestParam(required = false, defaultValue = "20") Integer pageSize,
-                                    @RequestParam(required = false, defaultValue = "200") Integer maxNodes) {
+                                    @RequestParam(required = false, defaultValue = "200") Integer maxNodes,
+                                    @RequestParam(required = false, defaultValue = "TARGET_OVERVIEW") String viewMode) {
         try {
-            return Result.success(callGraphService.buildCallGraph(chainCode, keyword, scope, method, category, pageNo, pageSize, maxNodes));
+            return Result.success(callGraphService.buildCallGraph(chainCode, keyword, scope, method, category, pageNo, pageSize, maxNodes, viewMode));
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }

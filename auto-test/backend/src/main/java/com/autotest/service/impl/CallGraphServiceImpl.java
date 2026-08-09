@@ -8,6 +8,7 @@ import com.autotest.model.vo.ClassifyResult;
 import com.autotest.service.CallGraphService;
 import com.autotest.service.SystemRegistryService;
 import com.autotest.util.InterfaceClassifier;
+import com.autotest.util.GraphDataBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -16,9 +17,11 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
- * 系统调用关系图服务实现：以被测系统 SUT 为中心，聚合各链路节点指向的外部/内部系统。
+ * 系统调用关系图服务实现：同时支持链路拓扑、系统流转和目标系统概览。
  * 节点未落库分类（interface_scope 为空）时现场调用 InterfaceClassifier 补齐。
  */
 @Service
@@ -40,12 +43,13 @@ public class CallGraphServiceImpl implements CallGraphService {
 
     @Override
     public CallGraphVO buildCallGraph(String chainCode) {
-        return buildCallGraph(chainCode, null, null, null, null, 1, 20, 200);
+        return buildCallGraph(chainCode, null, null, null, null, 1, 20, 200, "TARGET_OVERVIEW");
     }
 
     @Override
     public CallGraphVO buildCallGraph(String chainCode, String keyword, String scope, String method,
-                                      String category, Integer pageNo, Integer pageSize, Integer maxNodes) {
+                                      String category, Integer pageNo, Integer pageSize, Integer maxNodes,
+                                      String viewMode) {
         int safePageNo = pageNo == null || pageNo < 1 ? 1 : pageNo;
         int safePageSize = pageSize == null || pageSize < 1 ? 20 : Math.min(pageSize, 100);
         int safeMaxNodes = maxNodes == null || maxNodes < 20 ? 200 : Math.min(maxNodes, 500);
@@ -53,9 +57,16 @@ public class CallGraphServiceImpl implements CallGraphService {
         String normalizedMethod = isBlank(method) ? null : method.trim().toUpperCase();
         String normalizedKeyword = isBlank(keyword) ? null : keyword.trim();
         String normalizedCategory = isBlank(category) ? null : category.trim();
+        String normalizedView = isBlank(viewMode) ? "TARGET_OVERVIEW" : viewMode.trim().toUpperCase();
 
         CallGraphVO vo = new CallGraphVO();
-        vo.getNodes().add(new CallGraphVO.NodeItem(SUT_ID, SUT_NAME, "SUT", null));
+        vo.setViewMode(normalizedView);
+        if ("TARGET_OVERVIEW".equals(normalizedView)) {
+            CallGraphVO.NodeItem sut = new CallGraphVO.NodeItem(SUT_ID, SUT_NAME, "SUT", null);
+            sut.setNodeType("SUT");
+            sut.setRelationSource("OVERVIEW");
+            vo.getNodes().add(sut);
+        }
 
         int totalRows = callGraphMapper.countCallRows(chainCode, normalizedKeyword, normalizedScope, normalizedMethod, normalizedCategory);
         List<CallGraphRow> detailRows = callGraphMapper.selectCallRows(
@@ -125,7 +136,12 @@ public class CallGraphServiceImpl implements CallGraphService {
             }
         }
 
-        fillNodesAndEdges(vo, systemMap);
+        if ("CHAIN_FLOW".equals(normalizedView) || "SYSTEM_FLOW".equals(normalizedView)) {
+            fillFlowGraph(vo, graphRows, normalizedView, safeMaxNodes);
+        } else {
+            fillNodesAndEdges(vo, systemMap);
+            vo.setRelationNotice("目标系统概览：展示聚合关系，不代表完整调用顺序。请选择“链路流转”查看编排拓扑。");
+        }
         fillByDomain(vo, domainMap);
         fillDetail(vo, detailMap);
         return vo;
@@ -193,9 +209,112 @@ public class CallGraphServiceImpl implements CallGraphService {
             }
         });
         for (SystemAgg agg : systems) {
-            vo.getNodes().add(new CallGraphVO.NodeItem(agg.nodeId, agg.name, agg.scope, agg.category));
-            vo.getEdges().add(new CallGraphVO.EdgeItem(SUT_ID, agg.nodeId, Integer.valueOf(agg.count)));
+            CallGraphVO.NodeItem node = new CallGraphVO.NodeItem(agg.nodeId, agg.name, agg.scope, agg.category);
+            node.setNodeType("SYSTEM");
+            node.setRelationSource("OVERVIEW");
+            node.setCount(Integer.valueOf(agg.count));
+            vo.getNodes().add(node);
+            CallGraphVO.EdgeItem edge = new CallGraphVO.EdgeItem(SUT_ID, agg.nodeId, Integer.valueOf(agg.count));
+            edge.setRelationType("OVERVIEW");
+            edge.setRelationSource("OVERVIEW");
+            vo.getEdges().add(edge);
         }
+    }
+
+    /**
+     * 构建真正可读的有向链路：链路 -> 接口节点 -> 目标系统。
+     * 画布边是 CONFIGURED；没有画布边时才按节点顺序生成 INFERRED，并在响应中明确告知用户。
+     */
+    private void fillFlowGraph(CallGraphVO vo, List<CallGraphRow> rows, String viewMode, int maxNodes) {
+        Map<String, CallGraphRow> nodeRows = new LinkedHashMap<String, CallGraphRow>();
+        Map<String, List<CallGraphRow>> chains = new LinkedHashMap<String, List<CallGraphRow>>();
+        for (CallGraphRow row : rows) {
+            if (isBlank(row.getNodeCode())) {
+                continue;
+            }
+            String key = row.getChainCode() + "|" + row.getNodeCode();
+            nodeRows.put(key, row);
+            List<CallGraphRow> chainRows = chains.get(row.getChainCode());
+            if (chainRows == null) {
+                chainRows = new ArrayList<CallGraphRow>();
+                chains.put(row.getChainCode(), chainRows);
+            }
+            chainRows.add(row);
+        }
+        int nodeLimit = Math.max(20, maxNodes);
+        Set<String> edgeKeys = new HashSet<String>();
+        for (Map.Entry<String, List<CallGraphRow>> entry : chains.entrySet()) {
+            List<CallGraphRow> chainRows = entry.getValue();
+            if (chainRows.isEmpty()) continue;
+            CallGraphRow first = chainRows.get(0);
+            String chainId = "CHAIN_" + sanitize(first.getChainCode());
+            if (!"SYSTEM_FLOW".equals(viewMode)) {
+                addNode(vo, chainId, first.getChainName(), "CHAIN", "UNKNOWN", null, "CONFIGURED", chainRows.size(), nodeLimit);
+            }
+            Map<String, String> systemIds = new LinkedHashMap<String, String>();
+            for (CallGraphRow row : chainRows) {
+                String requestId = "REQ_" + sanitize(row.getChainCode()) + "_" + sanitize(row.getNodeCode());
+                if (vo.getNodes().size() >= nodeLimit) break;
+                String host = interfaceClassifier.extractHost(row.getRequestUrl());
+                ClassifyResult classified = interfaceClassifier.classify(row.getRequestUrl());
+                String scopeName = isBlank(row.getInterfaceScope()) ? classified.getScope() : row.getInterfaceScope().trim().toUpperCase();
+                String systemName = resolveSystemName(row, classified, host);
+                String systemCode = classified == null ? null : classified.getSystemCode();
+                String systemId = "SYS_" + (isBlank(systemCode) ? sanitize(host != null ? host : systemName) : systemCode);
+                if (!"SYSTEM_FLOW".equals(viewMode)) {
+                    addNode(vo, requestId, row.getNodeCode() + " · " + (isBlank(row.getRequestMethod()) ? "GET" : row.getRequestMethod().toUpperCase()), "INTERFACE", scopeName, row.getCategory(), "CONFIGURED", 1, nodeLimit);
+                    addEdge(vo, chainId, requestId, 1, "CONFIGURED", row);
+                }
+                if (!"SYSTEM_FLOW".equals(viewMode)) {
+                    addNode(vo, systemId, systemName, "SYSTEM", scopeName, row.getCategory(), "CONFIGURED", 1, nodeLimit);
+                    addEdge(vo, requestId, systemId, 1, "CONFIGURED", row);
+                } else {
+                    addNode(vo, systemId, systemName, "SYSTEM", scopeName, row.getCategory(), "CONFIGURED", 1, nodeLimit);
+                }
+                systemIds.put(row.getNodeCode(), systemId);
+            }
+            List<String[]> configuredEdges = GraphDataBuilder.extractEdges(first.getGraphData());
+            if (!configuredEdges.isEmpty()) {
+                for (String[] edge : configuredEdges) {
+                    CallGraphRow from = nodeRows.get(entry.getKey() + "|" + edge[0]);
+                    CallGraphRow to = nodeRows.get(entry.getKey() + "|" + edge[1]);
+                    if (from == null || to == null) continue;
+                    String fromId = "SYSTEM_FLOW".equals(viewMode) ? systemIds.get(from.getNodeCode()) : "REQ_" + sanitize(from.getChainCode()) + "_" + sanitize(from.getNodeCode());
+                    String toId = "SYSTEM_FLOW".equals(viewMode) ? systemIds.get(to.getNodeCode()) : "REQ_" + sanitize(to.getChainCode()) + "_" + sanitize(to.getNodeCode());
+                    if (fromId != null && toId != null && !fromId.equals(toId) && edgeKeys.add(fromId + "->" + toId)) addEdge(vo, fromId, toId, 1, "CONFIGURED", to);
+                }
+            } else {
+                vo.setRelationNotice("部分链路没有保存画布连线，已按节点顺序标记为推断关系；推断关系不能等同于真实 Trace。");
+                for (int i = 1; i < chainRows.size(); i++) {
+                    CallGraphRow from = chainRows.get(i - 1), to = chainRows.get(i);
+                    String fromId = "SYSTEM_FLOW".equals(viewMode) ? systemIds.get(from.getNodeCode()) : "REQ_" + sanitize(from.getChainCode()) + "_" + sanitize(from.getNodeCode());
+                    String toId = "SYSTEM_FLOW".equals(viewMode) ? systemIds.get(to.getNodeCode()) : "REQ_" + sanitize(to.getChainCode()) + "_" + sanitize(to.getNodeCode());
+                    if (fromId != null && toId != null && edgeKeys.add(fromId + "->" + toId)) addEdge(vo, fromId, toId, 1, "INFERRED", to);
+                }
+            }
+        }
+        if (vo.getRelationNotice() == null) vo.setRelationNotice("链路关系来自测试链路画布配置，不代表运行时真实 Trace。");
+    }
+
+    private void addNode(CallGraphVO vo, String id, String name, String type, String scope, String category,
+                         String source, int count, int limit) {
+        for (CallGraphVO.NodeItem item : vo.getNodes()) if (id.equals(item.getId())) return;
+        if (vo.getNodes().size() >= limit) return;
+        CallGraphVO.NodeItem node = new CallGraphVO.NodeItem(id, name, scope, category);
+        node.setNodeType(type);
+        node.setRelationSource(source);
+        node.setCount(Integer.valueOf(count));
+        vo.getNodes().add(node);
+    }
+
+    private void addEdge(CallGraphVO vo, String source, String target, int count, String type, CallGraphRow row) {
+        for (CallGraphVO.EdgeItem item : vo.getEdges()) if (source.equals(item.getSource()) && target.equals(item.getTarget())) return;
+        CallGraphVO.EdgeItem edge = new CallGraphVO.EdgeItem(source, target, Integer.valueOf(count));
+        edge.setRelationType(type);
+        edge.setRelationSource(type);
+        edge.setChainCode(row == null ? null : row.getChainCode());
+        edge.setMethod(row == null ? null : row.getRequestMethod());
+        vo.getEdges().add(edge);
     }
 
     private void fillStatsByModule(CallGraphVO vo, Map<String, SystemAgg> systemMap) {
