@@ -114,10 +114,46 @@ const detailColumns = [
   { colKey: 'count', title: '次数', width: 70 }
 ]
 const SCOPE_LABEL = { INTERNAL: '内网', EXTERNAL: '外网', UNKNOWN: '未知' }
-const SCOPE_COLORS = { INTERNAL: '#2f7cf6', EXTERNAL: '#e98a35', UNKNOWN: '#9aa4b2' }
+const THEME_FALLBACKS = {
+  text: '#1d2129',
+  textSecondary: '#4e5969',
+  textMute: '#86909c',
+  surface: '#ffffff',
+  surface2: '#f8fafc',
+  border: '#e5e6eb',
+  borderStrong: '#b8c1cc',
+  primary: '#0f766e',
+  internal: '#2f7cf6',
+  external: '#e98a35',
+  unknown: '#9aa4b2',
+  danger: '#d54941'
+}
+function cssVar(name, fallback) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback
+}
+function themeColors() {
+  const dark = document.documentElement.classList.contains('dark') || document.documentElement.classList.contains('t-theme-dark')
+  return {
+    text: cssVar('--text', THEME_FALLBACKS.text),
+    textSecondary: cssVar('--text-secondary', THEME_FALLBACKS.textSecondary),
+    textMute: cssVar('--text-mute', THEME_FALLBACKS.textMute),
+    surface: cssVar('--surface', THEME_FALLBACKS.surface),
+    surface2: cssVar('--surface-2', THEME_FALLBACKS.surface2),
+    border: cssVar('--border-strong', THEME_FALLBACKS.border),
+    borderStrong: cssVar('--border-strong', THEME_FALLBACKS.borderStrong),
+    primary: cssVar('--primary', THEME_FALLBACKS.primary),
+    internal: dark ? '#70a7ff' : THEME_FALLBACKS.internal,
+    external: dark ? '#f2ad67' : THEME_FALLBACKS.external,
+    unknown: cssVar('--text-mute', THEME_FALLBACKS.unknown),
+    danger: cssVar('--danger', THEME_FALLBACKS.danger)
+  }
+}
 function scopeLabel(scope) { return SCOPE_LABEL[scope] || scope || '未知' }
 function scopeTheme(scope) { return scope === 'EXTERNAL' ? 'warning' : scope === 'INTERNAL' ? 'primary' : 'default' }
-function scopeColor(scope) { return SCOPE_COLORS[scope] || SCOPE_COLORS.UNKNOWN }
+function scopeColor(scope) {
+  const colors = themeColors()
+  return { INTERNAL: colors.internal, EXTERNAL: colors.external, UNKNOWN: colors.unknown }[scope] || colors.unknown
+}
 function formatNumber(value) { return Number(value || 0).toLocaleString('zh-CN') }
 function percent(value, total) { return total ? `${Math.round(value / total * 100)}%` : '0%' }
 function scopeCount(scope) { return (graphData.statsByScope || []).find(item => item.scope === scope)?.count || 0 }
@@ -149,62 +185,76 @@ function onPageChange(info) { graphData.pageNo = info.current; graphData.pageSiz
 function renderGraph() {
   if (!graphRef.value) return
   if (g6) g6.destroy()
-  const nodes = graphData.nodes.map(node => ({ id: node.id, data: node, style: { labelText: node.name, labelFill: '#1d2129', labelFontSize: 12, fill: node.scope === 'SUT' ? '#0f766e' : '#fff', stroke: node.scope === 'SUT' ? '#0f766e' : scopeColor(node.scope), lineWidth: 2, size: node.scope === 'SUT' ? 56 : 42 } }))
-  const edges = graphData.edges.map(edge => ({ source: edge.source, target: edge.target, data: edge, style: { endArrow: true, stroke: '#b8c1cc', lineWidth: Math.max(1, Math.min(5, (edge.count || 1) / 5)) } }))
+  const colors = themeColors()
+  const nodes = graphData.nodes.map(node => ({ id: node.id, data: node, style: { labelText: node.name, labelFill: colors.text, labelFontSize: 12, fill: node.scope === 'SUT' ? colors.primary : colors.surface, stroke: node.scope === 'SUT' ? colors.primary : scopeColor(node.scope), lineWidth: 2, size: node.scope === 'SUT' ? 56 : 42 } }))
+  const edges = graphData.edges.map(edge => ({ source: edge.source, target: edge.target, data: edge, style: { endArrow: true, stroke: colors.borderStrong, lineWidth: Math.max(1, Math.min(5, (edge.count || 1) / 5)) } }))
   g6 = new Graph({ container: graphRef.value, autoResize: true, data: { nodes, edges }, layout: { type: 'force', linkDistance: 130, preventOverlap: true, nodeSize: 44 }, node: { type: 'circle' }, edge: { type: 'line' }, behaviors: ['drag-canvas', 'zoom-canvas', 'drag-element'] })
   g6.render()
 }
-function chartBase() { return { animation: false, tooltip: { trigger: 'axis' }, grid: { left: 48, right: 20, top: 20, bottom: 32, containLabel: true } } }
+function chartBase() {
+  const colors = themeColors()
+  return {
+    animation: false,
+    textStyle: { color: colors.textSecondary },
+    tooltip: { trigger: 'axis', backgroundColor: colors.surface, borderColor: colors.border, textStyle: { color: colors.text } },
+    grid: { left: 48, right: 20, top: 20, bottom: 32, containLabel: true },
+    xAxis: { axisLine: { lineStyle: { color: colors.border } }, axisLabel: { color: colors.textMute }, splitLine: { lineStyle: { color: colors.border } } },
+    yAxis: { axisLine: { lineStyle: { color: colors.border } }, axisLabel: { color: colors.textMute }, splitLine: { lineStyle: { color: colors.border } } }
+  }
+}
 function renderCharts() {
   charts.forEach(chart => chart.dispose()); charts = []
+  const colors = themeColors()
   const pieRefs = [scopeRef.value, scopeAltRef.value].filter(Boolean)
-  pieRefs.forEach(el => { const chart = echarts.init(el); chart.setOption({ animation: false, tooltip: { trigger: 'item' }, series: [{ type: 'pie', radius: ['42%', '68%'], data: graphData.statsByScope.map(item => ({ name: scopeLabel(item.scope), value: item.count, itemStyle: { color: scopeColor(item.scope) } })) }] }); charts.push(chart) })
-  if (methodRef.value) { const chart = echarts.init(methodRef.value); chart.setOption({ ...chartBase(), xAxis: { type: 'category', data: graphData.statsByMethod.map(item => item.name) }, yAxis: { type: 'value' }, series: [{ type: 'bar', data: graphData.statsByMethod.map(item => item.count), itemStyle: { color: '#0f766e' }, barMaxWidth: 28 }] }); charts.push(chart) }
+  pieRefs.forEach(el => { const chart = echarts.init(el); chart.setOption({ animation: false, textStyle: { color: colors.textSecondary }, tooltip: { trigger: 'item', backgroundColor: colors.surface, borderColor: colors.border, textStyle: { color: colors.text } }, series: [{ type: 'pie', radius: ['42%', '68%'], label: { color: colors.textSecondary }, data: graphData.statsByScope.map(item => ({ name: scopeLabel(item.scope), value: item.count, itemStyle: { color: scopeColor(item.scope) } })) }] }); charts.push(chart) })
+  if (methodRef.value) { const chart = echarts.init(methodRef.value); chart.setOption({ ...chartBase(), xAxis: { type: 'category', data: graphData.statsByMethod.map(item => item.name) }, yAxis: { type: 'value' }, series: [{ type: 'bar', data: graphData.statsByMethod.map(item => item.count), itemStyle: { color: colors.primary }, barMaxWidth: 28 }] }); charts.push(chart) }
   if (primaryRef.value) {
     const source = activeView.value === 'system' ? graphData.statsByModule : activeView.value === 'chain' ? graphData.statsByChain : graphData.statsByMethod
-    const chart = echarts.init(primaryRef.value); chart.setOption({ ...chartBase(), tooltip: { trigger: 'axis' }, xAxis: { type: 'value' }, yAxis: { type: 'category', data: source.slice(0, 30).map(item => item.name).reverse(), axisLabel: { width: 150, overflow: 'truncate' } }, series: [{ type: 'bar', data: source.slice(0, 30).map(item => item.count).reverse(), itemStyle: { color: '#2f7cf6' }, barMaxWidth: 20 }] }); charts.push(chart)
+    const chart = echarts.init(primaryRef.value); chart.setOption({ ...chartBase(), tooltip: { trigger: 'axis', backgroundColor: colors.surface, borderColor: colors.border, textStyle: { color: colors.text } }, xAxis: { type: 'value' }, yAxis: { type: 'category', data: source.slice(0, 30).map(item => item.name).reverse(), axisLabel: { width: 150, overflow: 'truncate' } }, series: [{ type: 'bar', data: source.slice(0, 30).map(item => item.count).reverse(), itemStyle: { color: colors.internal }, barMaxWidth: 20 }] }); charts.push(chart)
   }
 }
 function resize() { charts.forEach(chart => chart.resize()) }
+function refreshTheme() { nextTick(() => { renderGraph(); renderCharts() }) }
+let themeObserver = null
 watch(activeView, () => nextTick(renderCharts))
 watch(maxNodes, load)
-onMounted(async () => { await loadOptions(); await load(); window.addEventListener('resize', resize) })
-onBeforeUnmount(() => { window.removeEventListener('resize', resize); if (g6) g6.destroy(); charts.forEach(chart => chart.dispose()) })
+onMounted(async () => { await loadOptions(); await load(); window.addEventListener('resize', resize); themeObserver = new MutationObserver(refreshTheme); themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] }) })
+onBeforeUnmount(() => { window.removeEventListener('resize', resize); themeObserver?.disconnect(); if (g6) g6.destroy(); charts.forEach(chart => chart.dispose()) })
 </script>
 
 <style scoped>
 .call-graph-page { padding: 20px 24px 32px; }
-.filter-panel, .panel { border: 1px solid #e5e6eb; border-radius: 8px; background: #fff; }
+.filter-panel, .panel { border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); }
 .filter-panel { margin-top: 18px; padding: 16px; }
 .filter-main { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .keyword-input { width: min(360px, 100%); }
 .filter-select { width: 150px; }
 .method-select { width: 120px; }
-.filter-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; color: #86909c; font-size: 12px; }
+.filter-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; color: var(--text-mute); font-size: 12px; }
 .graph-limit { display: flex; align-items: center; gap: 8px; }
 .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
-.metric-card { padding: 16px; border: 1px solid #e5e6eb; border-radius: 8px; background: #fff; }
-.metric-card span, .metric-card small { display: block; color: #86909c; font-size: 12px; }
-.metric-card strong { display: block; margin: 8px 0 4px; color: #1d2129; font-size: 24px; line-height: 30px; }
-.view-tabs { display: flex; gap: 4px; margin: 20px 0 12px; border-bottom: 1px solid #e5e6eb; }
-.view-tabs button { border: 0; border-bottom: 2px solid transparent; background: transparent; padding: 10px 14px; color: #86909c; cursor: pointer; }
-.view-tabs button.active { border-bottom-color: #0f766e; color: #0f766e; font-weight: 600; }
+.metric-card { padding: 16px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); }
+.metric-card span, .metric-card small { display: block; color: var(--text-mute); font-size: 12px; }
+.metric-card strong { display: block; margin: 8px 0 4px; color: var(--text); font-size: 24px; line-height: 30px; }
+.view-tabs { display: flex; gap: 4px; margin: 20px 0 12px; border-bottom: 1px solid var(--border-strong); }
+.view-tabs button { border: 0; border-bottom: 2px solid transparent; background: transparent; padding: 10px 14px; color: var(--text-secondary); cursor: pointer; }
+.view-tabs button.active { border-bottom-color: var(--primary); color: var(--primary); font-weight: 600; }
 .network-layout, .analysis-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(280px, .8fr); gap: 16px; }
 .analysis-grid { grid-template-columns: minmax(0, 1fr) 360px; }
 .side-stack { display: grid; gap: 16px; }
 .panel { padding: 16px; min-width: 0; }
 .panel-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 12px; }
 .panel-head.compact { align-items: center; }
-.panel-head h2 { margin: 0; color: #1d2129; font-size: 15px; }
-.panel-head p, .panel-head span { margin: 4px 0 0; color: #86909c; font-size: 12px; }
-.warning-text { color: #d54941 !important; white-space: nowrap; }
-.graph-wrap { position: relative; height: 520px; border-radius: 6px; background: #f8fafc; }
+.panel-head h2 { margin: 0; color: var(--text); font-size: 15px; }
+.panel-head p, .panel-head span { margin: 4px 0 0; color: var(--text-mute); font-size: 12px; }
+.warning-text { color: var(--danger) !important; white-space: nowrap; }
+.graph-wrap { position: relative; height: 520px; border-radius: 6px; background: var(--surface-2); }
 .graph-canvas { width: 100%; height: 100%; }
 .graph-empty { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; }
 .chart { width: 100%; height: 190px; }
 .primary-chart { width: 100%; height: 520px; }
 .detail-panel { margin-top: 16px; }
-.detail-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; color: #86909c; font-size: 12px; }
+.detail-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; color: var(--text-mute); font-size: 12px; }
 @media (max-width: 1000px) { .metric-grid { grid-template-columns: repeat(2, 1fr); } .network-layout, .analysis-grid { grid-template-columns: 1fr; } }
 @media (max-width: 640px) { .call-graph-page { padding: 14px; } .metric-grid { grid-template-columns: 1fr 1fr; } .filter-foot { align-items: flex-start; flex-direction: column; gap: 10px; } .filter-select, .method-select { flex: 1 1 140px; } .graph-wrap, .primary-chart { height: 420px; } }
 </style>
