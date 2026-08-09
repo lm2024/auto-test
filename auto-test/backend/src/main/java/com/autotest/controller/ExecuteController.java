@@ -12,6 +12,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @RestController
 @RequestMapping("/api/execute")
@@ -54,18 +56,33 @@ public class ExecuteController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String startTime,
             @RequestParam(required = false) String endTime,
-            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) String categoryId,
             @RequestParam(defaultValue = "1") int pageNo,
             @RequestParam(defaultValue = "10") int pageSize) {
+        List<Long> categoryIds = parseCategoryIds(categoryId);
         List<ExecuteMainVO> records = executeService.listExecuteRecords(
-                chainCode, status, startTime, endTime, categoryId, pageNo, pageSize);
-        int total = executeService.countExecuteRecords(chainCode, status, startTime, endTime, categoryId);
+                chainCode, status, startTime, endTime, categoryIds, pageNo, pageSize);
+        int total = executeService.countExecuteRecords(chainCode, status, startTime, endTime, categoryIds);
         Map<String, Object> data = new HashMap<>();
         data.put("list", records);
         data.put("total", total);
         data.put("pageNo", pageNo);
         data.put("pageSize", pageSize);
         return Result.success(data);
+    }
+
+    private List<Long> parseCategoryIds(String csv) {
+        if (csv == null || csv.trim().isEmpty()) return new ArrayList<>();
+        try {
+            return Stream.of(csv.split(","))
+                    .map(String::trim)
+                    .filter(value -> !value.isEmpty())
+                    .map(Long::valueOf)
+                    .distinct()
+                    .collect(Collectors.toList());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("分类参数格式不正确");
+        }
     }
 
     @GetMapping("/plan")

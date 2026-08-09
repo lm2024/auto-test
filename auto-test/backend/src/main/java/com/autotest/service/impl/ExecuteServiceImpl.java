@@ -872,7 +872,7 @@ public class ExecuteServiceImpl implements ExecuteService {
     @Override
     public List<ExecuteMainVO> listExecuteRecords(String chainCode, String status,
                                                    String startTime, String endTime,
-                                                   Long categoryId, int pageNo, int pageSize) {
+                                                   List<Long> categoryIds, int pageNo, int pageSize) {
         Date start = null, end = null;
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         try {
@@ -884,8 +884,8 @@ public class ExecuteServiceImpl implements ExecuteService {
 
         int offset = (pageNo - 1) * pageSize;
         List<TestExecuteMain> records;
-        if (categoryId != null) {
-            records = executeMainMapper.selectListByCategory(chainCode, status, start, end, categoryId, offset, pageSize);
+        if (categoryIds != null && !categoryIds.isEmpty()) {
+            records = executeMainMapper.selectListByCategory(chainCode, status, start, end, categoryIds, offset, pageSize);
         } else {
             records = executeMainMapper.selectList(chainCode, status, start, end, offset, pageSize);
         }
@@ -893,7 +893,7 @@ public class ExecuteServiceImpl implements ExecuteService {
     }
 
     @Override
-    public int countExecuteRecords(String chainCode, String status, String startTime, String endTime, Long categoryId) {
+    public int countExecuteRecords(String chainCode, String status, String startTime, String endTime, List<Long> categoryIds) {
         Date start = null, end = null;
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         try {
@@ -902,8 +902,8 @@ public class ExecuteServiceImpl implements ExecuteService {
         } catch (Exception e) {
             // Ignore parse errors
         }
-        if (categoryId != null) {
-            return executeMainMapper.countListByCategory(chainCode, status, start, end, categoryId);
+        if (categoryIds != null && !categoryIds.isEmpty()) {
+            return executeMainMapper.countListByCategory(chainCode, status, start, end, categoryIds);
         }
         return executeMainMapper.countList(chainCode, status, start, end);
     }

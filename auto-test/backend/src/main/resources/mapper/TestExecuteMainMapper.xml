@@ -52,10 +52,12 @@
     </select>
 
     <select id="selectList" resultMap="BaseResultMap">
-        SELECT * FROM test_execute_main
+        SELECT e.* FROM test_execute_main e
+        LEFT JOIN test_chain c ON e.chain_code = c.chain_code
         <where>
             <if test="chainCode != null and chainCode != ''">
-                AND chain_code = #{chainCode}
+                AND (e.chain_code LIKE CONCAT('%', #{chainCode}, '%')
+                    OR c.chain_name LIKE CONCAT('%', #{chainCode}, '%'))
             </if>
             <if test="status != null and status != ''">
                 AND status = #{status}
@@ -72,10 +74,12 @@
     </select>
 
     <select id="countList" resultType="int">
-        SELECT COUNT(*) FROM test_execute_main
+        SELECT COUNT(*) FROM test_execute_main e
+        LEFT JOIN test_chain c ON e.chain_code = c.chain_code
         <where>
             <if test="chainCode != null and chainCode != ''">
-                AND chain_code = #{chainCode}
+                AND (e.chain_code LIKE CONCAT('%', #{chainCode}, '%')
+                    OR c.chain_name LIKE CONCAT('%', #{chainCode}, '%'))
             </if>
             <if test="status != null and status != ''">
                 AND status = #{status}
@@ -94,7 +98,8 @@
         INNER JOIN test_chain c ON e.chain_code = c.chain_code
         <where>
             <if test="chainCode != null and chainCode != ''">
-                AND e.chain_code = #{chainCode}
+                AND (e.chain_code LIKE CONCAT('%', #{chainCode}, '%')
+                    OR c.chain_name LIKE CONCAT('%', #{chainCode}, '%'))
             </if>
             <if test="status != null and status != ''">
                 AND e.status = #{status}
@@ -105,10 +110,15 @@
             <if test="endTime != null">
                 AND e.start_time &lt;= #{endTime}
             </if>
-            <if test="categoryId != null">
+            <if test="categoryIds != null and categoryIds.size() > 0">
                 AND c.category_id IN (
                     WITH RECURSIVE category_scope AS (
-                        SELECT id FROM sys_category WHERE id = #{categoryId} AND status = 1
+                        SELECT id FROM sys_category
+                        WHERE id IN
+                        <foreach collection="categoryIds" item="item" open="(" close=")" separator=",">
+                            #{item}
+                        </foreach>
+                        AND status = 1
                         UNION ALL
                         SELECT child.id
                         FROM sys_category child
@@ -128,7 +138,8 @@
         INNER JOIN test_chain c ON e.chain_code = c.chain_code
         <where>
             <if test="chainCode != null and chainCode != ''">
-                AND e.chain_code = #{chainCode}
+                AND (e.chain_code LIKE CONCAT('%', #{chainCode}, '%')
+                    OR c.chain_name LIKE CONCAT('%', #{chainCode}, '%'))
             </if>
             <if test="status != null and status != ''">
                 AND e.status = #{status}
@@ -139,10 +150,15 @@
             <if test="endTime != null">
                 AND e.start_time &lt;= #{endTime}
             </if>
-            <if test="categoryId != null">
+            <if test="categoryIds != null and categoryIds.size() > 0">
                 AND c.category_id IN (
                     WITH RECURSIVE category_scope AS (
-                        SELECT id FROM sys_category WHERE id = #{categoryId} AND status = 1
+                        SELECT id FROM sys_category
+                        WHERE id IN
+                        <foreach collection="categoryIds" item="item" open="(" close=")" separator=",">
+                            #{item}
+                        </foreach>
+                        AND status = 1
                         UNION ALL
                         SELECT child.id
                         FROM sys_category child

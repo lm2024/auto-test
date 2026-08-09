@@ -8,7 +8,7 @@
       </template>
 
       <div class="filter-bar">
-        <t-input v-model="filter.chainCode" placeholder="链路编码" clearable style="width:200px" />
+        <t-input v-model="filter.chainCode" placeholder="搜索链路编码或名称" clearable style="width:220px" @enter="search" />
         <t-select v-model="filter.status" placeholder="执行状态" clearable style="width:120px;margin-left:10px">
           <t-option label="运行中" value="RUNNING" />
           <t-option label="成功" value="SUCCESS" />
@@ -16,15 +16,16 @@
         </t-select>
         <t-date-range-picker v-model="dateRange" separator="至"
           :placeholder="['开始日期', '结束日期']" clearable style="margin-left:10px" />
-        <t-popup trigger="click" placement="bottom-left" :overlay-inner-style="{ width: '300px' }">
+        <t-popup trigger="click" placement="bottom-left" :overlay-inner-style="{ width: '320px' }">
           <t-button theme="default" variant="outline" style="margin-left:10px">
-            {{ filter.categoryId ? '已选分类' : '选择分类' }}
+            {{ filter.categoryIds.length ? `已选分类 ${filter.categoryIds.length} 项` : '选择分类（可多选）' }}
           </t-button>
           <template #content>
-            <CategoryTree mode="select" v-model="filter.categoryId" />
+            <CategoryTree mode="select" multiple v-model="filter.categoryIds" />
           </template>
         </t-popup>
-        <t-button theme="primary" style="margin-left:10px" @click="loadRecords">查询</t-button>
+        <t-button theme="primary" :loading="loading" style="margin-left:10px" @click="search">查询</t-button>
+        <t-button variant="text" @click="resetFilters">重置</t-button>
       </div>
 
       <t-table
@@ -33,6 +34,7 @@
         row-key="executionId"
         bordered
         stripe
+        :loading="loading"
         style="margin-top:15px"
       >
         <template #status="{ row }">
@@ -71,6 +73,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { BrowseIcon } from 'tdesign-icons-vue-next'
+import { MessagePlugin } from 'tdesign-vue-next'
 import api from '../api'
 import CategoryTree from '../components/CategoryTree.vue'
 import ActionMenu from '../components/ActionMenu.vue'
@@ -88,22 +91,37 @@ const columns = [
 ]
 
 const records = ref([])
-const filter = ref({ chainCode: '', status: '', categoryId: null })
+const filter = ref({ chainCode: '', status: '', categoryIds: [] })
 const dateRange = ref(null)
 const pageNo = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+const loading = ref(false)
 
 const loadRecords = async () => {
-  const params = { ...filter.value, pageNo: pageNo.value, pageSize: pageSize.value }
-  if (dateRange.value) {
-    params.startTime = dateRange.value[0]
-    params.endTime = dateRange.value[1]
+  loading.value = true
+  const params = { chainCode: filter.value.chainCode.trim(), status: filter.value.status, pageNo: pageNo.value, pageSize: pageSize.value }
+  if (filter.value.categoryIds.length) params.categoryId = filter.value.categoryIds.join(',')
+  if (dateRange.value?.length === 2) {
+    params.startTime = `${dateRange.value[0]} 00:00:00`
+    params.endTime = `${dateRange.value[1]} 23:59:59`
   }
-  if (!params.categoryId) delete params.categoryId
-  const res = await api.get('/execute/list', { params })
-  records.value = res.data?.list || []
-  total.value = res.data?.total || 0
+  try {
+    const res = await api.get('/execute/list', { params })
+    records.value = res.data?.list || []
+    total.value = res.data?.total || 0
+  } catch (e) {
+    MessagePlugin.error(e.response?.data?.message || e.message || '执行记录查询失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+const search = () => { pageNo.value = 1; loadRecords() }
+const resetFilters = () => {
+  filter.value = { chainCode: '', status: '', categoryIds: [] }
+  dateRange.value = null
+  search()
 }
 
 const onPageChange = (pageInfo) => {

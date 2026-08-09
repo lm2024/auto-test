@@ -26,12 +26,12 @@ public interface TestExecuteMainMapper {
                                                @Param("status") String status,
                                                @Param("startTime") Date startTime,
                                                @Param("endTime") Date endTime,
-                                               @Param("categoryId") Long categoryId,
+                                               @Param("categoryIds") List<Long> categoryIds,
                                                @Param("offset") int offset,
                                                @Param("pageSize") int pageSize);
     int countListByCategory(@Param("chainCode") String chainCode,
                             @Param("status") String status,
                             @Param("startTime") Date startTime,
                             @Param("endTime") Date endTime,
-                            @Param("categoryId") Long categoryId);
+                            @Param("categoryIds") List<Long> categoryIds);
 }
