@@ -119,6 +119,51 @@ FROM (
 
 COMMIT;
 
+-- 回填可视化拓扑：大多数链路按节点顺序生成线性关系。
+-- 0093 特意只保留节点、不生成边，用于验证“无关联节点”场景。
+UPDATE test_chain c
+JOIN (
+    SELECT chain_code,
+           CONCAT('{"cells":[', GROUP_CONCAT(cell_json ORDER BY seq_no SEPARATOR ','), ']}') AS graph_json
+    FROM (
+        SELECT chain_code, node_id AS seq_no,
+               CAST(JSON_OBJECT(
+                   'id', node_code,
+                   'shape', 'http-node',
+                   'x', 120,
+                   'y', 80 + node_id * 140,
+                   'width', 240,
+                   'height', 88,
+                   'data', JSON_OBJECT(
+                       'nodeCode', node_code,
+                       'nodeName', node_name,
+                       'nodeType', node_type,
+                       'requestMethod', request_method,
+                       'requestUrl', request_url,
+                       'interfaceScope', interface_scope,
+                       'targetSystem', target_system
+                   )
+               ) AS CHAR) AS cell_json
+        FROM test_node_config
+        WHERE chain_code LIKE 'SEED_CALL_CHAIN_%'
+        UNION ALL
+        SELECT a.chain_code, 100000 + a.node_id AS seq_no,
+               CAST(JSON_OBJECT(
+                   'id', CONCAT('edge-', a.node_code, '-', b.node_code),
+                   'shape', 'dag-edge',
+                   'source', JSON_OBJECT('cell', a.node_code, 'port', 'out'),
+                   'target', JSON_OBJECT('cell', b.node_code, 'port', 'in')
+               ) AS CHAR) AS cell_json
+        FROM test_node_config a
+        INNER JOIN test_node_config b
+            ON b.chain_code = a.chain_code AND b.node_id = a.node_id + 1
+        WHERE a.chain_code LIKE 'SEED_CALL_CHAIN_%'
+          AND a.chain_code <> 'SEED_CALL_CHAIN_0093'
+    ) cells
+    GROUP BY chain_code
+) graph ON graph.chain_code = c.chain_code
+SET c.graph_data = graph.graph_json;
+
 SELECT 'seed_callgraph_10000 completed' AS message;
 SELECT COUNT(*) AS seeded_nodes
 FROM test_node_config
