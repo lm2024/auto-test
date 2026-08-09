@@ -308,6 +308,9 @@ public class CallGraphServiceImpl implements CallGraphService {
     }
 
     private void addEdge(CallGraphVO vo, String source, String target, int count, String type, CallGraphRow row) {
+        if (!hasNode(vo, source) || !hasNode(vo, target)) {
+            return;
+        }
         for (CallGraphVO.EdgeItem item : vo.getEdges()) if (source.equals(item.getSource()) && target.equals(item.getTarget())) return;
         CallGraphVO.EdgeItem edge = new CallGraphVO.EdgeItem(source, target, Integer.valueOf(count));
         edge.setRelationType(type);
@@ -315,6 +318,18 @@ public class CallGraphServiceImpl implements CallGraphService {
         edge.setChainCode(row == null ? null : row.getChainCode());
         edge.setMethod(row == null ? null : row.getRequestMethod());
         vo.getEdges().add(edge);
+    }
+
+    private boolean hasNode(CallGraphVO vo, String id) {
+        if (isBlank(id)) {
+            return false;
+        }
+        for (CallGraphVO.NodeItem item : vo.getNodes()) {
+            if (id.equals(item.getId())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void fillStatsByModule(CallGraphVO vo, Map<String, SystemAgg> systemMap) {

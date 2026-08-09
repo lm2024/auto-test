@@ -220,7 +220,8 @@ function renderGraph() {
   if (g6) g6.destroy()
   const colors = themeColors()
   const nodes = graphData.nodes.map(node => ({ id: node.id, data: node, style: { labelText: node.name, labelFill: colors.text, labelFontSize: node.nodeType === 'INTERFACE' ? 11 : 12, fill: node.nodeType === 'CHAIN' ? colors.primary : colors.surface, stroke: node.nodeType === 'CHAIN' ? colors.primary : scopeColor(node.scope), lineWidth: 2, size: node.nodeType === 'CHAIN' ? 52 : node.nodeType === 'INTERFACE' ? 44 : 42 } }))
-  const edges = graphData.edges.map(edge => ({ id: `edge-${edge.source}-${edge.target}`, source: edge.source, target: edge.target, data: edge, style: { endArrow: true, stroke: edge.relationType === 'INFERRED' ? colors.external : colors.borderStrong, lineDash: edge.relationType === 'INFERRED' ? [6, 4] : undefined, lineWidth: Math.max(1, Math.min(5, (edge.count || 1) / 5)) } }))
+  const nodeIds = new Set(graphData.nodes.map(node => node.id))
+  const edges = graphData.edges.filter(edge => nodeIds.has(edge.source) && nodeIds.has(edge.target)).map(edge => ({ id: `edge-${edge.source}-${edge.target}`, source: edge.source, target: edge.target, data: edge, style: { endArrow: true, stroke: edge.relationType === 'INFERRED' ? colors.external : colors.borderStrong, lineDash: edge.relationType === 'INFERRED' ? [6, 4] : undefined, lineWidth: Math.max(1, Math.min(5, (edge.count || 1) / 5)) } }))
   const layouts = {
     force: { type: 'force', linkDistance: 130, preventOverlap: true, nodeSize: 44 },
     circular: { type: 'circular', radius: 190 },
