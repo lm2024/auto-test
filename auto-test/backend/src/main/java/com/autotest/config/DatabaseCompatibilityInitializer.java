@@ -36,6 +36,7 @@ public class DatabaseCompatibilityInitializer {
         addColumnIfMissing("test_account", "valid_until",
                 "ALTER TABLE test_account ADD COLUMN valid_until datetime DEFAULT NULL COMMENT '账号有效期结束' AFTER valid_from");
         createAccountUsageTableIfMissing();
+        createDataPoolTablesIfMissing();
         addColumnIfMissing("test_chain", "product_code",
                 "ALTER TABLE test_chain ADD COLUMN product_code varchar(64) DEFAULT NULL COMMENT '所属产品编码' AFTER tenant_id");
         addColumnIfMissing("test_chain", "login_chain_code",
@@ -75,6 +76,20 @@ public class DatabaseCompatibilityInitializer {
                 "started_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, ended_at datetime DEFAULT NULL, duration_ms bigint DEFAULT NULL, " +
                 "release_reason varchar(128) DEFAULT NULL, PRIMARY KEY (id), KEY idx_account_usage_account (account_id, started_at), " +
                 "KEY idx_account_usage_execution (execution_id), KEY idx_account_usage_tenant (tenant_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='测试账号使用记录'");
+    }
+
+    private void createDataPoolTablesIfMissing() {
+        jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS test_data_pool (" +
+                "id bigint NOT NULL AUTO_INCREMENT, pool_code varchar(64) NOT NULL, pool_name varchar(256) NOT NULL, " +
+                "tenant_id bigint DEFAULT NULL, product_code varchar(64) DEFAULT NULL, description varchar(512) DEFAULT NULL, " +
+                "column_defs json NOT NULL, status tinyint DEFAULT 1, create_by varchar(64) DEFAULT NULL, " +
+                "create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
+                "PRIMARY KEY (id), UNIQUE KEY uk_pool_code (pool_code), KEY idx_tenant (tenant_id), KEY idx_product (product_code), " +
+                "KEY idx_status (status)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='数据池'");
+        jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS test_data_pool_row (" +
+                "id bigint NOT NULL AUTO_INCREMENT, pool_id bigint NOT NULL, row_index int NOT NULL, row_data json NOT NULL, " +
+                "create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (id), UNIQUE KEY uk_pool_row (pool_id, row_index), " +
+                "KEY idx_pool_id (pool_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='数据池行数据'");
     }
 
     private void addColumnIfMissing(String table, String column, String alterSql) {

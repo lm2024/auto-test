@@ -95,6 +95,36 @@ CREATE TABLE `test_account_usage` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='测试账号使用记录表';
 
 -- =============================================
+-- 数据池主表
+-- =============================================
+DROP TABLE IF EXISTS `test_data_pool_row`;
+DROP TABLE IF EXISTS `test_data_pool`;
+CREATE TABLE `test_data_pool` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `pool_code` varchar(64) NOT NULL COMMENT '数据池编码',
+  `pool_name` varchar(256) NOT NULL COMMENT '数据池名称',
+  `tenant_id` bigint DEFAULT NULL COMMENT '租户ID',
+  `product_code` varchar(64) DEFAULT NULL COMMENT '所属产品编码',
+  `description` varchar(512) DEFAULT NULL COMMENT '描述',
+  `column_defs` json NOT NULL COMMENT '列定义',
+  `status` tinyint DEFAULT 1 COMMENT '状态',
+  `create_by` varchar(64) DEFAULT NULL,
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`), UNIQUE KEY `uk_pool_code` (`pool_code`), KEY `idx_tenant` (`tenant_id`),
+  KEY `idx_product` (`product_code`), KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='数据池';
+
+CREATE TABLE `test_data_pool_row` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `pool_id` bigint NOT NULL COMMENT '所属数据池ID',
+  `row_index` int NOT NULL COMMENT '行号',
+  `row_data` json NOT NULL COMMENT '行数据',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`), UNIQUE KEY `uk_pool_row` (`pool_id`,`row_index`), KEY `idx_pool_id` (`pool_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='数据池行数据';
+
+-- =============================================
 -- 测试链路表
 -- =============================================
 DROP TABLE IF EXISTS `test_chain`;
