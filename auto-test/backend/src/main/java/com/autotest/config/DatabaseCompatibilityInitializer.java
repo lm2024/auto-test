@@ -43,6 +43,22 @@ public class DatabaseCompatibilityInitializer {
                 "ALTER TABLE test_chain ADD COLUMN param_mode varchar(16) DEFAULT 'NONE' COMMENT '参数模式' AFTER data_pool_code");
         addColumnIfMissing("sys_system_registry", "category",
                 "ALTER TABLE sys_system_registry ADD COLUMN category varchar(128) DEFAULT NULL COMMENT '系统分类' AFTER ip_ranges");
+        addColumnIfMissing("sys_scheduled_task", "round_count",
+                "ALTER TABLE sys_scheduled_task ADD COLUMN round_count int DEFAULT 1 COMMENT '执行轮数' AFTER interval_minutes");
+        addColumnIfMissing("sys_scheduled_task", "round_interval_ms",
+                "ALTER TABLE sys_scheduled_task ADD COLUMN round_interval_ms int DEFAULT 0 COMMENT '轮次间隔毫秒' AFTER round_count");
+        addColumnIfMissing("sys_scheduled_task", "use_data_pool",
+                "ALTER TABLE sys_scheduled_task ADD COLUMN use_data_pool tinyint DEFAULT 0 COMMENT '是否使用数据池' AFTER round_interval_ms");
+        addColumnIfMissing("sys_scheduled_task", "data_pool_code",
+                "ALTER TABLE sys_scheduled_task ADD COLUMN data_pool_code varchar(64) DEFAULT NULL COMMENT '数据池编码' AFTER use_data_pool");
+        addColumnIfMissing("sys_task_execute_log", "round_number",
+                "ALTER TABLE sys_task_execute_log ADD COLUMN round_number int DEFAULT NULL COMMENT '当前轮次' AFTER execution_ids");
+        addColumnIfMissing("sys_task_execute_log", "total_rounds",
+                "ALTER TABLE sys_task_execute_log ADD COLUMN total_rounds int DEFAULT NULL COMMENT '总轮数' AFTER round_number");
+        addColumnIfMissing("test_execute_main", "round_number",
+                "ALTER TABLE test_execute_main ADD COLUMN round_number int DEFAULT NULL COMMENT '轮次编号' AFTER chain_code");
+        addColumnIfMissing("test_execute_main", "task_id",
+                "ALTER TABLE test_execute_main ADD COLUMN task_id bigint DEFAULT NULL COMMENT '关联定时任务ID' AFTER round_number");
     }
 
     private void addColumnIfMissing(String table, String column, String alterSql) {

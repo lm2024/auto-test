@@ -8,6 +8,7 @@ import java.util.List;
 
 public interface ExecuteService {
     String runChain(String chainCode);
+    String runChainWithParams(String chainCode, int roundIndex, String taskExecutionId);
     String runChain(String chainCode, String traceId, boolean parallel);
     ExecutionPlan parseChain(String chainCode);
     ExecuteMainVO getExecuteStatus(String executionId);

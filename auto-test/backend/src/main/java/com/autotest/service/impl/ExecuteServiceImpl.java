@@ -96,6 +96,7 @@ public class ExecuteServiceImpl implements ExecuteService {
      * @param roundIndex 轮次索引（从 0 开始），-1 表示不使用数据池
      * @param taskExecutionId 关联的定时任务执行 ID（可选）
      */
+    @Override
     public String runChainWithParams(String chainCode, int roundIndex, String taskExecutionId) {
         TestChain chain = chainMapper.selectByChainCode(chainCode);
         if (chain == null) {
@@ -122,6 +123,13 @@ public class ExecuteServiceImpl implements ExecuteService {
         mainLog.setTenantId(chain.getTenantId());
         if (roundIndex >= 0) {
             mainLog.setRoundNumber(roundIndex + 1);
+        }
+        if (taskExecutionId != null && !taskExecutionId.trim().isEmpty()) {
+            try {
+                mainLog.setTaskId(Long.valueOf(taskExecutionId));
+            } catch (NumberFormatException e) {
+                log.warn("[Execute] 定时任务 ID 无效: {}", taskExecutionId);
+            }
         }
         executeMainMapper.insert(mainLog);
 
