@@ -2,10 +2,9 @@
   <div>
     <t-card>
       <template #header>
-        <div class="card-header">
-          <span>测试账号管理</span>
-          <t-button theme="primary" @click="showCreateDialog">新增账号</t-button>
-        </div>
+        <PageHeader title="测试账号管理" description="集中管理各目标系统的认证账号与登录方式">
+          <template #actions><t-button theme="primary" @click="showCreateDialog">新增账号</t-button></template>
+        </PageHeader>
       </template>
 
       <div class="filter-bar">
@@ -101,6 +100,7 @@ import { MessagePlugin, DialogPlugin } from 'tdesign-vue-next'
 import { EditIcon, DeleteIcon } from 'tdesign-icons-vue-next'
 import api from '../api'
 import ActionMenu from '../components/ActionMenu.vue'
+import PageHeader from '../components/PageHeader.vue'
 
 const accounts = ref([])
 const filter = ref({ systemName: '', status: null })

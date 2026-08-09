@@ -1,18 +1,14 @@
 <template>
   <div class="registry-page">
-    <div class="page-head">
-      <div>
-        <div class="page-title">系统注册表</div>
-        <div class="page-desc">维护内外网系统的域名 / IP 段规则，用于自动识别接口归属</div>
-      </div>
-      <div class="head-ops">
+    <PageHeader title="系统注册表" description="维护内外网系统的域名 / IP 段规则，用于自动识别接口归属">
+      <template #actions>
         <t-input v-model="testUrl" placeholder="输入 URL 试一下识别结果" style="width:320px" clearable />
         <t-button theme="default" variant="outline" :loading="classifying" @click="doClassify">识别</t-button>
         <t-button theme="primary" @click="openEdit(null)">
           <template #icon><AddIcon /></template>新增系统
         </t-button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <t-alert v-if="classifyResult" theme="info" class="classify-alert" :close="true" @close="classifyResult = null">
       识别结果：<b>{{ scopeLabel(classifyResult.scope) }}</b>
@@ -77,6 +73,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { MessagePlugin, DialogPlugin } from 'tdesign-vue-next'
 import { AddIcon } from 'tdesign-icons-vue-next'
 import registryApi from '../api/registry'
+import PageHeader from '../components/PageHeader.vue'
 
 const columns = [
   { colKey: 'systemCode', title: '系统编码', width: 160, ellipsis: true },

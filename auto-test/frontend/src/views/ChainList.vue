@@ -2,10 +2,9 @@
   <div>
     <t-card>
       <template #header>
-        <div class="card-header">
-          <span>测试链路管理</span>
-          <t-button theme="primary" @click="showCreateDialog">新增链路</t-button>
-        </div>
+        <PageHeader title="测试链路管理" description="编排、筛选并执行接口测试链路">
+          <template #actions><t-button theme="primary" @click="showCreateDialog">新增链路</t-button></template>
+        </PageHeader>
       </template>
 
       <div class="filter-bar">
@@ -152,6 +151,7 @@ import { EditIcon, PlayCircleIcon, FileCopyIcon, SettingIcon, DeleteIcon } from 
 import api from '../api'
 import CategoryTree from '../components/CategoryTree.vue'
 import ActionMenu from '../components/ActionMenu.vue'
+import PageHeader from '../components/PageHeader.vue'
 
 const router = useRouter()
 

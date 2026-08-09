@@ -2,10 +2,9 @@
   <div>
     <t-card>
       <template #header>
-        <div class="card-header">
-          <span>定时任务管理</span>
-          <t-button theme="primary" @click="showCreateDialog">新增任务</t-button>
-        </div>
+        <PageHeader title="定时任务管理" description="让回归任务按计划自动运行">
+          <template #actions><t-button theme="primary" @click="showCreateDialog">新增任务</t-button></template>
+        </PageHeader>
       </template>
 
       <t-table :data="tasks" :columns="taskColumns" row-key="id" bordered stripe style="margin-top:15px">
@@ -89,6 +88,7 @@ import { EditIcon, DeleteIcon, PlayCircleIcon } from 'tdesign-icons-vue-next'
 import api from '../api'
 import ActionMenu from '../components/ActionMenu.vue'
 import CategoryTree from '../components/CategoryTree.vue'
+import PageHeader from '../components/PageHeader.vue'
 
 const tasks = ref([])
 const pageNo = ref(1)

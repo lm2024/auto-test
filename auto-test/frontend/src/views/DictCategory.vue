@@ -2,9 +2,9 @@
   <div>
     <t-card>
       <template #header>
-        <div class="card-header">
-          <span>分类管理</span>
-        </div>
+        <PageHeader title="分类管理" description="按层级组织测试资产，支持按需展开和维护">
+          <template #actions><t-button theme="primary" @click="showCreateDialog(null)">新增根分类</t-button></template>
+        </PageHeader>
       </template>
 
       <div class="category-layout">
@@ -92,6 +92,7 @@ import { PlayCircleIcon } from 'tdesign-icons-vue-next'
 import api from '../api'
 import CategoryTree from '../components/CategoryTree.vue'
 import ActionMenu from '../components/ActionMenu.vue'
+import PageHeader from '../components/PageHeader.vue'
 
 const chainColumns = [
   { colKey: 'chainCode', title: '链路编码', width: 180 },

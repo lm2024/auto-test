@@ -2,10 +2,9 @@
   <div>
     <t-card>
       <template #header>
-        <div class="card-header">
-          <span>租户管理</span>
-          <t-button theme="primary" @click="showCreateDialog">新增租户</t-button>
-        </div>
+        <PageHeader title="租户管理" description="维护隔离的业务空间与租户状态">
+          <template #actions><t-button theme="primary" @click="showCreateDialog">新增租户</t-button></template>
+        </PageHeader>
       </template>
 
       <div class="filter-bar">
@@ -87,6 +86,7 @@ import { MessagePlugin, DialogPlugin } from 'tdesign-vue-next'
 import { SettingIcon, DeleteIcon, ErrorTriangleFilledIcon, CheckCircleFilledIcon } from 'tdesign-icons-vue-next'
 import ActionMenu from '../components/ActionMenu.vue'
 import api from '../api'
+import PageHeader from '../components/PageHeader.vue'
 
 const list = ref([])
 const total = ref(0)

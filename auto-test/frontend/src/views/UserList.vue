@@ -2,10 +2,9 @@
   <div>
     <t-card>
       <template #header>
-        <div class="card-header">
-          <span>用户管理</span>
-          <t-button theme="primary" @click="showCreateDialog">新增用户</t-button>
-        </div>
+        <PageHeader title="用户管理" description="管理平台用户、角色与访问状态">
+          <template #actions><t-button theme="primary" @click="showCreateDialog">新增用户</t-button></template>
+        </PageHeader>
       </template>
 
       <div class="filter-bar">
@@ -95,6 +94,7 @@ import { EditIcon, DeleteIcon } from 'tdesign-icons-vue-next'
 import api from '../api'
 import ActionMenu from '../components/ActionMenu.vue'
 import PasswordStrength from '../components/PasswordStrength.vue'
+import PageHeader from '../components/PageHeader.vue'
 
 const users = ref([])
 const filter = ref({ keyword: '' })

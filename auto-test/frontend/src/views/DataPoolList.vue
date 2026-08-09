@@ -2,10 +2,9 @@
   <div>
     <t-card>
       <template #header>
-        <div class="card-header">
-          <span>数据池管理</span>
-          <t-button theme="primary" @click="showCreateDialog">新增数据池</t-button>
-        </div>
+        <PageHeader title="数据池管理" description="为接口测试准备可复用的参数化数据">
+          <template #actions><t-button theme="primary" @click="showCreateDialog">新增数据池</t-button></template>
+        </PageHeader>
       </template>
 
       <!-- 页面说明 -->
@@ -139,6 +138,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { MessagePlugin, DialogPlugin } from 'tdesign-vue-next'
 import api from '../api'
+import PageHeader from '../components/PageHeader.vue'
 
 const router = useRouter()
 const list = ref([])
