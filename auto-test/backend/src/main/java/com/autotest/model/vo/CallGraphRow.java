@@ -10,6 +10,8 @@ public class CallGraphRow {
     private String requestMethod;
     private String interfaceScope;
     private String targetSystem;
+    private String category;
+    private String nodeType;
 
     public String getChainCode() { return chainCode; }
     public void setChainCode(String chainCode) { this.chainCode = chainCode; }
@@ -23,4 +25,8 @@ public class CallGraphRow {
     public void setInterfaceScope(String interfaceScope) { this.interfaceScope = interfaceScope; }
     public String getTargetSystem() { return targetSystem; }
     public void setTargetSystem(String targetSystem) { this.targetSystem = targetSystem; }
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
+    public String getNodeType() { return nodeType; }
+    public void setNodeType(String nodeType) { this.nodeType = nodeType; }
 }

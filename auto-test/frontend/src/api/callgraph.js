@@ -7,7 +7,7 @@ import api from './index'
  *   statsByModule / statsByScope / byDomain / detail
  */
 export default {
-  getData(chainCode) {
-    return api.get('/call-graph/data', { params: { chainCode } })
+  getData(params = {}) {
+    return api.get('/call-graph/data', { params })
   }
 }

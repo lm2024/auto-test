@@ -40,11 +40,38 @@ public class CallGraphServiceImpl implements CallGraphService {
 
     @Override
     public CallGraphVO buildCallGraph(String chainCode) {
+        return buildCallGraph(chainCode, null, null, null, null, 1, 20, 200);
+    }
+
+    @Override
+    public CallGraphVO buildCallGraph(String chainCode, String keyword, String scope, String method,
+                                      String category, Integer pageNo, Integer pageSize, Integer maxNodes) {
+        int safePageNo = pageNo == null || pageNo < 1 ? 1 : pageNo;
+        int safePageSize = pageSize == null || pageSize < 1 ? 20 : Math.min(pageSize, 100);
+        int safeMaxNodes = maxNodes == null || maxNodes < 20 ? 200 : Math.min(maxNodes, 500);
+        String normalizedScope = isBlank(scope) ? null : scope.trim().toUpperCase();
+        String normalizedMethod = isBlank(method) ? null : method.trim().toUpperCase();
+        String normalizedKeyword = isBlank(keyword) ? null : keyword.trim();
+        String normalizedCategory = isBlank(category) ? null : category.trim();
+
         CallGraphVO vo = new CallGraphVO();
         vo.getNodes().add(new CallGraphVO.NodeItem(SUT_ID, SUT_NAME, "SUT", null));
 
-        List<CallGraphRow> rows = callGraphMapper.selectCallRows(chainCode);
-        if (rows == null || rows.isEmpty()) {
+        int totalRows = callGraphMapper.countCallRows(chainCode, normalizedKeyword, normalizedScope, normalizedMethod, normalizedCategory);
+        List<CallGraphRow> detailRows = callGraphMapper.selectCallRows(
+                chainCode, normalizedKeyword, normalizedScope, normalizedMethod, normalizedCategory,
+                (safePageNo - 1) * safePageSize, safePageSize);
+        List<CallGraphRow> graphRows = callGraphMapper.selectGraphRows(
+                chainCode, normalizedKeyword, normalizedScope, normalizedMethod, normalizedCategory, safeMaxNodes);
+        vo.setTotalRows(Integer.valueOf(totalRows));
+        vo.setTotalSystems(Integer.valueOf(callGraphMapper.countDistinctSystems(chainCode, normalizedKeyword, normalizedScope, normalizedMethod, normalizedCategory)));
+        vo.setPageNo(Integer.valueOf(safePageNo));
+        vo.setPageSize(Integer.valueOf(safePageSize));
+        vo.setGraphTruncated(Boolean.valueOf(totalRows > safeMaxNodes));
+
+        fillDatabaseStats(vo, chainCode, normalizedKeyword, normalizedScope, normalizedMethod, normalizedCategory);
+        if (graphRows == null || graphRows.isEmpty()) {
+            vo.setDetail(new ArrayList<CallGraphVO.DetailItem>());
             return vo;
         }
 
@@ -54,25 +81,25 @@ public class CallGraphServiceImpl implements CallGraphService {
         Map<String, Integer> scopeMap = new LinkedHashMap<String, Integer>();
         Map<String, CallGraphVO.DetailItem> detailMap = new LinkedHashMap<String, CallGraphVO.DetailItem>();
 
-        for (CallGraphRow row : rows) {
+        for (CallGraphRow row : graphRows) {
             String url = row.getRequestUrl();
             String host = interfaceClassifier.extractHost(url);
             ClassifyResult classified = interfaceClassifier.classify(url);
 
-            String scope = isBlank(row.getInterfaceScope())
+            String scopeName = isBlank(row.getInterfaceScope())
                     ? classified.getScope() : row.getInterfaceScope().trim().toUpperCase();
-            if (isBlank(scope)) {
-                scope = InterfaceClassifier.SCOPE_UNKNOWN;
+            if (isBlank(scopeName)) {
+                scopeName = InterfaceClassifier.SCOPE_UNKNOWN;
             }
 
             String systemCode = classified.getSystemCode();
             String displayName = resolveSystemName(row, classified, host);
             String nodeId = "SYS_" + (isBlank(systemCode) ? sanitize(host != null ? host : displayName) : systemCode);
-            String category = isBlank(systemCode) ? null : categoryMap.get(systemCode);
+            String categoryValue = isBlank(row.getCategory()) ? (isBlank(systemCode) ? null : categoryMap.get(systemCode)) : row.getCategory();
 
             SystemAgg systemAgg = systemMap.get(nodeId);
             if (systemAgg == null) {
-                systemAgg = new SystemAgg(nodeId, displayName, scope, category);
+                systemAgg = new SystemAgg(nodeId, displayName, scopeName, categoryValue);
                 systemMap.put(nodeId, systemAgg);
             }
             systemAgg.count++;
@@ -85,18 +112,54 @@ public class CallGraphServiceImpl implements CallGraphService {
             }
             domainAgg.count++;
 
-            Integer scopeCount = scopeMap.get(scope);
-            scopeMap.put(scope, Integer.valueOf(scopeCount == null ? 1 : scopeCount.intValue() + 1));
+            Integer scopeCount = scopeMap.get(scopeName);
+            scopeMap.put(scopeName, Integer.valueOf(scopeCount == null ? 1 : scopeCount.intValue() + 1));
 
-            accumulateDetail(detailMap, row, displayName, scope);
+        }
+        if (detailRows != null) {
+            for (CallGraphRow row : detailRows) {
+                String host = interfaceClassifier.extractHost(row.getRequestUrl());
+                ClassifyResult classified = interfaceClassifier.classify(row.getRequestUrl());
+                String detailScope = isBlank(row.getInterfaceScope()) ? classified.getScope() : row.getInterfaceScope().trim().toUpperCase();
+                accumulateDetail(detailMap, row, resolveSystemName(row, classified, host), isBlank(detailScope) ? InterfaceClassifier.SCOPE_UNKNOWN : detailScope);
+            }
         }
 
         fillNodesAndEdges(vo, systemMap);
-        fillStatsByModule(vo, systemMap);
-        fillStatsByScope(vo, scopeMap);
         fillByDomain(vo, domainMap);
         fillDetail(vo, detailMap);
         return vo;
+    }
+
+    private void fillDatabaseStats(CallGraphVO vo, String chainCode, String keyword, String scope, String method, String category) {
+        vo.setStatsByScope(toScopeStats(callGraphMapper.selectScopeStats(chainCode, keyword, scope, method, category)));
+        vo.setStatsByMethod(toDimensionStats(callGraphMapper.selectMethodStats(chainCode, keyword, scope, method, category)));
+        vo.setStatsByChain(toDimensionStats(callGraphMapper.selectChainStats(chainCode, keyword, scope, method, category)));
+        vo.setStatsByModule(toModuleStats(callGraphMapper.selectSystemStats(chainCode, keyword, scope, method, category)));
+    }
+
+    private List<CallGraphVO.DimensionStat> toDimensionStats(List<Map<String, Object>> rows) {
+        List<CallGraphVO.DimensionStat> result = new ArrayList<CallGraphVO.DimensionStat>();
+        if (rows != null) for (Map<String, Object> row : rows) {
+            result.add(new CallGraphVO.DimensionStat(String.valueOf(row.get("name")), ((Number) row.get("count")).intValue()));
+        }
+        return result;
+    }
+
+    private List<CallGraphVO.ModuleStat> toModuleStats(List<Map<String, Object>> rows) {
+        List<CallGraphVO.ModuleStat> result = new ArrayList<CallGraphVO.ModuleStat>();
+        if (rows != null) for (Map<String, Object> row : rows) {
+            result.add(new CallGraphVO.ModuleStat(String.valueOf(row.get("name")), ((Number) row.get("count")).intValue()));
+        }
+        return result;
+    }
+
+    private List<CallGraphVO.ScopeStat> toScopeStats(List<Map<String, Object>> rows) {
+        List<CallGraphVO.ScopeStat> result = new ArrayList<CallGraphVO.ScopeStat>();
+        if (rows != null) for (Map<String, Object> row : rows) {
+            result.add(new CallGraphVO.ScopeStat(String.valueOf(row.get("name")), ((Number) row.get("count")).intValue()));
+        }
+        return result;
     }
 
     /**

@@ -234,6 +234,7 @@ CREATE TABLE `sys_system_registry` (
   `scope` varchar(16) NOT NULL DEFAULT 'INTERNAL' COMMENT '内外网: INTERNAL=内网, EXTERNAL=外网',
   `domain_patterns` text COMMENT '域名匹配规则，多个用英文逗号分隔，支持 *.example.com 通配',
   `ip_ranges` text COMMENT 'IP段匹配规则(CIDR)，多个用英文逗号分隔，如 10.0.0.0/8',
+  `category` varchar(128) DEFAULT NULL COMMENT '系统分类',
   `owner` varchar(64) DEFAULT NULL COMMENT '负责人',
   `description` varchar(512) DEFAULT NULL COMMENT '系统说明',
   `sort_order` int DEFAULT '0' COMMENT '排序号',

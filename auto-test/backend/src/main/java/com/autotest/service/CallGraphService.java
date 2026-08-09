@@ -11,4 +11,7 @@ public interface CallGraphService {
      * 构建调用关系图数据，chainCode 为空时统计全部链路
      */
     CallGraphVO buildCallGraph(String chainCode);
+
+    CallGraphVO buildCallGraph(String chainCode, String keyword, String scope, String method,
+                               String category, Integer pageNo, Integer pageSize, Integer maxNodes);
 }

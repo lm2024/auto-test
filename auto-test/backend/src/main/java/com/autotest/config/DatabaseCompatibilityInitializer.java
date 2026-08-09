@@ -41,6 +41,8 @@ public class DatabaseCompatibilityInitializer {
                 "ALTER TABLE test_chain ADD COLUMN data_pool_code varchar(64) DEFAULT NULL COMMENT '绑定的数据池编码' AFTER product_code");
         addColumnIfMissing("test_chain", "param_mode",
                 "ALTER TABLE test_chain ADD COLUMN param_mode varchar(16) DEFAULT 'NONE' COMMENT '参数模式' AFTER data_pool_code");
+        addColumnIfMissing("sys_system_registry", "category",
+                "ALTER TABLE sys_system_registry ADD COLUMN category varchar(128) DEFAULT NULL COMMENT '系统分类' AFTER ip_ranges");
     }
 
     private void addColumnIfMissing(String table, String column, String alterSql) {

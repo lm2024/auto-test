@@ -20,9 +20,16 @@ public class CallGraphController {
     private CallGraphService callGraphService;
 
     @GetMapping("/data")
-    public Result<CallGraphVO> data(@RequestParam(required = false) String chainCode) {
+    public Result<CallGraphVO> data(@RequestParam(required = false) String chainCode,
+                                    @RequestParam(required = false) String keyword,
+                                    @RequestParam(required = false) String scope,
+                                    @RequestParam(required = false) String method,
+                                    @RequestParam(required = false) String category,
+                                    @RequestParam(required = false, defaultValue = "1") Integer pageNo,
+                                    @RequestParam(required = false, defaultValue = "20") Integer pageSize,
+                                    @RequestParam(required = false, defaultValue = "200") Integer maxNodes) {
         try {
-            return Result.success(callGraphService.buildCallGraph(chainCode));
+            return Result.success(callGraphService.buildCallGraph(chainCode, keyword, scope, method, category, pageNo, pageSize, maxNodes));
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }

@@ -1,228 +1,210 @@
 <template>
   <div class="call-graph-page">
-    <div class="page-head">
-      <div>
-        <div class="page-title">系统调用关系图</div>
-        <div class="page-desc">基于链路配置自动汇总接口间的调用关系与内外网分布</div>
-      </div>
-      <div class="head-ops">
-        <t-select v-model="chainCode" placeholder="全部链路" clearable style="width:220px" @change="load">
-          <t-option v-for="c in chains" :key="c.chainCode" :label="c.chainName" :value="c.chainCode" />
-        </t-select>
-        <t-button theme="default" variant="outline" :loading="loading" @click="load">
+    <PageHeader title="系统调用关系分析" description="从系统、链路、协议和网络边界多个维度检索调用资产；图形只展示受控样本，明细始终分页">
+      <template #actions>
+        <t-button variant="outline" :loading="loading" @click="load">
           <template #icon><RefreshIcon /></template>刷新
         </t-button>
+      </template>
+    </PageHeader>
+
+    <section class="filter-panel">
+      <div class="filter-main">
+        <t-input v-model="filters.keyword" placeholder="搜索链路、系统、URL 或目标系统" clearable class="keyword-input" @enter="search" />
+        <t-select v-model="filters.chainCode" placeholder="全部链路" clearable class="filter-select">
+          <t-option v-for="chain in chains" :key="chain.chainCode" :label="chain.chainName" :value="chain.chainCode" />
+        </t-select>
+        <t-select v-model="filters.scope" placeholder="全部网络范围" clearable class="filter-select">
+          <t-option label="内网" value="INTERNAL" />
+          <t-option label="外网" value="EXTERNAL" />
+          <t-option label="未知" value="UNKNOWN" />
+        </t-select>
+        <t-select v-model="filters.method" placeholder="全部方法" clearable class="method-select">
+          <t-option v-for="method in methods" :key="method" :label="method" :value="method" />
+        </t-select>
+        <t-select v-model="filters.category" placeholder="全部系统分类" clearable class="filter-select">
+          <t-option v-for="category in categories" :key="category" :label="category" :value="category" />
+        </t-select>
+        <t-button theme="primary" @click="search">检索</t-button>
+        <t-button variant="outline" @click="resetFilters">重置</t-button>
       </div>
+      <div class="filter-foot">
+        <span class="result-hint">当前条件命中 {{ formatNumber(graphData.totalRows) }} 条调用记录</span>
+        <label class="graph-limit">图形节点上限
+          <t-select v-model="maxNodes" size="small" style="width:96px">
+            <t-option :value="100" label="100" />
+            <t-option :value="200" label="200" />
+            <t-option :value="500" label="500" />
+          </t-select>
+        </label>
+      </div>
+    </section>
+
+    <section class="metric-grid">
+      <div class="metric-card"><span>调用记录</span><strong>{{ formatNumber(graphData.totalRows) }}</strong><small>当前筛选范围</small></div>
+      <div class="metric-card"><span>目标系统</span><strong>{{ formatNumber(graphData.totalSystems) }}</strong><small>图形样本内聚合</small></div>
+      <div class="metric-card"><span>外网调用</span><strong>{{ formatNumber(scopeCount('EXTERNAL')) }}</strong><small>{{ percent(scopeCount('EXTERNAL'), graphData.totalRows) }} 占比</small></div>
+      <div class="metric-card"><span>图形状态</span><strong>{{ graphData.graphTruncated ? '受控' : '完整' }}</strong><small>{{ graphData.graphTruncated ? `仅绘制前 ${maxNodes} 个节点样本` : '当前范围可完整展示' }}</small></div>
+    </section>
+
+    <div class="view-tabs">
+      <button v-for="item in views" :key="item.value" :class="{ active: activeView === item.value }" @click="activeView = item.value">{{ item.label }}</button>
     </div>
 
-    <div class="cg-body">
-      <div class="cg-graph">
-        <div ref="graphRef" class="graph-canvas"></div>
-        <t-empty v-if="!graphData.nodes || graphData.nodes.length === 0" description="暂无调用关系数据" class="graph-empty" />
+    <section v-if="activeView === 'network'" class="network-layout">
+      <div class="panel graph-panel">
+        <div class="panel-head"><div><h2>调用网络</h2><p>被测系统与目标系统的关系拓扑，节点数量受上限保护</p></div><span v-if="graphData.graphTruncated" class="warning-text">数据量较大，当前为 Top {{ maxNodes }} 样本</span></div>
+        <div class="graph-wrap"><div ref="graphRef" class="graph-canvas"></div><t-empty v-if="!graphData.nodes.length" description="当前条件暂无调用关系" class="graph-empty" /></div>
       </div>
-
-      <div class="cg-side">
-        <div class="stat-card">
-          <div class="stat-title">接口内外网分布</div>
-          <div ref="scopeRef" class="stat-chart"></div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-title">按域名统计</div>
-          <div ref="domainRef" class="stat-chart"></div>
-        </div>
+      <div class="side-stack">
+        <div class="panel chart-panel"><div class="panel-head compact"><h2>网络边界</h2><span>调用记录</span></div><div ref="scopeRef" class="chart"></div></div>
+        <div class="panel chart-panel"><div class="panel-head compact"><h2>HTTP 方法</h2><span>调用记录</span></div><div ref="methodRef" class="chart"></div></div>
       </div>
-    </div>
+    </section>
 
-    <div class="cg-detail" v-if="graphData.detail && graphData.detail.length">
-      <div class="stat-title" style="margin-bottom:8px">调用明细</div>
-      <t-table :data="graphData.detail" :columns="detailColumns" row-key="chainCode" size="small" max-height="300">
-        <template #scope="{ row }">
-          <t-tag size="small" variant="light" :theme="row.scope === 'EXTERNAL' ? 'warning' : (row.scope === 'INTERNAL' ? 'primary' : 'default')">
-            {{ scopeLabel(row.scope) }}
-          </t-tag>
-        </template>
+    <section v-else class="analysis-grid">
+      <div class="panel large-chart"><div class="panel-head"><div><h2>{{ activeView === 'system' ? '目标系统排行' : activeView === 'chain' ? '链路调用排行' : 'HTTP 方法分布' }}</h2><p>统计来自数据库聚合，不依赖前端加载全部节点</p></div></div><div ref="primaryRef" class="primary-chart"></div></div>
+      <div class="panel chart-panel"><div class="panel-head compact"><h2>网络边界</h2><span>当前筛选</span></div><div ref="scopeAltRef" class="chart"></div></div>
+    </section>
+
+    <section class="panel detail-panel">
+      <div class="panel-head"><div><h2>调用明细</h2><p>按页检索原始调用配置，避免一次性渲染十万条记录</p></div></div>
+      <t-table :data="graphData.detail" :columns="detailColumns" row-key="chainCode" size="small" bordered stripe :loading="loading">
+        <template #scope="{ row }"><t-tag size="small" variant="light" :theme="scopeTheme(row.scope)">{{ scopeLabel(row.scope) }}</t-tag></template>
       </t-table>
-    </div>
+      <div class="detail-footer"><span>第 {{ graphData.pageNo }} 页</span><t-pagination :current="graphData.pageNo" :page-size="graphData.pageSize" :total="graphData.totalRows" :page-size-options="[20, 50, 100]" show-jumper @change="onPageChange" /></div>
+    </section>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, reactive, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { RefreshIcon } from 'tdesign-icons-vue-next'
 import * as echarts from 'echarts'
 import { Graph } from '@antv/g6'
+import PageHeader from '../components/PageHeader.vue'
 import callgraphApi from '../api/callgraph'
 import chainApi from '../api/chain'
+import registryApi from '../api/registry'
 
-const chainCode = ref('')
+const views = [{ value: 'network', label: '调用网络' }, { value: 'system', label: '系统排行' }, { value: 'chain', label: '链路排行' }, { value: 'method', label: '方法分布' }]
+const methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
+const activeView = ref('network')
+const maxNodes = ref(200)
+const filters = reactive({ keyword: '', chainCode: '', scope: '', method: '', category: '' })
 const chains = ref([])
+const categories = ref([])
 const loading = ref(false)
 const graphRef = ref(null)
 const scopeRef = ref(null)
-const domainRef = ref(null)
-
-const graphData = reactive({ nodes: [], edges: [], statsByScope: [], byDomain: [], detail: [] })
-
+const methodRef = ref(null)
+const scopeAltRef = ref(null)
+const primaryRef = ref(null)
+const graphData = reactive({ nodes: [], edges: [], statsByModule: [], statsByScope: [], statsByMethod: [], statsByChain: [], byDomain: [], detail: [], totalRows: 0, totalSystems: 0, pageNo: 1, pageSize: 20, graphTruncated: false })
 let g6 = null
-let scopeChart = null
-let domainChart = null
+let charts = []
 
 const detailColumns = [
-  { colKey: 'chainName', title: '链路', width: 140, ellipsis: true },
-  { colKey: 'targetSystem', title: '目标系统', width: 140, ellipsis: true },
-  { colKey: 'method', title: '方法', width: 70 },
-  { colKey: 'url', title: 'URL', ellipsis: true },
-  { colKey: 'scope', title: '归属', width: 80 },
+  { colKey: 'chainName', title: '链路', width: 170, ellipsis: true },
+  { colKey: 'targetSystem', title: '目标系统', width: 150, ellipsis: true },
+  { colKey: 'method', title: '方法', width: 80 },
+  { colKey: 'url', title: '请求 URL', ellipsis: true },
+  { colKey: 'scope', title: '网络范围', width: 90 },
   { colKey: 'count', title: '次数', width: 70 }
 ]
-
 const SCOPE_LABEL = { INTERNAL: '内网', EXTERNAL: '外网', UNKNOWN: '未知' }
-function scopeLabel(s) { return SCOPE_LABEL[s] || s || '未知' }
+const SCOPE_COLORS = { INTERNAL: '#2f7cf6', EXTERNAL: '#e98a35', UNKNOWN: '#9aa4b2' }
+function scopeLabel(scope) { return SCOPE_LABEL[scope] || scope || '未知' }
+function scopeTheme(scope) { return scope === 'EXTERNAL' ? 'warning' : scope === 'INTERNAL' ? 'primary' : 'default' }
+function scopeColor(scope) { return SCOPE_COLORS[scope] || SCOPE_COLORS.UNKNOWN }
+function formatNumber(value) { return Number(value || 0).toLocaleString('zh-CN') }
+function percent(value, total) { return total ? `${Math.round(value / total * 100)}%` : '0%' }
+function scopeCount(scope) { return (graphData.statsByScope || []).find(item => item.scope === scope)?.count || 0 }
 
-function scopeColor(s) {
-  if (s === 'EXTERNAL') return '#d54941'
-  if (s === 'INTERNAL') return '#0052d9'
-  return '#86909c'
-}
-
-async function loadChains() {
+async function loadOptions() {
   try {
-    const res = await chainApi.list({})
-    if (res.code === 200) chains.value = res.data || []
-  } catch (e) { /* 忽略 */ }
+    const [chainRes, registryRes] = await Promise.all([chainApi.list({}), registryApi.list()])
+    chains.value = chainRes.code === 200 ? (chainRes.data || []) : []
+    const values = (registryRes.code === 200 ? registryRes.data || [] : []).map(item => item.category).filter(Boolean)
+    categories.value = [...new Set(values)].sort()
+  } catch (e) { MessagePlugin.warning('筛选项加载不完整') }
 }
 
 async function load() {
   loading.value = true
   try {
-    const res = await callgraphApi.getData(chainCode.value || '')
-    if (res.code === 200) {
-      Object.assign(graphData, {
-        nodes: res.data.nodes || [],
-        edges: res.data.edges || [],
-        statsByScope: res.data.statsByScope || [],
-        byDomain: res.data.byDomain || [],
-        detail: res.data.detail || []
-      })
-      renderGraph()
-      renderCharts()
-    } else {
-      MessagePlugin.error(res.message || '加载失败')
-    }
-  } catch (e) {
-    MessagePlugin.error('加载失败: ' + (e.response?.data?.message || e.message))
-  } finally {
-    loading.value = false
-  }
+    const res = await callgraphApi.getData({ ...filters, pageNo: graphData.pageNo, pageSize: graphData.pageSize, maxNodes: maxNodes.value })
+    if (res.code !== 200) throw new Error(res.message || '加载失败')
+    Object.assign(graphData, res.data || {})
+    await nextTick()
+    renderGraph()
+    renderCharts()
+  } catch (e) { MessagePlugin.error(e.response?.data?.message || e.message || '加载失败') } finally { loading.value = false }
 }
+function search() { graphData.pageNo = 1; load() }
+function resetFilters() { Object.assign(filters, { keyword: '', chainCode: '', scope: '', method: '', category: '' }); search() }
+function onPageChange(info) { graphData.pageNo = info.current; graphData.pageSize = info.pageSize; load() }
 
 function renderGraph() {
   if (!graphRef.value) return
-  const nodes = (graphData.nodes || []).map((n) => ({
-    id: n.id,
-    data: { label: n.name, scope: n.scope, category: n.category },
-    style: {
-      fill: n.scope === 'EXTERNAL' ? '#fff1e9' : (n.scope === 'INTERNAL' ? '#e8f3ff' : '#f2f3f5'),
-      stroke: scopeColor(n.scope),
-      lineWidth: 1.5
-    }
-  }))
-  const edges = (graphData.edges || []).map((e) => ({ source: e.source, target: e.target }))
-
-  if (g6) {
-    g6.destroy()
-    g6 = null
-  }
-  g6 = new Graph({
-    container: graphRef.value,
-    autoResize: true,
-    data: { nodes, edges },
-    layout: { type: 'force', linkDistance: 140, preventOverlap: true, nodeSize: 40 },
-    node: {
-      // 颜色已在每个节点的 style 上按 scope 显式指定，这里不再用 palette，避免覆盖
-      style: {
-        labelText: (d) => d.data?.label || d.id,
-        size: 40,
-        labelFill: '#1d2129',
-        labelFontSize: 12,
-        labelPlacement: 'bottom'
-      }
-    },
-    edge: { style: { endArrow: true, stroke: '#c9cdd4', lineWidth: 1.5 } },
-    behaviors: ['drag-canvas', 'zoom-canvas', 'drag-element']
-  })
+  if (g6) g6.destroy()
+  const nodes = graphData.nodes.map(node => ({ id: node.id, data: node, style: { labelText: node.name, labelFill: '#1d2129', labelFontSize: 12, fill: node.scope === 'SUT' ? '#0f766e' : '#fff', stroke: node.scope === 'SUT' ? '#0f766e' : scopeColor(node.scope), lineWidth: 2, size: node.scope === 'SUT' ? 56 : 42 } }))
+  const edges = graphData.edges.map(edge => ({ source: edge.source, target: edge.target, data: edge, style: { endArrow: true, stroke: '#b8c1cc', lineWidth: Math.max(1, Math.min(5, (edge.count || 1) / 5)) } }))
+  g6 = new Graph({ container: graphRef.value, autoResize: true, data: { nodes, edges }, layout: { type: 'force', linkDistance: 130, preventOverlap: true, nodeSize: 44 }, node: { type: 'circle' }, edge: { type: 'line' }, behaviors: ['drag-canvas', 'zoom-canvas', 'drag-element'] })
   g6.render()
 }
-
+function chartBase() { return { animation: false, tooltip: { trigger: 'axis' }, grid: { left: 48, right: 20, top: 20, bottom: 32, containLabel: true } } }
 function renderCharts() {
-  if (!scopeRef.value || !domainRef.value) return
-  if (!scopeChart) scopeChart = echarts.init(scopeRef.value)
-  if (!domainChart) domainChart = echarts.init(domainRef.value)
-
-  scopeChart.setOption({
-    tooltip: { trigger: 'item' },
-    legend: { bottom: 0, type: 'scroll' },
-    series: [
-      {
-        type: 'pie',
-        radius: ['40%', '65%'],
-        center: ['50%', '45%'],
-        data: (graphData.statsByScope || []).map((s) => ({
-          name: scopeLabel(s.scope),
-          value: s.count,
-          itemStyle: { color: scopeColor(s.scope) }
-        }))
-      }
-    ]
-  })
-
-  domainChart.setOption({
-    tooltip: { trigger: 'item' },
-    legend: { bottom: 0, type: 'scroll' },
-    series: [
-      {
-        type: 'pie',
-        radius: ['40%', '65%'],
-        center: ['50%', '45%'],
-        data: (graphData.byDomain || []).map((d) => ({ name: d.domain || '未归类', value: d.count }))
-      }
-    ]
-  })
+  charts.forEach(chart => chart.dispose()); charts = []
+  const pieRefs = [scopeRef.value, scopeAltRef.value].filter(Boolean)
+  pieRefs.forEach(el => { const chart = echarts.init(el); chart.setOption({ animation: false, tooltip: { trigger: 'item' }, series: [{ type: 'pie', radius: ['42%', '68%'], data: graphData.statsByScope.map(item => ({ name: scopeLabel(item.scope), value: item.count, itemStyle: { color: scopeColor(item.scope) } })) }] }); charts.push(chart) })
+  if (methodRef.value) { const chart = echarts.init(methodRef.value); chart.setOption({ ...chartBase(), xAxis: { type: 'category', data: graphData.statsByMethod.map(item => item.name) }, yAxis: { type: 'value' }, series: [{ type: 'bar', data: graphData.statsByMethod.map(item => item.count), itemStyle: { color: '#0f766e' }, barMaxWidth: 28 }] }); charts.push(chart) }
+  if (primaryRef.value) {
+    const source = activeView.value === 'system' ? graphData.statsByModule : activeView.value === 'chain' ? graphData.statsByChain : graphData.statsByMethod
+    const chart = echarts.init(primaryRef.value); chart.setOption({ ...chartBase(), tooltip: { trigger: 'axis' }, xAxis: { type: 'value' }, yAxis: { type: 'category', data: source.slice(0, 30).map(item => item.name).reverse(), axisLabel: { width: 150, overflow: 'truncate' } }, series: [{ type: 'bar', data: source.slice(0, 30).map(item => item.count).reverse(), itemStyle: { color: '#2f7cf6' }, barMaxWidth: 20 }] }); charts.push(chart)
+  }
 }
-
-function resize() {
-  if (scopeChart) scopeChart.resize()
-  if (domainChart) domainChart.resize()
-}
-
-onMounted(async () => {
-  await loadChains()
-  await load()
-  window.addEventListener('resize', resize)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', resize)
-  if (g6) g6.destroy()
-  if (scopeChart) scopeChart.dispose()
-  if (domainChart) domainChart.dispose()
-})
+function resize() { charts.forEach(chart => chart.resize()) }
+watch(activeView, () => nextTick(renderCharts))
+watch(maxNodes, load)
+onMounted(async () => { await loadOptions(); await load(); window.addEventListener('resize', resize) })
+onBeforeUnmount(() => { window.removeEventListener('resize', resize); if (g6) g6.destroy(); charts.forEach(chart => chart.dispose()) })
 </script>
 
 <style scoped>
-.call-graph-page { padding: 20px 24px; }
-.page-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; gap: 16px; }
-.page-title { font-size: 18px; font-weight: 600; color: #1d2129; }
-.page-desc { font-size: 13px; color: #86909c; margin-top: 4px; }
-.head-ops { display: flex; gap: 8px; align-items: center; }
-.cg-body { display: flex; gap: 16px; }
-.cg-graph { position: relative; flex: 1 1 60%; min-width: 0; height: 460px; border: 1px solid #e5e6eb; border-radius: 8px; background: #fafbfc; }
+.call-graph-page { padding: 20px 24px 32px; }
+.filter-panel, .panel { border: 1px solid #e5e6eb; border-radius: 8px; background: #fff; }
+.filter-panel { margin-top: 18px; padding: 16px; }
+.filter-main { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.keyword-input { width: min(360px, 100%); }
+.filter-select { width: 150px; }
+.method-select { width: 120px; }
+.filter-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; color: #86909c; font-size: 12px; }
+.graph-limit { display: flex; align-items: center; gap: 8px; }
+.metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.metric-card { padding: 16px; border: 1px solid #e5e6eb; border-radius: 8px; background: #fff; }
+.metric-card span, .metric-card small { display: block; color: #86909c; font-size: 12px; }
+.metric-card strong { display: block; margin: 8px 0 4px; color: #1d2129; font-size: 24px; line-height: 30px; }
+.view-tabs { display: flex; gap: 4px; margin: 20px 0 12px; border-bottom: 1px solid #e5e6eb; }
+.view-tabs button { border: 0; border-bottom: 2px solid transparent; background: transparent; padding: 10px 14px; color: #86909c; cursor: pointer; }
+.view-tabs button.active { border-bottom-color: #0f766e; color: #0f766e; font-weight: 600; }
+.network-layout, .analysis-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(280px, .8fr); gap: 16px; }
+.analysis-grid { grid-template-columns: minmax(0, 1fr) 360px; }
+.side-stack { display: grid; gap: 16px; }
+.panel { padding: 16px; min-width: 0; }
+.panel-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 12px; }
+.panel-head.compact { align-items: center; }
+.panel-head h2 { margin: 0; color: #1d2129; font-size: 15px; }
+.panel-head p, .panel-head span { margin: 4px 0 0; color: #86909c; font-size: 12px; }
+.warning-text { color: #d54941 !important; white-space: nowrap; }
+.graph-wrap { position: relative; height: 520px; border-radius: 6px; background: #f8fafc; }
 .graph-canvas { width: 100%; height: 100%; }
-.graph-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
-.cg-side { flex: 1 1 40%; min-width: 280px; display: flex; flex-direction: column; gap: 16px; }
-.stat-card { border: 1px solid #e5e6eb; border-radius: 8px; padding: 12px; background: #fff; }
-.stat-title { font-size: 14px; font-weight: 600; color: #1d2129; margin-bottom: 8px; }
-.stat-chart { width: 100%; height: 200px; }
-.cg-detail { margin-top: 16px; border: 1px solid #e5e6eb; border-radius: 8px; padding: 12px; }
+.graph-empty { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; }
+.chart { width: 100%; height: 190px; }
+.primary-chart { width: 100%; height: 520px; }
+.detail-panel { margin-top: 16px; }
+.detail-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; color: #86909c; font-size: 12px; }
+@media (max-width: 1000px) { .metric-grid { grid-template-columns: repeat(2, 1fr); } .network-layout, .analysis-grid { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { .call-graph-page { padding: 14px; } .metric-grid { grid-template-columns: 1fr 1fr; } .filter-foot { align-items: flex-start; flex-direction: column; gap: 10px; } .filter-select, .method-select { flex: 1 1 140px; } .graph-wrap, .primary-chart { height: 420px; } }
 </style>

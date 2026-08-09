@@ -14,6 +14,13 @@ public class CallGraphVO {
     private List<ScopeStat> statsByScope = new ArrayList<ScopeStat>();
     private List<DomainStat> byDomain = new ArrayList<DomainStat>();
     private List<DetailItem> detail = new ArrayList<DetailItem>();
+    private Integer totalRows;
+    private Integer totalSystems;
+    private Integer pageNo;
+    private Integer pageSize;
+    private Boolean graphTruncated = Boolean.FALSE;
+    private List<DimensionStat> statsByMethod = new ArrayList<DimensionStat>();
+    private List<DimensionStat> statsByChain = new ArrayList<DimensionStat>();
 
     public List<NodeItem> getNodes() { return nodes; }
     public void setNodes(List<NodeItem> nodes) { this.nodes = nodes; }
@@ -27,6 +34,20 @@ public class CallGraphVO {
     public void setByDomain(List<DomainStat> byDomain) { this.byDomain = byDomain; }
     public List<DetailItem> getDetail() { return detail; }
     public void setDetail(List<DetailItem> detail) { this.detail = detail; }
+    public Integer getTotalRows() { return totalRows; }
+    public void setTotalRows(Integer totalRows) { this.totalRows = totalRows; }
+    public Integer getTotalSystems() { return totalSystems; }
+    public void setTotalSystems(Integer totalSystems) { this.totalSystems = totalSystems; }
+    public Integer getPageNo() { return pageNo; }
+    public void setPageNo(Integer pageNo) { this.pageNo = pageNo; }
+    public Integer getPageSize() { return pageSize; }
+    public void setPageSize(Integer pageSize) { this.pageSize = pageSize; }
+    public Boolean getGraphTruncated() { return graphTruncated; }
+    public void setGraphTruncated(Boolean graphTruncated) { this.graphTruncated = graphTruncated; }
+    public List<DimensionStat> getStatsByMethod() { return statsByMethod; }
+    public void setStatsByMethod(List<DimensionStat> statsByMethod) { this.statsByMethod = statsByMethod; }
+    public List<DimensionStat> getStatsByChain() { return statsByChain; }
+    public void setStatsByChain(List<DimensionStat> statsByChain) { this.statsByChain = statsByChain; }
 
     /**
      * 图节点：中心节点 SUT 或某个目标系统
@@ -177,6 +198,21 @@ public class CallGraphVO {
         public void setUrl(String url) { this.url = url; }
         public String getScope() { return scope; }
         public void setScope(String scope) { this.scope = scope; }
+        public Integer getCount() { return count; }
+        public void setCount(Integer count) { this.count = count; }
+    }
+
+    public static class DimensionStat {
+        private String name;
+        private Integer count;
+
+        public DimensionStat() { }
+        public DimensionStat(String name, Integer count) {
+            this.name = name;
+            this.count = count;
+        }
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
         public Integer getCount() { return count; }
         public void setCount(Integer count) { this.count = count; }
     }
