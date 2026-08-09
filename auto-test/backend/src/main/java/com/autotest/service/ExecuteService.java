@@ -10,6 +10,7 @@ public interface ExecuteService {
     String runChain(String chainCode);
     String runChainWithParams(String chainCode, int roundIndex, String taskExecutionId);
     String runChain(String chainCode, String traceId, boolean parallel);
+    String runChain(String chainCode, String traceId, boolean parallel, Long userId, String operatorName);
     ExecutionPlan parseChain(String chainCode);
     ExecuteMainVO getExecuteStatus(String executionId);
     List<NodeExecuteLogVO> getNodeLogs(String executionId);

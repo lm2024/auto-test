@@ -5,6 +5,7 @@ import com.autotest.model.dto.AccountCreateDTO;
 import com.autotest.model.entity.TestAccount;
 import com.autotest.model.vo.Result;
 import com.autotest.service.AccountService;
+import com.autotest.service.AccountUsageService;
 import com.autotest.service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -25,6 +26,9 @@ public class AccountController {
     private AccountService accountService;
 
     @Autowired
+    private AccountUsageService accountUsageService;
+
+    @Autowired
     private AuthService authService;
 
     @Autowired
@@ -33,13 +37,13 @@ public class AccountController {
     @PostMapping("/create")
     public Result<?> createAccount(@RequestBody AccountCreateDTO dto) {
         TestAccount account = accountService.createAccount(dto);
-        return Result.success(account);
+        return Result.success(maskPassword(account));
     }
 
     @PutMapping("/update")
     public Result<?> updateAccount(@RequestParam Long id, @RequestBody AccountCreateDTO dto) {
         TestAccount account = accountService.updateAccount(id, dto);
-        return Result.success(account);
+        return Result.success(maskPassword(account));
     }
 
     @DeleteMapping("/delete")
@@ -51,7 +55,19 @@ public class AccountController {
     @GetMapping("/detail")
     public Result<?> getAccount(@RequestParam Long id) {
         TestAccount account = accountService.getAccount(id);
-        return Result.success(account);
+        return Result.success(maskPassword(account));
+    }
+
+    @GetMapping("/usage")
+    public Result<?> listUsage(@RequestParam Long accountId,
+                               @RequestParam(defaultValue = "1") int pageNo,
+                               @RequestParam(defaultValue = "20") int pageSize) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("list", accountUsageService.list(accountId, pageNo, pageSize));
+        data.put("total", accountUsageService.count(accountId));
+        data.put("pageNo", pageNo);
+        data.put("pageSize", pageSize);
+        return Result.success(data);
     }
 
     @GetMapping("/list")
@@ -62,6 +78,7 @@ public class AccountController {
             @RequestParam(defaultValue = "10") int pageSize) {
         int offset = (pageNo - 1) * pageSize;
         List<TestAccount> accounts = accountService.listAccounts(systemName, status, offset, pageSize);
+        accounts.forEach(this::maskPassword);
         int total = accountService.countAccounts(systemName, status);
         Map<String, Object> data = new HashMap<>();
         data.put("list", accounts);
@@ -74,13 +91,18 @@ public class AccountController {
     @PostMapping("/acquire")
     public Result<?> acquireAccount(@RequestParam String accountCode) {
         TestAccount account = accountService.acquireAccount(accountCode);
-        return Result.success(account);
+        return Result.success(maskPassword(account));
     }
 
     @PostMapping("/release")
     public Result<?> releaseAccount(@RequestParam String accountCode) {
         accountService.releaseAccount(accountCode);
         return Result.success();
+    }
+
+    private TestAccount maskPassword(TestAccount account) {
+        if (account != null) account.setPassword(null);
+        return account;
     }
 
     /**

@@ -56,6 +56,8 @@ CREATE TABLE `test_account` (
   `status` int DEFAULT '1' COMMENT '状态：0=禁用，1=可用，2=锁定',
   `last_used_time` datetime DEFAULT NULL COMMENT '最后使用时间',
   `lock_until` datetime DEFAULT NULL COMMENT '锁定截止时间',
+  `valid_from` datetime DEFAULT NULL COMMENT '账号有效期开始',
+  `valid_until` datetime DEFAULT NULL COMMENT '账号有效期结束',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
@@ -64,6 +66,33 @@ CREATE TABLE `test_account` (
   KEY `idx_account_tenant` (`tenant_id`),
   KEY `idx_account_product` (`product_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='测试账号管理表';
+
+-- =============================================
+-- 测试账号使用记录表
+-- =============================================
+DROP TABLE IF EXISTS `test_account_usage`;
+CREATE TABLE `test_account_usage` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+  `account_id` bigint NOT NULL COMMENT '账号ID',
+  `account_code` varchar(64) NOT NULL COMMENT '账号编码快照',
+  `tenant_id` bigint DEFAULT NULL COMMENT '租户ID',
+  `user_id` bigint DEFAULT NULL COMMENT '使用人员ID',
+  `operator_name` varchar(128) DEFAULT NULL COMMENT '使用人员或系统名称',
+  `execution_id` varchar(32) DEFAULT NULL COMMENT '执行ID',
+  `task_id` bigint DEFAULT NULL COMMENT '定时任务ID',
+  `chain_code` varchar(64) DEFAULT NULL COMMENT '使用链路',
+  `data_pool_code` varchar(64) DEFAULT NULL COMMENT '使用数据池',
+  `usage_type` varchar(32) DEFAULT NULL COMMENT '使用类型',
+  `status` varchar(16) NOT NULL DEFAULT 'RUNNING' COMMENT '使用状态',
+  `started_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '开始时间',
+  `ended_at` datetime DEFAULT NULL COMMENT '结束时间',
+  `duration_ms` bigint DEFAULT NULL COMMENT '使用时长毫秒',
+  `release_reason` varchar(128) DEFAULT NULL COMMENT '释放原因',
+  PRIMARY KEY (`id`),
+  KEY `idx_account_usage_account` (`account_id`,`started_at`),
+  KEY `idx_account_usage_execution` (`execution_id`),
+  KEY `idx_account_usage_tenant` (`tenant_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='测试账号使用记录表';
 
 -- =============================================
 -- 测试链路表

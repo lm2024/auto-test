@@ -1,5 +1,7 @@
 package com.autotest.model.dto;
 
+import java.util.Date;
+
 /**
  * 测试账号创建/更新 DTO
  */
@@ -15,6 +17,8 @@ public class AccountCreateDTO {
     private String loginConfig;
     private Long tenantId;
     private String productCode;
+    private Date validFrom;
+    private Date validUntil;
 
     public String getAccountCode() { return accountCode; }
     public void setAccountCode(String accountCode) { this.accountCode = accountCode; }
@@ -38,4 +42,8 @@ public class AccountCreateDTO {
     public void setTenantId(Long tenantId) { this.tenantId = tenantId; }
     public String getProductCode() { return productCode; }
     public void setProductCode(String productCode) { this.productCode = productCode; }
+    public Date getValidFrom() { return validFrom; }
+    public void setValidFrom(Date validFrom) { this.validFrom = validFrom; }
+    public Date getValidUntil() { return validUntil; }
+    public void setValidUntil(Date validUntil) { this.validUntil = validUntil; }
 }

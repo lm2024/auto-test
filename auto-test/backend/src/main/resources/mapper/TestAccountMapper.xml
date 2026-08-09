@@ -19,15 +19,17 @@
         <result column="status" property="status"/>
         <result column="last_used_time" property="lastUsedTime"/>
         <result column="lock_until" property="lockUntil"/>
+        <result column="valid_from" property="validFrom"/>
+        <result column="valid_until" property="validUntil"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
     </resultMap>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO test_account (account_code, account_name, tenant_id, product_code, system_name, username, password,
-            auth_type, auth_config, login_type, login_config, login_script, status)
+            auth_type, auth_config, login_type, login_config, login_script, status, valid_from, valid_until)
         VALUES (#{accountCode}, #{accountName}, #{tenantId}, #{productCode}, #{systemName}, #{username}, #{password},
-            #{authType}, #{authConfig}, #{loginType}, #{loginConfig}, #{loginScript}, #{status})
+            #{authType}, #{authConfig}, #{loginType}, #{loginConfig}, #{loginScript}, #{status}, #{validFrom}, #{validUntil})
     </insert>
 
     <update id="update">
@@ -45,6 +47,8 @@
             <if test="loginConfig != null">login_config = #{loginConfig},</if>
             <if test="loginScript != null">login_script = #{loginScript},</if>
             <if test="status != null">status = #{status},</if>
+            <if test="validFrom != null">valid_from = #{validFrom},</if>
+            <if test="validUntil != null">valid_until = #{validUntil},</if>
         </set>
         WHERE id = #{id}
     </update>
@@ -92,6 +96,8 @@
         SET status = 2, lock_until = #{lockUntil}, last_used_time = NOW()
         WHERE account_code = #{accountCode}
           AND (status = 1 OR (status = 2 AND lock_until IS NOT NULL AND lock_until &lt; NOW()))
+          AND (valid_from IS NULL OR valid_from &lt;= NOW())
+          AND (valid_until IS NULL OR valid_until &gt; NOW())
     </update>
 
     <update id="releaseAccount">
@@ -104,6 +110,8 @@
         SELECT * FROM test_account
         WHERE account_code = #{accountCode}
           AND (status = 1 OR (status = 2 AND lock_until IS NOT NULL AND lock_until &lt; NOW()))
+          AND (valid_from IS NULL OR valid_from &lt;= NOW())
+          AND (valid_until IS NULL OR valid_until &gt; NOW())
         LIMIT 1
     </select>
 

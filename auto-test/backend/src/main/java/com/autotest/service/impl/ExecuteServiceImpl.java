@@ -19,6 +19,7 @@ import com.autotest.model.vo.NodeExecuteLogVO;
 import com.autotest.service.AccountService;
 import com.autotest.service.DataPoolService;
 import com.autotest.service.ExecuteService;
+import com.autotest.service.AccountUsageService;
 import com.autotest.service.GlobalVariableService;
 import com.autotest.util.CodeGenerator;
 import com.autotest.util.DagPlanner;
@@ -70,6 +71,9 @@ public class ExecuteServiceImpl implements ExecuteService {
     private AccountService accountService;
 
     @Autowired
+    private AccountUsageService accountUsageService;
+
+    @Autowired
     private GlobalVariableService globalVariableService;
 
     @Autowired
@@ -82,6 +86,7 @@ public class ExecuteServiceImpl implements ExecuteService {
 
     /** 临时存储数据池参数（key: executionId, value: 参数 Map） */
     private final ConcurrentHashMap<String, Map<String, Object>> poolVarsMap = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, OperatorInfo> operatorMap = new ConcurrentHashMap<>();
 
     @Override
     public String runChain(String chainCode) {
@@ -170,6 +175,11 @@ public class ExecuteServiceImpl implements ExecuteService {
      * @param parallel 是否并发回放多个TraceGroup
      */
     public String runChain(String chainCode, String traceId, boolean parallel) {
+        return runChain(chainCode, traceId, parallel, null, "手动执行");
+    }
+
+    @Override
+    public String runChain(String chainCode, String traceId, boolean parallel, Long userId, String operatorName) {
         TestChain chain = chainMapper.selectByChainCode(chainCode);
         if (chain == null) {
             throw new BusinessException(404, "链路不存在");
@@ -194,6 +204,7 @@ public class ExecuteServiceImpl implements ExecuteService {
         mainLog.setSkipCount(0);
         mainLog.setTenantId(chain.getTenantId());
         executeMainMapper.insert(mainLog);
+        operatorMap.put(executionId, new OperatorInfo(userId, operatorName));
 
         // Execute asynchronously with TraceId grouping
         executeChainByTraceIdAsync(executionId, chainCode, chain.getExecuteMode(), traceId, parallel);
@@ -267,6 +278,8 @@ public class ExecuteServiceImpl implements ExecuteService {
         int failCount = 0;
         int skipCount = 0;
         String errorMessage = null;
+        String acquiredAccountCode = null;
+        boolean accountUsageStarted = false;
 
         try {
             // 画布拓扑非法（例如存在环形依赖）时直接判失败，不执行任何节点
@@ -275,11 +288,17 @@ public class ExecuteServiceImpl implements ExecuteService {
             }
 
             // Phase 2: Account acquisition and token injection
-            String acquiredAccountCode = null;
             if (chain.getAccountCode() != null && !chain.getAccountCode().isEmpty()) {
                 try {
                     TestAccount account = accountService.acquireAccount(chain.getAccountCode());
                     acquiredAccountCode = account.getAccountCode();
+                    TestExecuteMain executionMain = executeMainMapper.selectByExecutionId(executionId);
+                    Long taskId = executionMain == null ? null : executionMain.getTaskId();
+                    OperatorInfo operator = operatorMap.get(executionId);
+                    accountUsageService.start(account, executionId, taskId, chain.getChainCode(), chain.getDataPoolCode(),
+                            taskId == null ? "MANUAL" : "SCHEDULED", operator == null ? null : operator.userId,
+                            taskId == null ? (operator == null ? "手动执行" : operator.name) : "定时任务");
+                    accountUsageStarted = true;
                     String token = obtainTokenForAccount(account);
                     if (token != null) {
                         context.setVariable("__ACCOUNT_TOKEN__", token);
@@ -517,12 +536,12 @@ public class ExecuteServiceImpl implements ExecuteService {
             errorMessage = e.getMessage();
         } finally {
             // Phase 2: Release account lock
-            if (chain.getAccountCode() != null && !chain.getAccountCode().isEmpty()) {
+            if (acquiredAccountCode != null) {
                 try {
-                    accountService.releaseAccount(chain.getAccountCode());
-                    log.info("[Execute] 释放测试账号: {}", chain.getAccountCode());
+                    accountService.releaseAccount(acquiredAccountCode);
+                    log.info("[Execute] 释放测试账号: {}", acquiredAccountCode);
                 } catch (Exception e) {
-                    log.warn("[Execute] 释放测试账号失败: {}", chain.getAccountCode(), e);
+                    log.warn("[Execute] 释放测试账号失败: {}", acquiredAccountCode, e);
                 }
             }
         }
@@ -531,6 +550,10 @@ public class ExecuteServiceImpl implements ExecuteService {
         context.setEndTime(new Date());
         long totalCostMs = context.getEndTime().getTime() - context.getStartTime().getTime();
         String finalStatus = (failCount > 0 || errorMessage != null) ? "FAILED" : "SUCCESS";
+
+        if (accountUsageStarted) {
+            accountUsageService.finish(executionId, finalStatus, "链路执行结束");
+        }
 
         TestExecuteMain updateLog = new TestExecuteMain();
         updateLog.setExecutionId(executionId);
@@ -544,6 +567,7 @@ public class ExecuteServiceImpl implements ExecuteService {
             updateLog.setErrorMessage(errorMessage.length() > 2000 ? errorMessage.substring(0, 2000) : errorMessage);
         }
         executeMainMapper.update(updateLog);
+        operatorMap.remove(executionId);
 
         List<TestNodeExecuteLog> nodeLogs = context.getNodeLogs();
         if (!nodeLogs.isEmpty()) {
@@ -1032,6 +1056,16 @@ public class ExecuteServiceImpl implements ExecuteService {
             log.warn("[Execute] 获取账号token失败: accountCode={}", account.getAccountCode(), e);
         }
         return null;
+    }
+
+    private static class OperatorInfo {
+        private final Long userId;
+        private final String name;
+
+        private OperatorInfo(Long userId, String name) {
+            this.userId = userId;
+            this.name = name;
+        }
     }
 
     /**

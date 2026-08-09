@@ -34,6 +34,16 @@ public class AccountServiceImpl implements AccountService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public TestAccount createAccount(AccountCreateDTO dto) {
+        if (dto == null || dto.getAccountCode() == null || dto.getAccountCode().trim().isEmpty()) {
+            throw new BusinessException(400, "账号编码不能为空");
+        }
+        if (dto.getAccountName() == null || dto.getAccountName().trim().isEmpty()) {
+            throw new BusinessException(400, "账号名称不能为空");
+        }
+        if (dto.getValidFrom() != null && dto.getValidUntil() != null
+                && !dto.getValidUntil().after(dto.getValidFrom())) {
+            throw new BusinessException(400, "有效期结束时间必须晚于开始时间");
+        }
         if (accountMapper.selectByAccountCode(dto.getAccountCode()) != null) {
             throw new BusinessException(409, "账号编码已存在: " + dto.getAccountCode());
         }
@@ -57,6 +67,8 @@ public class AccountServiceImpl implements AccountService {
         account.setLoginConfig(loginConfig);
         account.setTenantId(dto.getTenantId());
         account.setProductCode(dto.getProductCode());
+        account.setValidFrom(dto.getValidFrom());
+        account.setValidUntil(dto.getValidUntil());
         // 自动设置 tenantId
         if (account.getTenantId() == null) {
             account.setTenantId(TenantContext.getTenantId());
@@ -73,6 +85,10 @@ public class AccountServiceImpl implements AccountService {
         TestAccount existing = accountMapper.selectById(id);
         if (existing == null) {
             throw new BusinessException(404, "账号不存在");
+        }
+        if (dto.getValidFrom() != null && dto.getValidUntil() != null
+                && !dto.getValidUntil().after(dto.getValidFrom())) {
+            throw new BusinessException(400, "有效期结束时间必须晚于开始时间");
         }
 
         TestAccount account = new TestAccount();
@@ -93,6 +109,8 @@ public class AccountServiceImpl implements AccountService {
         if (dto.getLoginConfig() != null) account.setLoginConfig(dto.getLoginConfig());
         if (dto.getTenantId() != null) account.setTenantId(dto.getTenantId());
         if (dto.getProductCode() != null) account.setProductCode(dto.getProductCode());
+        if (dto.getValidFrom() != null) account.setValidFrom(dto.getValidFrom());
+        if (dto.getValidUntil() != null) account.setValidUntil(dto.getValidUntil());
 
         accountMapper.update(account);
         return decryptPassword(accountMapper.selectById(id));

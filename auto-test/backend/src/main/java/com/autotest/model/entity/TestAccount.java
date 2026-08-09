@@ -22,6 +22,8 @@ public class TestAccount {
     private Integer status;
     private Date lastUsedTime;
     private Date lockUntil;
+    private Date validFrom;
+    private Date validUntil;
     private Date createTime;
     private Date updateTime;
 
@@ -57,6 +59,10 @@ public class TestAccount {
     public void setLastUsedTime(Date lastUsedTime) { this.lastUsedTime = lastUsedTime; }
     public Date getLockUntil() { return lockUntil; }
     public void setLockUntil(Date lockUntil) { this.lockUntil = lockUntil; }
+    public Date getValidFrom() { return validFrom; }
+    public void setValidFrom(Date validFrom) { this.validFrom = validFrom; }
+    public Date getValidUntil() { return validUntil; }
+    public void setValidUntil(Date validUntil) { this.validUntil = validUntil; }
     public Date getCreateTime() { return createTime; }
     public void setCreateTime(Date createTime) { this.createTime = createTime; }
     public Date getUpdateTime() { return updateTime; }

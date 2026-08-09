@@ -31,6 +31,11 @@ public class DatabaseCompatibilityInitializer {
                 "ALTER TABLE test_account ADD COLUMN login_config json COMMENT '登录详细配置' AFTER auth_config");
         addColumnIfMissing("test_account", "login_script",
                 "ALTER TABLE test_account ADD COLUMN login_script text COMMENT '自定义登录脚本' AFTER login_config");
+        addColumnIfMissing("test_account", "valid_from",
+                "ALTER TABLE test_account ADD COLUMN valid_from datetime DEFAULT NULL COMMENT '账号有效期开始' AFTER lock_until");
+        addColumnIfMissing("test_account", "valid_until",
+                "ALTER TABLE test_account ADD COLUMN valid_until datetime DEFAULT NULL COMMENT '账号有效期结束' AFTER valid_from");
+        createAccountUsageTableIfMissing();
         addColumnIfMissing("test_chain", "product_code",
                 "ALTER TABLE test_chain ADD COLUMN product_code varchar(64) DEFAULT NULL COMMENT '所属产品编码' AFTER tenant_id");
         addColumnIfMissing("test_chain", "login_chain_code",
@@ -59,6 +64,17 @@ public class DatabaseCompatibilityInitializer {
                 "ALTER TABLE test_execute_main ADD COLUMN round_number int DEFAULT NULL COMMENT '轮次编号' AFTER chain_code");
         addColumnIfMissing("test_execute_main", "task_id",
                 "ALTER TABLE test_execute_main ADD COLUMN task_id bigint DEFAULT NULL COMMENT '关联定时任务ID' AFTER round_number");
+    }
+
+    private void createAccountUsageTableIfMissing() {
+        jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS test_account_usage (" +
+                "id bigint NOT NULL AUTO_INCREMENT, account_id bigint NOT NULL, account_code varchar(64) NOT NULL, " +
+                "tenant_id bigint DEFAULT NULL, user_id bigint DEFAULT NULL, operator_name varchar(128) DEFAULT NULL, " +
+                "execution_id varchar(32) DEFAULT NULL, task_id bigint DEFAULT NULL, chain_code varchar(64) DEFAULT NULL, " +
+                "data_pool_code varchar(64) DEFAULT NULL, usage_type varchar(32) DEFAULT NULL, status varchar(16) NOT NULL DEFAULT 'RUNNING', " +
+                "started_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, ended_at datetime DEFAULT NULL, duration_ms bigint DEFAULT NULL, " +
+                "release_reason varchar(128) DEFAULT NULL, PRIMARY KEY (id), KEY idx_account_usage_account (account_id, started_at), " +
+                "KEY idx_account_usage_execution (execution_id), KEY idx_account_usage_tenant (tenant_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='测试账号使用记录'");
     }
 
     private void addColumnIfMissing(String table, String column, String alterSql) {
