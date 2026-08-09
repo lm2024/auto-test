@@ -2,9 +2,15 @@
   <div class="login-wizard">
     <t-card>
       <template #header>
-        <div class="card-header">
-          <span>登录配置向导</span>
-          <t-button theme="primary" @click="goToAccountList">返回账号管理</t-button>
+        <div class="wizard-header">
+          <t-button variant="text" class="back-button" @click="goToAccountList">
+            <template #icon><ArrowLeftIcon /></template>
+            返回账号管理
+          </t-button>
+          <div class="wizard-heading">
+            <h1>登录配置向导</h1>
+            <p>按步骤完成认证方式配置、验证和保存</p>
+          </div>
         </div>
       </template>
 
@@ -214,6 +220,7 @@
 import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { MessagePlugin } from 'tdesign-vue-next'
+import { ArrowLeftIcon } from 'tdesign-icons-vue-next'
 import api from '../api'
 
 const router = useRouter()
@@ -379,7 +386,11 @@ const goToAccountList = () => { router.push('/account/list') }
 
 <style scoped>
 .login-wizard { max-width: 800px; margin: 0 auto; }
-.card-header { display: flex; justify-content: space-between; align-items: center; }
+.wizard-header { display: flex; align-items: flex-start; gap: 18px; width: 100%; }
+.back-button { flex: 0 0 auto; margin-top: 2px; color: var(--text-secondary, #6b7280); }
+.back-button:hover { color: var(--primary); background: rgba(15, 118, 110, 0.06); }
+.wizard-heading h1 { margin: 0; color: var(--text); font-size: 22px; line-height: 32px; font-weight: 700; }
+.wizard-heading p { margin: 4px 0 0; color: var(--text-secondary, #7b8794); font-size: 13px; line-height: 20px; }
 .steps-bar { display: flex; align-items: center; justify-content: center; margin: 20px 0 30px; }
 .step { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .step-number { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
@@ -409,4 +420,9 @@ const goToAccountList = () => { router.push('/account/list') }
 .result-header { font-weight: 500; margin-bottom: 4px; }
 .result-message { color: #666; font-size: 13px; }
 .result-token, .result-cookies { color: #999; font-size: 12px; margin-top: 4px; }
+@media (max-width: 640px) {
+  .wizard-header { gap: 8px; }
+  .back-button { padding-left: 0; padding-right: 0; }
+  .wizard-heading h1 { font-size: 20px; }
+}
 </style>
