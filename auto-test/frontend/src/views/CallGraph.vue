@@ -53,7 +53,7 @@
 
     <section v-if="activeView === 'network'" class="network-layout">
       <div class="panel graph-panel">
-        <div class="panel-head"><div><h2>调用网络</h2><p>被测系统与目标系统的关系拓扑，节点数量受上限保护</p></div><span v-if="graphData.graphTruncated" class="warning-text">数据量较大，当前为 Top {{ maxNodes }} 样本</span></div>
+        <div class="panel-head"><div><h2>调用网络</h2><p>点击节点或连线查看详情，拖拽、缩放和切换布局均不会重新查询数据</p></div><div class="graph-actions"><t-select v-model="layoutMode" size="small" style="width:120px"><t-option v-for="item in layoutOptions" :key="item.value" :label="item.label" :value="item.value" /></t-select><span v-if="graphData.graphTruncated" class="warning-text">Top {{ maxNodes }}</span></div></div>
         <div class="graph-wrap"><div ref="graphRef" class="graph-canvas"></div><t-empty v-if="!graphData.nodes.length" description="当前条件暂无调用关系" class="graph-empty" /></div>
       </div>
       <div class="side-stack">
@@ -74,6 +74,27 @@
       </t-table>
       <div class="detail-footer"><span>第 {{ graphData.pageNo }} 页</span><t-pagination :current="graphData.pageNo" :page-size="graphData.pageSize" :total="graphData.totalRows" :page-size-options="[20, 50, 100]" show-jumper @change="onPageChange" /></div>
     </section>
+
+    <t-drawer v-model:visible="graphDrawerVisible" :header="selectedGraphItem?.type === 'edge' ? '调用关系详情' : '目标系统详情'" size="420px" :footer="false">
+      <template v-if="selectedGraphItem?.type === 'node'">
+        <div class="graph-detail-title"><span class="detail-dot" :style="{ background: scopeColor(selectedGraphItem.data.scope) }"></span><strong>{{ selectedGraphItem.data.name }}</strong></div>
+        <t-descriptions :column="1" bordered size="small">
+          <t-descriptions-item label="系统编码">{{ selectedGraphItem.data.id }}</t-descriptions-item>
+          <t-descriptions-item label="网络范围">{{ scopeLabel(selectedGraphItem.data.scope) }}</t-descriptions-item>
+          <t-descriptions-item label="系统分类">{{ selectedGraphItem.data.category || '未分类' }}</t-descriptions-item>
+          <t-descriptions-item label="调用次数">{{ selectedGraphItem.data.count || nodeCallCount(selectedGraphItem.data.id) }}</t-descriptions-item>
+        </t-descriptions>
+        <div class="drawer-actions"><t-button theme="primary" @click="inspectNode">查看相关明细</t-button><t-button variant="outline" @click="focusNode">聚焦节点</t-button></div>
+      </template>
+      <template v-else-if="selectedGraphItem?.type === 'edge'">
+        <t-descriptions :column="1" bordered size="small">
+          <t-descriptions-item label="来源">{{ selectedGraphItem.data.source }}</t-descriptions-item>
+          <t-descriptions-item label="目标">{{ selectedGraphItem.data.target }}</t-descriptions-item>
+          <t-descriptions-item label="调用次数">{{ selectedGraphItem.data.count || 0 }}</t-descriptions-item>
+        </t-descriptions>
+        <div class="drawer-actions"><t-button theme="primary" @click="inspectEdge">查看调用明细</t-button></div>
+      </template>
+    </t-drawer>
   </div>
 </template>
 
@@ -102,6 +123,10 @@ const methodRef = ref(null)
 const scopeAltRef = ref(null)
 const primaryRef = ref(null)
 const graphData = reactive({ nodes: [], edges: [], statsByModule: [], statsByScope: [], statsByMethod: [], statsByChain: [], byDomain: [], detail: [], totalRows: 0, totalSystems: 0, pageNo: 1, pageSize: 20, graphTruncated: false })
+const layoutMode = ref('force')
+const layoutOptions = [{ value: 'force', label: '力导向' }, { value: 'circular', label: '环形布局' }, { value: 'radial', label: '径向布局' }]
+const graphDrawerVisible = ref(false)
+const selectedGraphItem = ref(null)
 let g6 = null
 let charts = []
 
@@ -188,8 +213,48 @@ function renderGraph() {
   const colors = themeColors()
   const nodes = graphData.nodes.map(node => ({ id: node.id, data: node, style: { labelText: node.name, labelFill: colors.text, labelFontSize: 12, fill: node.scope === 'SUT' ? colors.primary : colors.surface, stroke: node.scope === 'SUT' ? colors.primary : scopeColor(node.scope), lineWidth: 2, size: node.scope === 'SUT' ? 56 : 42 } }))
   const edges = graphData.edges.map(edge => ({ source: edge.source, target: edge.target, data: edge, style: { endArrow: true, stroke: colors.borderStrong, lineWidth: Math.max(1, Math.min(5, (edge.count || 1) / 5)) } }))
-  g6 = new Graph({ container: graphRef.value, autoResize: true, data: { nodes, edges }, layout: { type: 'force', linkDistance: 130, preventOverlap: true, nodeSize: 44 }, node: { type: 'circle' }, edge: { type: 'line' }, behaviors: ['drag-canvas', 'zoom-canvas', 'drag-element'] })
+  const layouts = {
+    force: { type: 'force', linkDistance: 130, preventOverlap: true, nodeSize: 44 },
+    circular: { type: 'circular', radius: 190 },
+    radial: { type: 'radial', unitRadius: 120, preventOverlap: true }
+  }
+  g6 = new Graph({ container: graphRef.value, autoResize: true, data: { nodes, edges }, layout: layouts[layoutMode.value], node: { type: 'circle' }, edge: { type: 'line' }, behaviors: ['drag-canvas', 'zoom-canvas', 'drag-element'] })
+  g6.on('node:click', event => {
+    const id = event?.target?.id || event?.id
+    const node = graphData.nodes.find(item => item.id === id)
+    if (node) { selectedGraphItem.value = { type: 'node', data: node }; graphDrawerVisible.value = true }
+  })
+  g6.on('edge:click', event => {
+    const id = event?.target?.id || event?.id
+    const edge = graphData.edges.find(item => `edge-${item.source}-${item.target}` === id)
+    if (edge) { selectedGraphItem.value = { type: 'edge', data: edge }; graphDrawerVisible.value = true }
+  })
   g6.render()
+}
+function nodeCallCount(id) {
+  const edge = graphData.edges.find(item => item.target === id)
+  return edge?.count || 0
+}
+function inspectNode() {
+  const node = selectedGraphItem.value?.data
+  if (!node || node.scope === 'SUT') return
+  filters.keyword = node.name || node.id
+  graphDrawerVisible.value = false
+  search()
+}
+function inspectEdge() {
+  const edge = selectedGraphItem.value?.data
+  if (!edge) return
+  const target = graphData.nodes.find(item => item.id === edge.target)
+  filters.keyword = target?.name || edge.target
+  graphDrawerVisible.value = false
+  search()
+}
+function focusNode() {
+  const node = selectedGraphItem.value?.data
+  if (g6 && node?.id) {
+    g6.focusElement(node.id, true)
+  }
 }
 function chartBase() {
   const colors = themeColors()
@@ -216,7 +281,8 @@ function renderCharts() {
 function resize() { charts.forEach(chart => chart.resize()) }
 function refreshTheme() { nextTick(() => { renderGraph(); renderCharts() }) }
 let themeObserver = null
-watch(activeView, () => nextTick(renderCharts))
+watch(activeView, () => nextTick(() => { if (activeView.value === 'network') renderGraph(); renderCharts() }))
+watch(layoutMode, () => nextTick(renderGraph))
 watch(maxNodes, load)
 onMounted(async () => { await loadOptions(); await load(); window.addEventListener('resize', resize); themeObserver = new MutationObserver(refreshTheme); themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] }) })
 onBeforeUnmount(() => { window.removeEventListener('resize', resize); themeObserver?.disconnect(); if (g6) g6.destroy(); charts.forEach(chart => chart.dispose()) })
@@ -249,12 +315,14 @@ onBeforeUnmount(() => { window.removeEventListener('resize', resize); themeObser
 .panel-head p, .panel-head span { margin: 4px 0 0; color: var(--text-mute); font-size: 12px; }
 .warning-text { color: var(--danger) !important; white-space: nowrap; }
 .graph-wrap { position: relative; height: 520px; border-radius: 6px; background: var(--surface-2); }
+.graph-actions { display:flex; align-items:center; gap:10px; }
 .graph-canvas { width: 100%; height: 100%; }
 .graph-empty { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; }
 .chart { width: 100%; height: 190px; }
 .primary-chart { width: 100%; height: 520px; }
 .detail-panel { margin-top: 16px; }
 .detail-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; color: var(--text-mute); font-size: 12px; }
+.graph-detail-title { display:flex; align-items:center; gap:10px; font-size:18px; margin-bottom:16px; }.detail-dot { width:10px; height:10px; border-radius:50%; }.drawer-actions { display:flex; gap:10px; margin-top:18px; }
 @media (max-width: 1000px) { .metric-grid { grid-template-columns: repeat(2, 1fr); } .network-layout, .analysis-grid { grid-template-columns: 1fr; } }
 @media (max-width: 640px) { .call-graph-page { padding: 14px; } .metric-grid { grid-template-columns: 1fr 1fr; } .filter-foot { align-items: flex-start; flex-direction: column; gap: 10px; } .filter-select, .method-select { flex: 1 1 140px; } .graph-wrap, .primary-chart { height: 420px; } }
 </style>
