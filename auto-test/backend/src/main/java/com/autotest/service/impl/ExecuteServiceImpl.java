@@ -1085,7 +1085,7 @@ public class ExecuteServiceImpl implements ExecuteService {
         log.info("[Execute] 执行前置登录链路: loginChainCode={}", loginChainCode);
         try {
             // 同步执行登录链路
-            ExecutionContext loginContext = executeChainSync(loginChainCode);
+            ExecutionContext loginContext = executeChainSync(loginChainCode, context.getExecutionId());
 
             // 将登录链路的变量合并到当前上下文
             if (loginContext != null && loginContext.getVariables() != null) {
@@ -1111,7 +1111,7 @@ public class ExecuteServiceImpl implements ExecuteService {
      * 同步执行一条链路并返回执行上下文。
      * 用于登录链路的前置执行。
      */
-    private ExecutionContext executeChainSync(String chainCode) {
+    private ExecutionContext executeChainSync(String chainCode, String parentExecutionId) {
         TestChain loginChain = chainMapper.selectByChainCode(chainCode);
         if (loginChain == null) {
             throw new BusinessException(404, "登录链路不存在: " + chainCode);
@@ -1152,15 +1152,28 @@ public class ExecuteServiceImpl implements ExecuteService {
             nodes = allNodes;
         }
 
+        String acquiredLoginAccountCode = null;
+        boolean loginUsageStarted = false;
+        String loginStatus = "SUCCESS";
+        String loginUsageExecutionId = parentExecutionId + "_LOGIN";
+
         // 获取账号 token
         if (loginChain.getAccountCode() != null && !loginChain.getAccountCode().isEmpty()) {
             try {
                 TestAccount account = accountService.acquireAccount(loginChain.getAccountCode());
+                acquiredLoginAccountCode = account.getAccountCode();
+                TestExecuteMain parentMain = executeMainMapper.selectByExecutionId(parentExecutionId);
+                Long taskId = parentMain == null ? null : parentMain.getTaskId();
+                accountUsageService.start(account, loginUsageExecutionId, taskId, chainCode,
+                        loginChain.getDataPoolCode(), "LOGIN", null,
+                        taskId == null ? "手动执行" : "定时任务");
+                loginUsageStarted = true;
                 String token = obtainTokenForAccount(account);
                 if (token != null) {
                     loginContext.setVariable("__ACCOUNT_TOKEN__", token);
                 }
             } catch (Exception e) {
+                loginStatus = "FAILED";
                 log.warn("[Execute] 登录链路获取账号失败: {}", e.getMessage());
             }
         }
@@ -1172,6 +1185,7 @@ public class ExecuteServiceImpl implements ExecuteService {
             }
             NodeResult result = executeNode(loginContext, node);
             if (!result.success) {
+                loginStatus = "FAILED";
                 log.error("[Execute] 登录链路节点执行失败: nodeCode={}, error={}",
                         node.getNodeCode(), result.errorMessage);
                 break;
@@ -1179,9 +1193,10 @@ public class ExecuteServiceImpl implements ExecuteService {
         }
 
         // 释放账号
-        if (loginChain.getAccountCode() != null && !loginChain.getAccountCode().isEmpty()) {
+        if (acquiredLoginAccountCode != null) {
             try {
-                accountService.releaseAccount(loginChain.getAccountCode());
+                accountService.releaseAccount(acquiredLoginAccountCode);
+                if (loginUsageStarted) accountUsageService.finish(loginUsageExecutionId, loginStatus, "登录链路执行结束");
             } catch (Exception e) {
                 log.warn("[Execute] 登录链路释放账号失败: {}", e.getMessage());
             }
