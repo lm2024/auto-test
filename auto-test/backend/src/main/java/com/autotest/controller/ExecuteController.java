@@ -8,6 +8,8 @@ import com.autotest.service.ExecuteService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -23,15 +25,17 @@ public class ExecuteController {
     private ExecuteService executeService;
 
     @PostMapping("/run")
-    public Result<?> runChain(@RequestBody Map<String, String> params) {
+    public Result<?> runChain(@RequestBody Map<String, String> params, HttpServletRequest request) {
         String chainCode = params.get("chainCode");
         String traceId = params.get("traceId");
         Boolean parallel = params.containsKey("parallel") ? Boolean.parseBoolean(params.get("parallel")) : false;
+        Long userId = (Long) request.getAttribute("userId");
+        String operatorName = userId == null ? "手动执行" : "用户#" + userId;
         String executionId;
         if (traceId != null && !traceId.isEmpty()) {
-            executionId = executeService.runChain(chainCode, traceId, parallel);
+            executionId = executeService.runChain(chainCode, traceId, parallel, userId, operatorName);
         } else {
-            executionId = executeService.runChain(chainCode);
+            executionId = executeService.runChain(chainCode, null, false, userId, operatorName);
         }
         Map<String, Object> data = new HashMap<>();
         data.put("executionId", executionId);
