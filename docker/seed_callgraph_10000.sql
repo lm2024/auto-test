@@ -16,16 +16,17 @@ DELETE FROM test_node_config WHERE chain_code LIKE 'SEED_CALL_CHAIN_%';
 DELETE FROM test_chain WHERE chain_code LIKE 'SEED_CALL_CHAIN_%';
 DELETE FROM sys_system_registry WHERE system_code LIKE 'SEED_SYS_%';
 
--- 32 个目标系统：16 个内网、16 个外网，覆盖 8 种分类。
+-- 36 个目标系统：16 个内网、16 个外网、4 个未知，覆盖 8 种分类。
 INSERT INTO sys_system_registry
     (system_code, system_name, scope, domain_patterns, ip_ranges, category, owner, description, sort_order, status, tenant_id)
 SELECT
     CONCAT('SEED_SYS_', LPAD(n, 3, '0')),
     CONCAT('压测目标系统 ', LPAD(n, 3, '0')),
-    CASE WHEN n <= 16 THEN 'INTERNAL' ELSE 'EXTERNAL' END,
+    CASE WHEN n <= 16 THEN 'INTERNAL' WHEN n <= 32 THEN 'EXTERNAL' ELSE 'UNKNOWN' END,
     CASE WHEN n <= 16
         THEN CONCAT('*.seed-', LPAD(n, 3, '0'), '.internal')
-        ELSE CONCAT('*.seed-', LPAD(n, 3, '0'), '.example.com')
+        WHEN n <= 32 THEN CONCAT('*.seed-', LPAD(n, 3, '0'), '.example.com')
+        ELSE CONCAT('unknown.seed-', LPAD(n, 3, '0'), '.test')
     END,
     CASE WHEN n <= 16 THEN CONCAT('10.', n, '.0.0/16') ELSE NULL END,
     ELT(MOD(n - 1, 8) + 1, '用户', '订单', '支付', '数据', '消息', '第三方', '安全', '基础设施'),
@@ -37,7 +38,7 @@ SELECT
 FROM (
     WITH RECURSIVE seq AS (
         SELECT 1 AS n
-        UNION ALL SELECT n + 1 FROM seq WHERE n < 32
+        UNION ALL SELECT n + 1 FROM seq WHERE n < 36
     )
     SELECT n FROM seq
 ) numbers;
@@ -90,12 +91,12 @@ SELECT
     CASE
         WHEN MOD(n, 10) <= 5 THEN CONCAT('SEED_SYS_', LPAD(MOD(n - 1, 16) + 1, 3, '0'))
         WHEN MOD(n, 10) <= 8 THEN CONCAT('SEED_SYS_', LPAD(MOD(n - 1, 16) + 17, 3, '0'))
-        ELSE NULL
+        ELSE CONCAT('SEED_SYS_', LPAD(MOD(n - 1, 4) + 33, 3, '0'))
     END,
     CASE
         WHEN MOD(n, 10) <= 5 THEN CONCAT('http://svc-', LPAD(MOD(n - 1, 16) + 1, 3, '0'), '.seed-', LPAD(MOD(n - 1, 16) + 1, 3, '0'), '.internal/api/v', MOD(n - 1, 4) + 1, '/resource/', MOD(n - 1, 37) + 1)
         WHEN MOD(n, 10) <= 8 THEN CONCAT('https://api-', LPAD(MOD(n - 1, 16) + 17, 3, '0'), '.seed-', LPAD(MOD(n - 1, 16) + 17, 3, '0'), '.example.com/open/v', MOD(n - 1, 4) + 1, '/resource/', MOD(n - 1, 37) + 1)
-        ELSE CONCAT('https://unknown-', LPAD(MOD(n - 1, 20) + 1, 2, '0'), '.unclassified.example/legacy/', MOD(n - 1, 53) + 1)
+        ELSE CONCAT('https://unknown.seed-', LPAD(MOD(n - 1, 4) + 33, 3, '0'), '.test/legacy/', MOD(n - 1, 53) + 1)
     END,
     ELT(MOD(n - 1, 7) + 1, 'GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'),
     '{"Accept":"application/json","X-Seed-Data":"callgraph-10000"}',
