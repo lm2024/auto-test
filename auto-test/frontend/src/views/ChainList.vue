@@ -355,12 +355,12 @@ onMounted(() => { loadCategoryTreeMap(); loadChains() })
 
 /* ── Primary Button ── */
 :deep(.el-button--primary) {
-  background: linear-gradient(135deg, var(--primary, #3ecf8e), var(--primary-soft, #4ade80));
+  background: linear-gradient(135deg, var(--primary, #3ecf8e), var(--primary-gradient-end, #5db8a7));
   border: none;
   border-radius: var(--sb-radius-sm, 6px);
   font-weight: 600;
   font-size: 14px;
-  color: var(--text-on-green, #0a0a0a);
+  color: var(--text-on-primary, #ffffff);
   box-shadow: 0 2px 8px var(--sb-accent-bg-2, rgba(62, 207, 142, 0.18));
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -615,8 +615,8 @@ onMounted(() => { loadCategoryTreeMap(); loadChains() })
 }
 
 :deep(.el-pagination .el-pager li.is-active) {
-  background: linear-gradient(135deg, var(--primary, #3ecf8e), var(--primary-soft, #4ade80));
-  color: var(--text-on-green, #0a0a0a);
+  background: linear-gradient(135deg, var(--primary, #3ecf8e), var(--primary-gradient-end, #5db8a7));
+  color: var(--text-on-primary, #ffffff);
   border-radius: 8px;
 }
 

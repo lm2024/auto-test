@@ -83,6 +83,50 @@
   /* ── Typography ── */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: ui-monospace, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+
+  /* ── Legacy --sb-* aliases：映射自新令牌 ──
+     design-tokens.css 未被 main.js 引入，导致全项目 110+ 处 var(--sb-*) 失效。
+     此处补齐别名，使既有样式在新色板下正确解析（亮色值）。 */
+  --sb-success: var(--success);
+  --sb-success-bg: var(--success-bg);
+  --sb-danger: var(--danger);
+  --sb-danger-bg: var(--danger-bg);
+  --sb-warning: var(--warning);
+  --sb-warning-bg: var(--warning-bg);
+  --sb-info: var(--info);
+  --sb-info-bg: var(--info-bg);
+  --sb-border: var(--border);
+  --sb-border-strong: var(--border-strong);
+  --sb-border-subtle: var(--border-subtle);
+  --sb-accent-bg: var(--accent-bg);
+  --sb-accent-bg-2: var(--accent-bg-2);
+  --sb-accent-border: var(--accent-border);
+  --sb-accent-soft: var(--accent-soft);
+  --sb-accent-soft-2: var(--accent-medium);
+  --sb-overlay: var(--overlay);
+  --sb-radius-xs: var(--radius-xs);
+  --sb-radius-sm: var(--radius-sm);
+  --sb-radius-md: var(--radius-md);
+  --sb-radius-lg: var(--radius-lg);
+  --sb-radius-xl: var(--radius-xl);
+  --sb-radius-full: var(--radius-full);
+  --sb-shadow-1: var(--shadow-1);
+  --sb-shadow-2: var(--shadow-2);
+  --sb-shadow-3: var(--shadow-3);
+  --sb-shadow-accent: var(--shadow-primary);
+  --sb-font-sans: var(--font-sans);
+  --sb-font-mono: var(--font-mono);
+  --sb-space-xxs: var(--space-xxs);
+  --sb-space-xs: var(--space-xs);
+  --sb-space-sm: var(--space-sm);
+  --sb-space-md: var(--space-md);
+  --sb-space-lg: var(--space-lg);
+  --sb-space-xl: var(--space-xl);
+  --sb-space-xxl: var(--space-xxl);
+  --sb-space-huge: var(--space-huge);
+  /* 渐变实心终点（替代被改成 10% 透明的 --primary-soft） */
+  --primary-gradient-end: #5db8a7;
+  --text-on-green: #232938;
 }
 
 /* ════════════ 暗色主题 ════════════ */
@@ -113,7 +157,7 @@ html.dark {
   --text-secondary: #b0b8c4;    /* 次级文本 */
   --text-mute: #7d8694;         /* 辅助文本 */
   --text-disabled: #565f6b;     /* 禁用文本 */
-  --text-on-primary: #232938;   /* 主色上的文本 */
+  --text-on-primary: #ffffff;   /* 主色上的文本（双态统一白字，保证彩色按钮可读） */
 
   /* ── Accent tints（主色语义化底色）── */
   --accent-bg: rgba(93, 184, 167, 0.1);
@@ -133,6 +177,47 @@ html.dark {
   --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.4);
   --shadow-3: 0 16px 48px rgba(0, 0, 0, 0.5);
   --shadow-primary: 0 4px 24px rgba(93, 184, 167, 0.12);
+
+  /* ── Legacy --sb-* aliases：映射自新令牌（暗色值）── */
+  --sb-success: var(--success);
+  --sb-success-bg: var(--success-bg);
+  --sb-danger: var(--danger);
+  --sb-danger-bg: var(--danger-bg);
+  --sb-warning: var(--warning);
+  --sb-warning-bg: var(--warning-bg);
+  --sb-info: var(--info);
+  --sb-info-bg: var(--info-bg);
+  --sb-border: var(--border);
+  --sb-border-strong: var(--border-strong);
+  --sb-border-subtle: var(--border-subtle);
+  --sb-accent-bg: var(--accent-bg);
+  --sb-accent-bg-2: var(--accent-bg-2);
+  --sb-accent-border: var(--accent-border);
+  --sb-accent-soft: var(--accent-soft);
+  --sb-accent-soft-2: var(--accent-medium);
+  --sb-overlay: var(--overlay);
+  --sb-radius-xs: var(--radius-xs);
+  --sb-radius-sm: var(--radius-sm);
+  --sb-radius-md: var(--radius-md);
+  --sb-radius-lg: var(--radius-lg);
+  --sb-radius-xl: var(--radius-xl);
+  --sb-radius-full: var(--radius-full);
+  --sb-shadow-1: var(--shadow-1);
+  --sb-shadow-2: var(--shadow-2);
+  --sb-shadow-3: var(--shadow-3);
+  --sb-shadow-accent: var(--shadow-primary);
+  --sb-font-sans: var(--font-sans);
+  --sb-font-mono: var(--font-mono);
+  --sb-space-xxs: var(--space-xxs);
+  --sb-space-xs: var(--space-xs);
+  --sb-space-sm: var(--space-sm);
+  --sb-space-md: var(--space-md);
+  --sb-space-lg: var(--space-lg);
+  --sb-space-xl: var(--space-xl);
+  --sb-space-xxl: var(--space-xxl);
+  --sb-space-huge: var(--space-huge);
+  --primary-gradient-end: #6dc4b4;
+  --text-on-green: #171717;
 }
 
 /* ════════════ 登录页面专用样式 ════════════ */

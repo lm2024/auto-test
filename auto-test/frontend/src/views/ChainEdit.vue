@@ -1349,13 +1349,13 @@ onMounted(() => {
 }
 
 .toolbar :deep(.el-button--primary) {
-  background: linear-gradient(135deg, var(--primary), var(--primary-soft));
+  background: linear-gradient(135deg, var(--primary), var(--primary-gradient-end));
   border: none;
   box-shadow: 0 2px 8px rgba(62, 207, 142, 0.3);
 }
 
 .toolbar :deep(.el-button--success) {
-  background: linear-gradient(135deg, var(--sb-success), var(--primary-soft));
+  background: var(--sb-success);
   border: none;
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
 }
@@ -1633,7 +1633,7 @@ onMounted(() => {
 }
 
 .node-card.selected .node-index {
-  background: linear-gradient(135deg, var(--primary), var(--primary-soft));
+  background: linear-gradient(135deg, var(--primary), var(--primary-gradient-end));
   color: #fff;
   box-shadow: 0 2px 8px rgba(62, 207, 142, 0.3);
 }

@@ -169,9 +169,9 @@ onMounted(loadRecords)
 }
 
 .filter-bar :deep(.el-button--primary) {
-  background: linear-gradient(135deg, var(--primary, #3ecf8e), var(--primary-soft, #4ade80));
+  background: linear-gradient(135deg, var(--primary, #3ecf8e), var(--primary-gradient-end, #5db8a7));
   border: none;
-  color: var(--text-on-green, #0a0a0a);
+  color: var(--text-on-primary, #ffffff);
   box-shadow: 0 2px 8px var(--sb-accent-bg-2, rgba(62, 207, 142, 0.18));
 }
 
@@ -248,8 +248,8 @@ onMounted(loadRecords)
 }
 
 :deep(.el-pagination .el-pager li.is-active) {
-  background: linear-gradient(135deg, var(--primary, #3ecf8e), var(--primary-soft, #4ade80));
-  color: var(--text-on-green, #0a0a0a);
+  background: linear-gradient(135deg, var(--primary, #3ecf8e), var(--primary-gradient-end, #5db8a7));
+  color: var(--text-on-primary, #ffffff);
   border-radius: 8px;
 }
 

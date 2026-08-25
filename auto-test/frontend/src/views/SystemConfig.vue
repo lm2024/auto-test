@@ -165,7 +165,7 @@ const saveConfig = async () => {
 
 /* ── Buttons ── */
 :deep(.el-button--primary) {
-  background: linear-gradient(135deg, var(--primary), var(--primary-soft));
+  background: linear-gradient(135deg, var(--primary), var(--primary-gradient-end));
   border: none;
   border-radius: 10px;
   font-weight: 600;
